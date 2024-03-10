@@ -1,0 +1,3 @@
+[submodule "linkrec-llms"]
+	path = linkrec-llms
+	url = git@github.com:epfl-dlab/linkrec-llms.git
