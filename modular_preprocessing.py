@@ -337,7 +337,7 @@ def find_negative_contexts(section_sentences, mentions, curr_section, index, cor
     return contexts
 
 
-def process_version(input, side_contexts_size):
+def process_version(input):
     output = []
     d = difflib.Differ()
     file_1 = os.path.join(
@@ -514,7 +514,7 @@ def process_version(input, side_contexts_size):
                     continue
                 mention = link.text.strip()
                 target_title = fix_target_titles(
-                    href[side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
+                    href[args.side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
                 all_links.append({
                     'mention': mention,
                     'target_title': target_title,
@@ -536,7 +536,7 @@ def process_version(input, side_contexts_size):
                 counter = 0
                 continuous_left_added_text = []
                 accept = True
-                while left_index >= 0 and counter < (2*side_contexts_size) and len(left_context) < side_contexts_size:
+                while left_index >= 0 and counter < (2*args.side_contexts_size) and len(left_context) < args.side_contexts_size:
                     counter += 1
                     if all_sentences[left_index]['section_original'] != sentence['section_original']:
                         break
@@ -576,7 +576,7 @@ def process_version(input, side_contexts_size):
                                 all_sentences[right_index]['clean_sentence'])
                             # rightmost_index = max(rightmost_index, right_index)
                     right_index -= 1
-                right_context = right_context[-side_contexts_size:]
+                right_context = right_context[-args.side_contexts_size:]
                 # right_index = rightmost_index
                 context = ' '.join(
                     left_context[::-1]) + ' '.join(right_context[::-1])
@@ -586,7 +586,7 @@ def process_version(input, side_contexts_size):
                 direct_match = True
                 left_context = []
                 left_index = sentence['match'] - 1
-                while left_index >= 0 and len(left_context) < side_contexts_size:
+                while left_index >= 0 and len(left_context) < args.side_contexts_size:
                     if all_sentences[left_index]['status'] == 'added':
                         left_index -= 1
                         continue
@@ -597,7 +597,7 @@ def process_version(input, side_contexts_size):
                     left_index -= 1
                 right_context = []
                 right_index = sentence['match'] + 1
-                while right_index < len(all_sentences) and len(right_context) < side_contexts_size:
+                while right_index < len(all_sentences) and len(right_context) < args.side_contexts_size:
                     if all_sentences[right_index]['status'] == 'added':
                         right_index += 1
                         continue
@@ -641,7 +641,7 @@ def process_version(input, side_contexts_size):
 
                 # get target title
                 target_title = fix_target_titles(
-                    href[side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
+                    href[args.side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
                 mentions = mentions_map.get(
                     target_title, [urllib.parse.unquote(target_title).replace('_', ' ')])
                 # candidate_current_links = [{}]
@@ -661,7 +661,7 @@ def process_version(input, side_contexts_size):
                 # candidate_current_links.sort(key=lambda x: len(x), reverse=True)
                 # current_links = candidate_current_links[0]
                 negative_contexts = find_negative_contexts(
-                    section_sentences, mentions, section, sentence['index'], context, side_contexts_size, all_links)
+                    section_sentences, mentions, section, sentence['index'], context, args.side_contexts_size, all_links)
                 if target_title in input['versions'][second_version]:
                     output.append({
                         'source_title': input['source_title'],
@@ -696,7 +696,7 @@ if __name__ == '__main__':
                         help='Path to the mention map file')
     parser.add_argument('--output_dir', type=str, required=True,
                         help='Path to the output directory')
-    parser.add_argument('--side_context_size', type=int, required=True,
+    parser.add_argument('--side_contexts_size', type=int, required=True,
                         help='Half size of the context')
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
