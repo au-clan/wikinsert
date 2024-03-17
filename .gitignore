@@ -4,4 +4,5 @@
 # Ada Library Information
 *.ali
 
-visualisation_trials/test_data
+multi_context_data/*
+ready_to_score_data/*

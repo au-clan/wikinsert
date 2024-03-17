@@ -785,10 +785,13 @@ if __name__ == '__main__':
     revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)
     output = []
     pool = Pool(min(cpu_count(), args.n_processes), initializer=initializer)
+    print("Parallel multiprocess")
     for result in tqdm(pool.imap(process_version, revisions_clean), total=len(revisions_clean)):
         output.extend(result)
     pool.close()
     pool.join()
+
+    print(f"The len: {len(output)}")
 
     for i in range(0, len(output), 100_000):
         df_output = pd.DataFrame(output[i:i+100_000])
