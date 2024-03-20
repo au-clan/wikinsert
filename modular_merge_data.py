@@ -156,9 +156,9 @@ if __name__ == '__main__':
             df_links = df_links[~df_removed]
             print(f"Removed {df_removed.sum()} links because of empty context")
             
-            df_removed = df_links['negative_contexts'] == '[]'
+            df_removed = df_links['all_contexts'] == '[]'
             df_links = df_links[~df_removed]
-            print(f"Removed {df_removed.sum()} links because of empty negative contexts")
+            print(f"Removed {df_removed.sum()} links because of empty contexts")
             
             df_removed = ~df_links['target_title'].isin(pages)
             df_links = df_links[~df_removed]

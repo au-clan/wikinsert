@@ -18,10 +18,18 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 def fix_title(title):
     return parse.unquote(title).replace('_', ' ')
 
+def score_contexts(contexts_list, scores_list):
+    for context_dixt, score in zip(contexts_list, scores_list):
+        context_dixt['score'] = score
+    
+    return contexts_list
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str,
+                        required=True, help='Path to data directory')
+    parser.add_argument('--output_dir', type=str,
                         required=True, help='Path to data directory')
     parser.add_argument('--langs', type=str, nargs='+', required=True,
                         help='Languages to benchmark')
@@ -40,7 +48,6 @@ if __name__ == '__main__':
     parser.add_argument('--only_multilingual', action='store_true',
                         help='Only use multilingual model')
     parser.add_argument('--multilingual_name', type=str, default='multilingual', help='Suffix of multilingual model')
-    parser.add_argument('--pointwise_loss', action='store_true', help='Use model trained with pointwise loss')
     parser.set_defaults(use_section_title=False, use_mentions=False,
                         use_cuda=False, only_multilingual=False)
 
@@ -53,9 +60,9 @@ if __name__ == '__main__':
     if not os.path.exists(args.models_dir):
         raise ValueError('Models directory does not exist')
 
-    output_dimension = 2 if args.pointwise_loss else 1
+    output_dimension = 1
 
-    batch_size = 12
+    batch_size = 64
 
     # process each language sequentially
 
@@ -86,6 +93,8 @@ if __name__ == '__main__':
                                                                           nn.Linear(models[args.multilingual_name]['model'].config.hidden_size, output_dimension))
             models[args.multilingual_name]['classification_head'].load_state_dict(torch.load(
                 os.path.join(args.models_dir, args.models_prefix + '_' + args.multilingual_name, 'classification_head.pth'), map_location='cpu'))
+
+            
             models[args.multilingual_name]['classification_head'].eval()
             models[args.multilingual_name]['tokenizer'] = AutoTokenizer.from_pretrained(
                 os.path.join(args.models_dir, args.models_prefix + '_' + args.multilingual_name, 'tokenizer'))
@@ -101,7 +110,7 @@ if __name__ == '__main__':
                         'cuda' if torch.cuda.is_available() else 'cpu')
         
             mention_map_pre = pd.read_parquet(os.path.join(
-                args.data_dir, f'{lang}_mention_map.parquet'))
+                args.data_dir, f'mention_map_{lang}.parquet'))
             mention_map_pre = mention_map_pre.to_dict('records')
             mention_map = {}
             for row in mention_map_pre:
@@ -121,21 +130,23 @@ if __name__ == '__main__':
                     random.shuffle(mention_map[title])
                 mention_map[title] = ' '.join(mention_map[title])
 
+
             for side_contexts_size in args.side_contexts_sizes:
+                print('Processing context size', side_contexts_size )
                 df = pd.read_parquet(os.path.join(args.data_dir, f'{lang}_{side_contexts_size}.parquet'))
 
                 df['target_title'] = df['target_title'].apply(fix_title)
                 
                 df['idx'] = df.index
-                df_contexts = df.explode('contexts')
-                
+                df['all_contexts'] = df['all_contexts'].apply(eval)
+                df_contexts = df.explode('all_contexts').reset_index()
+                df_contexts['contexts'] = df_contexts['all_contexts'].apply(lambda x : x['context'])
+                df_contexts['sections'] = df_contexts['all_contexts'].apply(lambda x : x['section'])
+
                 with torch.no_grad():
                     
-                    for i in range(0, len(df), batch_size):
+                    for i in tqdm(range(0, len(df_contexts), batch_size)):
                         batch_df = df_contexts.iloc[i:i+batch_size]
-                        batch_mention = mention_map[i:i+batch_size]
-
-                        #use mention_map.get(tgt_title)
 
                         if args.use_mentions:
                             input0 = [f"{target_title} {mention_map.get(target_title, '')}{models[model_lang]['tokenizer'].sep_token}{target_lead}" 
@@ -151,25 +162,26 @@ if __name__ == '__main__':
 
                         inputs = list(zip(input0, input1))
 
-                        input_tokens = models[model_lang]['tokenizer'](batch_df['input'], return_tensors='pt', padding='max_length',
+                        input_tokens = models[model_lang]['tokenizer'](inputs, return_tensors='pt', padding='max_length',
                                                                        truncation=True, max_length=512).to('cuda' if torch.cuda.is_available() and args.use_cuda else 'cpu')
 
                         embeddings = models[model_lang]['model'](**input_tokens)['last_hidden_state'][:, 0, :]
-                        prediction = models[model_lang]['classification_head'](embeddings).squeeze()
-
-                        if (len(prediction.shape) == 0 and not args.pointwise_loss) or (len(prediction.shape) == 1 and args.pointwise_loss):
-                            prediction = prediction.unsqueeze(0)
+                        prediction = models[model_lang]['classification_head'](embeddings).squeeze().detach().cpu().numpy()
                         
-                        if args.pointwise_loss:
-                            batch_df['scores'] = [score[1].item() for score in prediction]
-                        else:
-                            batch_df['scores'] = [score[1] for score in prediction]
+                        df_contexts.loc[batch_df.index, 'scores'] = prediction
 
-                        df_contexts.loc[batch_df.index, 'scores'] = batch_df['score']
+                    scores_df = df_contexts[['idx','scores']].groupby('idx').agg({'scores' : list}).reset_index()
 
-                        scores_df = df_contexts['idx','scores'].groupby('idx').agg({'scores' : list}).reset_index()
+                    
 
-                        df['scores'] = scores_df['scores']
+                    df['scores'] = scores_df['scores']
+                    df['all_contexts'] = df.apply(lambda x: score_contexts(x['all_contexts'], x['scores']), axis=1)
+                    df.drop(columns=['scores'], inplace=True)
+                    
+
+                    df.to_parquet(os.path.join(args.output_dir, f'{lang}_{side_contexts_size}_scored.parquet'))
+
+
 
 
                             
