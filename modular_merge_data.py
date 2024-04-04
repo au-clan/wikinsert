@@ -142,6 +142,7 @@ if __name__ == '__main__':
         del df_pages
 
         for j in  args.side_contexts_sizes:
+            print(f'Processing context size {j}')
             # load links
             try:
                 df_links = pd.read_parquet(os.path.join(args.test_data_dir, lang, f'context_size_{side_contexts_size}', 'test_data.parquet'))

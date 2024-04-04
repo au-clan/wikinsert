@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     output_dimension = 1
 
-    batch_size = 64
+    batch_size = 4
 
     # process each language sequentially
 

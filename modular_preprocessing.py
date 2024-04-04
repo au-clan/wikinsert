@@ -728,11 +728,20 @@ if __name__ == '__main__':
     pool.close()
     pool.join()
 
-    print(f"The len: {len(output)}")
+    
 
-    for i in range(0, len(output), 100_000):
+    '''for i in range(0, len(output), 100_000):
         df_output = pd.DataFrame(output[i:i+100_000])
         df_output['context'] = df_output['context'].progress_apply(fix_text)
         df_output['source_lead'] = df_output['source_lead'].progress_apply(
             fix_text)
-        df_output.to_parquet(os.path.join(args.output_dir, f'test_data_{i}.parquet'))
+        df_output.to_parquet(os.path.join(args.output_dir, f'test_data_{i}.parquet'))'''
+    
+    print(f"The length of the output is {len(output)}")
+
+    df_output = pd.DataFrame(output)
+    df_output['context'] = df_output['context'].progress_apply(fix_text)
+    df_output['source_lead'] = df_output['source_lead'].progress_apply(
+        fix_text)
+    df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))
+
