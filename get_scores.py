@@ -19,8 +19,8 @@ def fix_title(title):
     return parse.unquote(title).replace('_', ' ')
 
 def score_contexts(contexts_list, scores_list):
-    for context_dixt, score in zip(contexts_list, scores_list):
-        context_dixt['score'] = score
+    for context_dict, score in zip(contexts_list, scores_list):
+        context_dict['score'] = score
     
     return contexts_list
 
