@@ -254,11 +254,11 @@ def create_all_contexts(section_sentences, mentions, curr_section, index, correc
         for i, sentence in enumerate(section_sentences[section]):
             found = False
             for mention in mentions:
-                if mention.lower() in sentence['clean_sentence'].lower():
+               '''if mention.lower() in sentence['clean_sentence'].lower():
                     found = True
-                    break
-            if section == curr_section and sentence['index'] == index:
-                found = True
+                    break'''
+            '''if section == curr_section and sentence['index'] == index:
+                found = True'''
 
             if not found:
                 curr_sentences.append(sentence)
@@ -268,11 +268,11 @@ def create_all_contexts(section_sentences, mentions, curr_section, index, correc
                     max_index = min(len(curr_sentences), i + side_contexts_size + 1)
                     context = " ".join([s['clean_sentence']
                                         for s in curr_sentences[min_index:max_index]]).strip()
-                    if len(context.split(' ')) > (2*side_contexts_size) and context not in context_texts:
-                        contexts.append({'context': context, 'section': section, 'correct' : context == correct_context})
-                        context_texts.add(context)
-                    else:
-                        continue
+                    #if  context not in context_texts: #len(context.split(' ')) > 10 and
+                    contexts.append({'context': context, 'middle_sentence': curr_sentences[i] ,'section': section, 'correct' : curr_sentences[i]['index'] == index})
+                    context_texts.add(context)
+                    #else:
+                    #    continue
                 curr_sentences = []
 
         if len(curr_sentences) != 0:
@@ -281,12 +281,21 @@ def create_all_contexts(section_sentences, mentions, curr_section, index, correc
                 max_index = min(len(curr_sentences), i + side_contexts_size + 1)
                 context = " ".join([s['clean_sentence']
                                     for s in curr_sentences[min_index:max_index]]).strip()
-                if len(context.split(' ')) > (2*side_contexts_size) and context not in context_texts:
-                    contexts.append({'context': context, 'section': section, 'correct' : context == correct_context})
-                    context_texts.add(context)
-                else:
-                    continue
-                
+                #if  context not in context_texts: # and len(context.split(' ')) > 10
+                contexts.append({'context': context, 'middle_sentence': curr_sentences[i] ,'section': section, 'correct' : curr_sentences[i]['index'] == index})
+                context_texts.add(context)
+                #else:
+                #    continue
+    #check all context contains at least one correct
+    if not any([context['correct'] for context in contexts]):
+        print(f"index to look {index}")
+        #print(correct_context)
+        for section in section_sentences:
+            for s in section_sentences[section]:
+                print(s['index'])
+
+        raise Exception('No correct context found')
+
     return contexts
 
 
@@ -309,8 +318,9 @@ def process_version(input):
     html_1_clean = simplify_html(html_1)
     text_1 = "\n".join(
         [line for line in str(html_1_clean).split('\n') if line.strip() != ''])
-    sentences_1 = sent_tokenize(text_1)
-    sentences_1 = fix_sentence_tokenizer(sentences_1)
+    original_sentences_1 = sent_tokenize(text_1)
+    
+    sentences_1 = fix_sentence_tokenizer(original_sentences_1)
     for second_version in input['versions']:
         found_links = []
         file_2 = os.path.join(
@@ -327,8 +337,8 @@ def process_version(input):
         html_2_clean = simplify_html(html_2)
         text_2 = "\n".join(
             [line for line in str(html_2_clean).split('\n') if line.strip() != ''])
-        sentences_2 = sent_tokenize(text_2)
-        sentences_2 = fix_sentence_tokenizer(sentences_2)
+        original_sentences_2 = sent_tokenize(text_2)
+        sentences_2 = fix_sentence_tokenizer(original_sentences_2)
 
         original_lead = ''
         all_sentences = []
@@ -449,16 +459,20 @@ def process_version(input):
 
         section_sentences = {}
         for sentence in all_sentences:
-            if sentence['status'] == 'added':
-                continue
+            #if sentence['status'] == 'added':
+            #    continue
             if sentence['section_original'] not in section_sentences:
                 section_sentences[sentence['section_original']] = []
             section_sentences[sentence['section_original']].append(sentence)
-            
+
+
+
         all_links = []
+
         for sentence in all_sentences:
             if sentence['status'] == 'added':
                 continue
+
             soup = BeautifulSoup(sentence['raw_sentence'], 'html.parser')
             links = soup.find_all('a')
             for link in links:
@@ -467,16 +481,17 @@ def process_version(input):
                     continue
                 mention = link.text.strip()
                 target_title = fix_target_titles(
-                    href[args.side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
+                    href[6:].split('#')[0], redirect_1, redirect_2)
                 all_links.append({
                     'mention': mention,
                     'target_title': target_title,
                     'section': sentence['section_original']                    
-                })
+                })            
 
         for sentence in all_sentences:
             if sentence['status'] != 'added':
                 continue
+
             if sentence['match'] is None:
                 direct_match = False
                 section = sentence['section_original']
@@ -568,6 +583,7 @@ def process_version(input):
                 continue
             soup = BeautifulSoup(sentence['raw_sentence'], 'html.parser')
             links = soup.find_all('a')
+            
             for link in links:
                 # get href
                 href = link.get('href')
@@ -592,9 +608,11 @@ def process_version(input):
                     ) in all_sentences[sentence['match']]['clean_sentence'].lower()
                     missing_category = None if present else 'missing_mention'
 
+
+
                 # get target title
                 target_title = fix_target_titles(
-                    href[args.side_contexts_size+1:].split('#')[0], redirect_1, redirect_2)
+                    href[6:].split('#')[0], redirect_1, redirect_2)
                 mentions = mentions_map.get(
                     target_title, [urllib.parse.unquote(target_title).replace('_', ' ')])
                 all_contexts = create_all_contexts(

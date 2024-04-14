@@ -145,11 +145,11 @@ if __name__ == '__main__':
             print(f'Processing context size {j}')
             # load links
             try:
-                df_links = pd.read_parquet(os.path.join(args.test_data_dir, lang, f'context_size_{side_contexts_size}', 'test_data.parquet'))
+                df_links = pd.read_parquet(os.path.join(args.test_data_dir, lang, f'context_size_{j}', 'test_data.parquet'))
             except:
-                print(f'Error reading file {os.path.join(args.test_data_dir, lang, f"context_size_{side_contexts_size}", "test_data.parquet")}')
+                print(f'Error reading file {os.path.join(args.test_data_dir, lang, f"context_size_{j}", "test_data.parquet")}')
                 continue
-            print(f'Loaded links for context_size_{side_contexts_size}')
+            print(f'Loaded links for context_size_{j}')
             
             print(f"Originally, there are {len(df_links)} links for language {lang}")
 
