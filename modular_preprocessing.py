@@ -14,9 +14,27 @@ import warnings
 from multiprocessing import Pool, cpu_count
 import json
 tqdm.pandas()
+import execjs
+
+
+HTML_PROCESSORS = "js_parsing/html_processors.js"
+SENTENCE_TOKENIZER = "extractSentences"
+LINK_EXTRACTOR = "extractLinks"
+
+with open(HTML_PROCESSORS, 'r') as f:
+    html_processors = f.read()
+
+html_processors_compiled = execjs.compile(html_processors)
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
+def tokenize_in_sentences(file_path : str):
+    result = html_processors_compiled.call(SENTENCE_TOKENIZER, file_path)
+    return result
+
+def extract_links(file_path : str):
+    result = html_processors.call(LINK_EXTRACTOR, file_path)
+    return pd.DataFrame(json.loads(result))
 
 def fix_target_titles(title, redirect_map_1, redirect_map_2):
     counter = 0
@@ -33,7 +51,6 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
         if counter == 10:
             break
     return title
-
 
 def simplify_html(html):
     # remove all figures, tables, captions, sup, style
@@ -87,7 +104,6 @@ def simplify_html(html):
         tag.decompose()
 
     return html
-
 
 def fix_sentence_tokenizer(sentences):
     if not sentences:
@@ -298,13 +314,12 @@ def create_all_contexts(section_sentences, mentions, curr_section, index, correc
 
     return contexts
 
-
 def process_version(input):
     output = []
     d = difflib.Differ()
     file_1 = os.path.join(
         args.html_dir, f"{input['source_ID']}_{input['first_version']}.html")
-    # read the first version
+    '''# read the first version
     with open(file_1, 'r') as f:
         text_1 = f.read()
     html_1 = BeautifulSoup(text_1, 'html.parser')
@@ -320,12 +335,15 @@ def process_version(input):
         [line for line in str(html_1_clean).split('\n') if line.strip() != ''])
     original_sentences_1 = sent_tokenize(text_1)
     
-    sentences_1 = fix_sentence_tokenizer(original_sentences_1)
+    sentences_1 = fix_sentence_tokenizer(original_sentences_1)'''
+
+    sentences_1 = None #js thing
+
     for second_version in input['versions']:
         found_links = []
         file_2 = os.path.join(
             args.html_dir, f"{input['source_ID']}_{second_version}.html")
-        with open(file_2, 'r') as f:
+        '''with open(file_2, 'r') as f:
             text_2 = f.read()
         html_2 = BeautifulSoup(text_2, 'html.parser')
         html_2 = html_2.find_all('div', {'class': 'mw-parser-output'})
@@ -338,7 +356,9 @@ def process_version(input):
         text_2 = "\n".join(
             [line for line in str(html_2_clean).split('\n') if line.strip() != ''])
         original_sentences_2 = sent_tokenize(text_2)
-        sentences_2 = fix_sentence_tokenizer(original_sentences_2)
+        sentences_2 = fix_sentence_tokenizer(original_sentences_2)'''
+
+        sentences_2 = None #js thing
 
         original_lead = ''
         all_sentences = []
@@ -487,6 +507,8 @@ def process_version(input):
                     'target_title': target_title,
                     'section': sentence['section_original']                    
                 })            
+
+
 
         for sentence in all_sentences:
             if sentence['status'] != 'added':
