@@ -18,8 +18,9 @@ import execjs
 
 
 HTML_PROCESSORS = "js_parsing/html_processors.js"
-SENTENCE_TOKENIZER = "extractSentences"
-LINK_EXTRACTOR = "extractLinks"
+PARSER = "parse" 
+
+UNRELEVENT_SECTIONS = ["References", "Other Websites"]
 
 with open(HTML_PROCESSORS, 'r') as f:
     html_processors = f.read()
@@ -28,13 +29,16 @@ html_processors_compiled = execjs.compile(html_processors)
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
-def tokenize_in_sentences(file_path : str):
-    result = html_processors_compiled.call(SENTENCE_TOKENIZER, file_path)
-    return result
+def get_sentences_and_links(file_path):
+    results = html_processors_compiled.call(PARSER, file_path)
+    sentences = json.loads(results['sentences'])
+    links = json.loads(results['links'])
+    sentences = pd.DataFrame(sentences)
+    sentences = sentences.drop(columns = ['md5'])
 
-def extract_links(file_path : str):
-    result = html_processors.call(LINK_EXTRACTOR, file_path)
-    return pd.DataFrame(json.loads(result))
+    links = pd.DataFrame(links)
+
+    return sentences, links
 
 def fix_target_titles(title, redirect_map_1, redirect_map_2):
     counter = 0
@@ -52,208 +56,56 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
             break
     return title
 
-def simplify_html(html):
-    # remove all figures, tables, captions, sup, style
-    # figures
-    for figure in html.find_all('figure'):
-        figure.decompose()
-    # tables
-    for table in html.find_all('table'):
-        table.decompose()
-    # captions
-    for caption in html.find_all('caption'):
-        caption.decompose()
-    # sup
-    for sup in html.find_all('sup'):
-        sup.decompose()
-    # style
-    for style in html.find_all('style'):
-        style.decompose()
+def clean_condition(txt):
+    # don't allow sentences with less than 10 characters
+    #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
+    return len(txt) > 10 and (txt.strip()[0].isupper() or txt[-1] == '.')
 
-    # remove all comments
-    comments = html.find_all(string=lambda text: isinstance(text, Comment))
-    [comment.extract() for comment in comments]
+def merge_sentences(row1, row2):
+    row = {}
+    row['text'] = row1['text'] + ' ' + row2['text']
+    row['md5'] = row1['md5'] + ',' + row2['md5']
+    row['id'] = row1['id']
+    row['startIdx'] = row1['startIdx']
+    row['endIdx'] = row2['endIdx']
+    row['section'] = row1['section']
+    row['locList'] = row1['locList'] + row2['locList']
 
-    # remove all tags with class 'mw-editsection'
-    for tag in html.find_all('span', {'class': 'mw-editsection'}):
-        tag.decompose()
+    return row
 
-    # remove all tags with class 'metadata'
-    for tag in html.find_all('div', {'class': 'metadata'}):
-        tag.decompose()
-
-    # remove all tags with class 'reflist'
-    for tag in html.find_all('div', {'class': 'reflist'}):
-        tag.decompose()
-
-    # remove all links with class 'external text'
-    for tag in html.find_all('a', {'class': 'external text'}):
-        tag.decompose()
-
-    # remove all map tags
-    for tag in html.find_all('map'):
-        tag.decompose()
-
-    # remove all tags with any of the following classes
-    # side-box side-box-right plainlinks sistersitebox
-    for tag in html.find_all('div', {'class': ['side-box', 'side-box-right', 'plainlinks', 'sistersitebox']}):
-        tag.decompose()
-
-    # remove all tags with class 'thumbcaption'
-    for tag in html.find_all('div', {'class': 'thumbcaption'}):
-        tag.decompose()
-
-    return html
-
-def fix_sentence_tokenizer(sentences):
-    if not sentences:
-        return sentences
-
-    # dont allow sentences with less than 10 characters
-    new_sentences = []
-    join_prev = 0
+def clean_sentences(sentences_df):
+    # don't allow sentences with less than 10 characters
+    #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
     i = 0
-    while i < len(sentences):
-        if len(sentences[i]) < 10:
-            if new_sentences == []:
-                new_sentences.append(sentences[i])
-                join_prev = 1
-            else:
-                new_sentences[-1] += ' ' + sentences[i]
-                join_prev = 1
-        elif join_prev > 0:
-            new_sentences[-1] += ' ' + sentences[i]
-            join_prev -= 1
-        else:
-            new_sentences.append(sentences[i])
-        i += 1
-        
-    # dont allow links to be separated across sentences
-    final_sentences = new_sentences
     new_sentences = []
-    i = 0
-    start_count = 0
-    end_count = 0
-    while i < len(final_sentences):
-        start_count += final_sentences[i].count('<a ')
-        end_count += final_sentences[i].count('</a>')
-        if start_count > end_count:
-            if new_sentences == []:
-                new_sentences.append(final_sentences[i])
+    current_unclean = None 
+
+    for _, row in sentences_df.iterrows():
+        if row['section'] in UNRELEVENT_SECTIONS:
+            continue
+
+        row = row.to_dict()
+        if current_unclean is None:
+            if clean_condition(row['text']):
+                new_sentences.append(row)
             else:
-                new_sentences[-1] += ' ' + final_sentences[i]
+                current_unclean = row
+        elif current_unclean['section'] == row['section']:
+            current_unclean = merge_sentences(current_unclean, row)
+            if clean_condition(current_unclean['text']):
+                new_sentences.append(current_unclean)
+                current_unclean = None
         else:
-            new_sentences.append(final_sentences[i])
-            start_count = 0
-            end_count = 0
-        i += 1
+            if len(new_sentences) > 0:
+                new_sentences[-1] = merge_sentences(new_sentences[-1], current_unclean)
+            else:
+                new_sentences.append(current_unclean)
     
-    # dont allow parentheses to be separated across sentences
-    final_sentences = new_sentences
-    new_sentences = [final_sentences[0]]
-    i = 1
-    while i < len(final_sentences):
-        # find right-most occurrence of ')' and '(' in sentences[i-1]
-        right_paren_before = final_sentences[i-1].rfind(')')
-        left_paren_before = final_sentences[i-1].rfind('(')
-        right_paren_before = right_paren_before if right_paren_before != -1 else 0
-        left_paren_before = left_paren_before if left_paren_before != -1 else 0
-        # find left-most occurrence of ')' and '(' in sentences[i]
-        right_paren_after = final_sentences[i].find(')')
-        left_paren_after = final_sentences[i].find('(')
-        right_parent_after = right_paren_after if right_paren_after != - \
-            1 else len(final_sentences[i])
-        left_paren_after = left_paren_after if left_paren_after != - \
-            1 else len(final_sentences[i])
+    if current_unclean is not None:
+        new_sentences.append(current_unclean)
         
-        if right_paren_before < left_paren_before and right_parent_after < left_paren_after:
-            new_sentences[-1] += ' ' + final_sentences[i]
-        else:
-            new_sentences.append(final_sentences[i])
-        i += 1
-        
-    # dont allow list items to be separated across sentences
-    final_sentences = new_sentences
-    new_sentences = []
-    i = 0
-    start_count = 0
-    end_count = 0
-    while i < len(final_sentences):
-        start_count += final_sentences[i].count('<li>')
-        end_count += final_sentences[i].count('</li>')
-        if start_count > end_count:
-            if new_sentences == []:
-                new_sentences.append(final_sentences[i])
-            else:
-                new_sentences[-1] += ' ' + final_sentences[i]
-        else:
-            new_sentences.append(final_sentences[i])
-            start_count = 0
-            end_count = 0
-        i += 1
-                
-    # force </li> to act as a separator
-    final_sentences = new_sentences
-    new_sentences = []
-    i = 0
-    while i < len(final_sentences):
-        if '</li>' in final_sentences[i]:
-            extra_sentences = [
-                s.strip() for s in final_sentences[i].split('</li>')]
-            extra_sentences[:-1] = [s for s in extra_sentences[:-1] if s != '']
-            extra_sentences[:-1] = [s + '</li>' for s in extra_sentences[:-1]]
-            if extra_sentences[-1] == '':
-                extra_sentences.pop()
-            new_sentences.extend(extra_sentences)
-        else:
-            new_sentences.append(final_sentences[i])
-        i += 1
-    
-    # add a new line to all lists
-    i = 0
-    while i < len(new_sentences):
-        new_sentences[i] = new_sentences[i].replace('\n</li>', '</li>')
-        new_sentences[i] = new_sentences[i].replace('</li>', '\n</li>')
-        i += 1
 
-    # dont allow h2 tags to be separated across sentences
-    final_sentences = new_sentences
-    new_sentences = []
-    start_count = 0
-    end_count = 0
-    i = 0
-    while i < len(final_sentences):
-        start_count += final_sentences[i].count('<h2>')
-        end_count += final_sentences[i].count('</h2>')
-        if start_count > end_count:
-            if new_sentences == []:
-                new_sentences.append(final_sentences[i])
-            else:
-                new_sentences[-1] += ' ' + final_sentences[i]
-        else:
-            new_sentences.append(final_sentences[i])
-            start_count = 0
-            end_count = 0
-        i += 1
-        
-    # force </h2> to act as a separator
-    final_sentences = new_sentences
-    new_sentences = []
-    i = 0
-    while i < len(final_sentences):
-        if '</h2>' in final_sentences[i]:
-            extra_sentences = [
-                s.strip() for s in final_sentences[i].split('</h2>')]
-            extra_sentences[:-1] = [s for s in extra_sentences[:-1] if s != '']
-            extra_sentences[:-1] = [s + '</h2>' for s in extra_sentences[:-1]]
-            if extra_sentences[-1] == '':
-                extra_sentences.pop()
-            new_sentences.extend(extra_sentences)
-        else:
-            new_sentences.append(final_sentences[i])
-        i += 1
-
-    return new_sentences
+    return pd.DataFrame(new_sentences)
 
 def fix_text(text):
     text = text.strip()
@@ -319,70 +171,52 @@ def process_version(input):
     d = difflib.Differ()
     file_1 = os.path.join(
         args.html_dir, f"{input['source_ID']}_{input['first_version']}.html")
-    '''# read the first version
-    with open(file_1, 'r') as f:
-        text_1 = f.read()
-    html_1 = BeautifulSoup(text_1, 'html.parser')
-    # the article is in the last div with class 'mw-parser-output'
-    html_1 = html_1.find_all('div', {'class': 'mw-parser-output'})
-    if len(html_1) == 0:
+    
+    sentences_1, all_links_1 = get_sentences_and_links(file_1)
+    if len(sentences_1.shape[0]) == 0:
         print('No HTML found')
         print(f"{input['source_ID']}_{input['first_version']}.html")
         return []
-    html_1 = html_1[-1]
-    html_1_clean = simplify_html(html_1)
-    text_1 = "\n".join(
-        [line for line in str(html_1_clean).split('\n') if line.strip() != ''])
-    original_sentences_1 = sent_tokenize(text_1)
     
-    sentences_1 = fix_sentence_tokenizer(original_sentences_1)'''
-
-    sentences_1 = None #js thing
-
+    clean_sentences_1 = clean_sentences(sentences_1)
+ 
     for second_version in input['versions']:
         found_links = []
         file_2 = os.path.join(
             args.html_dir, f"{input['source_ID']}_{second_version}.html")
-        '''with open(file_2, 'r') as f:
-            text_2 = f.read()
-        html_2 = BeautifulSoup(text_2, 'html.parser')
-        html_2 = html_2.find_all('div', {'class': 'mw-parser-output'})
-        if len(html_2) == 0:
+        
+        sentences_2, all_links_2 = get_sentences_and_links(file_2)
+        if len(sentences_2.shape[0]) == 0:
             print('No HTML found')
             print(f"{input['source_ID']}_{second_version}.html")
-            continue
-        html_2 = html_2[-1]
-        html_2_clean = simplify_html(html_2)
-        text_2 = "\n".join(
-            [line for line in str(html_2_clean).split('\n') if line.strip() != ''])
-        original_sentences_2 = sent_tokenize(text_2)
-        sentences_2 = fix_sentence_tokenizer(original_sentences_2)'''
+            return []
 
-        sentences_2 = None #js thing
+        clean_sentences_2 = clean_sentences(sentences_2)
 
         original_lead = ''
         all_sentences = []
-        section_original = 'Lead'
-        section_new = 'Lead'
-        diff = d.compare(sentences_1, sentences_2)
+        diff = d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text']))
+        index_in_1 = -1
+        index_in_2 = -1
         for line in diff:
             if line.startswith('?'):
-                continue
+                raise Exception(f'Unexpected line: {diff}')
             elif line.startswith('+'):
-                soup = BeautifulSoup(line[2:].strip(), 'html.parser')
-                clean_text = soup.text.strip(' ')
-                if clean_text.strip() == '':
-                    continue
-                h2 = soup.find('h2')
-                if h2 is not None:
-                    section_new = h2.text.strip()
+                index_in_2 += 1
+
                 all_sentences.append({'status': 'added',
                                       'index': len(all_sentences),
                                       'match': None,
-                                      'section_new': section_new,
-                                      'section_original': section_original,
-                                      'clean_sentence': clean_text,
-                                      'raw_sentence': line[2:].strip()})
+                                      'section1': None,
+                                      'section2' : clean_sentences_2['section'][index_in_2],
+                                      'clean_sentence': line[2:].strip(),
+                                      'startIdx1': None,
+                                      'endIdx1': None,
+                                      'startIdx2': clean_sentences_1['startIdx'][index_in_2],
+                                      'endIdx2': clean_sentences_1['endIdx'][index_in_2],
+                                      'locList2': None,
+                                      'locList2': clean_sentences_2['locList'][index_in_2]})
+                
                 words = [word.strip() for word in all_sentences[-1]
                          ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
                 freqs = {}
@@ -412,20 +246,19 @@ def process_version(input):
                                   ]['match'] = all_sentences[-1]['index']
                     all_sentences[-1]['match'] = all_sentences[best_match['index']]['index']
             elif line.startswith('-'):
-                soup = BeautifulSoup(line[2:].strip(), 'html.parser')
-                clean_text = soup.text.strip(' ')
-                if clean_text.strip() == '':
-                    continue
-                h2 = soup.find('h2')
-                if h2 is not None:
-                    section_original = h2.text.strip()
+                index_in_1 += 1
                 all_sentences.append({'status': 'removed',
                                       'index': len(all_sentences),
                                       'match': None,
-                                      'section_new': section_new,
-                                      'section_original': section_original,
-                                      'clean_sentence': clean_text,
-                                      'raw_sentence': line[2:].strip()})
+                                      'section1': clean_sentences_1['section'][index_in_1],
+                                      'section2': None,
+                                      'clean_sentence': line[2:].strip(),
+                                      'startIdx2': clean_sentences_1['startIdx'][index_in_1],
+                                      'endIdx2': clean_sentences_1['endIdx'][index_in_1],
+                                      'startIdx1': None,
+                                      'endIdx1': None,
+                                      'locList2': clean_sentences_1['locList'][index_in_1],
+                                      'locList1': None})
 
                 words = [word.strip() for word in all_sentences[-1]
                          ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
@@ -456,58 +289,46 @@ def process_version(input):
                                   ]['match'] = all_sentences[-1]['index']
                     all_sentences[-1]['match'] = all_sentences[best_match['index']]['index']
 
-                if section_original == 'Lead':
+                if clean_sentences_1['section'][index_in_1] == 'Lead':
                     original_lead += ' ' + all_sentences[-1]['clean_sentence']
             else:
-                soup = BeautifulSoup(line.strip(), 'html.parser')
-                clean_text = soup.text.strip(' ')
-                if clean_text.strip() == '':
-                    continue
-                h2 = soup.find('h2')
-                if h2 is not None:
-                    section_original = h2.text.strip()
-                    section_new = section_original
-                if section_original == 'Lead':
-                    original_lead += ' ' + clean_text
+                index_in_1 += 1
+                index_in_2 += 2
+
+                if clean_sentences_1['section'][index_in_1] == 'Lead':
+                    original_lead += ' ' + line.strip()
+
                 all_sentences.append({'status': 'neutral',
                                       'index': len(all_sentences),
                                       'match': None,
-                                      'section_new': section_new,
-                                      'section_original': section_original,
-                                      'clean_sentence': clean_text,
-                                      'raw_sentence': line.strip()})
+                                      'section1' : clean_sentences_1['section'][index_in_1],
+                                      'section2' : clean_sentences_2['section'][index_in_2],
+                                      'clean_sentence': line.strip(),
+                                      'startIdx1': clean_sentences_1['startIdx'][index_in_1],
+                                      'endIdx1': clean_sentences_1['endIdx'][index_in_1],
+                                      'startIdx2': clean_sentences_2['startIdx'][index_in_2],
+                                      'endIdx2': clean_sentences_2['endIdx'][index_in_2],
+                                      'locList1': clean_sentences_1['locList'][index_in_1],
+                                      'locList2': clean_sentences_2['locList'][index_in_2]})
 
         section_sentences = {}
         for sentence in all_sentences:
-            #if sentence['status'] == 'added':
-            #    continue
-            if sentence['section_original'] not in section_sentences:
-                section_sentences[sentence['section_original']] = []
-            section_sentences[sentence['section_original']].append(sentence)
-
-
+            if sentence['status'] == 'added':
+                continue
+            if sentence['section1'] not in section_sentences:
+                section_sentences[sentence['section1']] = []
+            section_sentences[sentence['section1']].append(sentence)
 
         all_links = []
 
-        for sentence in all_sentences:
-            if sentence['status'] == 'added':
-                continue
-
-            soup = BeautifulSoup(sentence['raw_sentence'], 'html.parser')
-            links = soup.find_all('a')
-            for link in links:
-                href = link.get('href')
-                if href is None or not href.startswith('/wiki/'):
-                    continue
-                mention = link.text.strip()
+        for _, link_dict in all_links_1:
                 target_title = fix_target_titles(
-                    href[6:].split('#')[0], redirect_1, redirect_2)
+                    link_dict['link'][6:].split('#')[0], redirect_1, redirect_2)
                 all_links.append({
-                    'mention': mention,
+                    'mention': link_dict['text'],
                     'target_title': target_title,
-                    'section': sentence['section_original']                    
+                    'section': link_dict['section']                    
                 })            
-
 
 
         for sentence in all_sentences:
@@ -516,8 +337,8 @@ def process_version(input):
 
             if sentence['match'] is None:
                 direct_match = False
-                section = sentence['section_original']
-                new_section = sentence['section_new']
+                section = sentence['section1']
+                new_section = sentence['section2']
                 # go through the previous context_size and next context_size sentences
                 # if any of these is neutral and has the same section, use it as context
                 # if any of these is added and has a match and has the same section, use it as context
@@ -528,7 +349,7 @@ def process_version(input):
                 accept = True
                 while left_index >= 0 and counter < (2*args.side_contexts_size) and len(left_context) < args.side_contexts_size:
                     counter += 1
-                    if all_sentences[left_index]['section_original'] != sentence['section_original']:
+                    if all_sentences[left_index]['section1'] != sentence['section1']:
                         break
                     if all_sentences[left_index]['status'] == 'neutral':
                         left_context.append(
@@ -548,7 +369,7 @@ def process_version(input):
                 # rightmost_index = sentence['index'] + 1
                 continuous_right_added_text = []
                 while right_index > sentence['index']:
-                    if right_index >= len(all_sentences) or all_sentences[right_index]['section_original'] != sentence['section_original']:
+                    if right_index >= len(all_sentences) or all_sentences[right_index]['section1'] != sentence['section1']:
                         right_index -= 1
                         continue
                     if all_sentences[right_index]['status'] == 'neutral':
@@ -580,7 +401,7 @@ def process_version(input):
                     if all_sentences[left_index]['status'] == 'added':
                         left_index -= 1
                         continue
-                    if all_sentences[left_index]['section_original'] != all_sentences[sentence['match']]['section_original']:
+                    if all_sentences[left_index]['section1'] != all_sentences[sentence['match']]['section1']:
                         break
                     left_context.append(
                         all_sentences[left_index]['clean_sentence'])
@@ -591,15 +412,15 @@ def process_version(input):
                     if all_sentences[right_index]['status'] == 'added':
                         right_index += 1
                         continue
-                    if all_sentences[right_index]['section_original'] != all_sentences[sentence['match']]['section_original']:
+                    if all_sentences[right_index]['section1'] != all_sentences[sentence['match']]['section1']:
                         break
                     right_context.append(
                         all_sentences[right_index]['clean_sentence'])
                     right_index += 1
                 context = ' '.join(left_context[::-1]) + ' ' + all_sentences[sentence['match']
                                                                              ]['clean_sentence'] + ' ' + ' '.join(right_context)
-                section = all_sentences[sentence['match']]['section_original']
-                new_section = sentence['section_new']
+                section = all_sentences[sentence['match']]['section1']
+                new_section = sentence['section2']
 
             if '<a ' not in sentence['raw_sentence']:
                 continue
