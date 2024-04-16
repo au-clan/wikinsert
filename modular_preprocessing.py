@@ -2,11 +2,9 @@ from calendar import c
 from numpy import argsort
 import pandas as pd
 import argparse
-from bs4 import BeautifulSoup, Comment, MarkupResemblesLocatorWarning
+from bs4 import MarkupResemblesLocatorWarning
 import re
-import urllib
 import difflib
-from nltk import sent_tokenize
 import math
 from tqdm import tqdm
 import os
@@ -34,7 +32,8 @@ def get_sentences_and_links(file_path):
     sentences = json.loads(results['sentences'])
     links = json.loads(results['links'])
     sentences = pd.DataFrame(sentences)
-    sentences = sentences.drop(columns = ['md5'])
+    if sentences.shape[0] > 0:
+        sentences = sentences.drop(columns = ['md5'])
 
     links = pd.DataFrame(links)
 
@@ -75,9 +74,11 @@ def merge_sentences(row1, row2):
 def clean_sentences(sentences_df):
     # don't allow sentences with less than 10 characters
     #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
-    i = 0
     new_sentences = []
     current_unclean = None 
+
+    sentences_df['id'] = sentences_df['id'].apply(lambda x: [x])
+    sentences_df['text'] = sentences_df['text'].apply(lambda x: x.strip())
 
     for _, row in sentences_df.iterrows():
         if row['section'] in UNRELEVENT_SECTIONS:
@@ -99,6 +100,13 @@ def clean_sentences(sentences_df):
                 new_sentences[-1] = merge_sentences(new_sentences[-1], current_unclean)
             else:
                 new_sentences.append(current_unclean)
+            
+            current_unclean = None
+
+            if clean_condition(row['text']):
+                new_sentences.append(row)
+            else:
+                current_unclean = row
     
     if current_unclean is not None:
         new_sentences.append(current_unclean)
@@ -156,6 +164,11 @@ def process_version(input):
             print(f"{input['source_ID']}_{second_version}.html")
             return []
 
+        if all_links_2.shape[0] == 0:
+            print('No links found')
+            print(f"{input['source_ID']}_{second_version}.html")
+            return []
+
         clean_sentences_2 = clean_sentences(sentences_2)
 
         original_lead = ''
@@ -163,12 +176,15 @@ def process_version(input):
         diff = d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text']))
         index_in_1 = -1
         index_in_2 = -1
-        for line in diff:
+
+        for i, line in enumerate(diff):
             if line.startswith('?'):
-                raise Exception(f'Unexpected line: {diff}')
+                continue
+            
             elif line.startswith('+'):
                 index_in_2 += 1
                 all_sentences.append({'status': 'added',
+                                    'added_after': clean_sentences_1['id'][max(index_in_1, 0)],
                                     'index': len(all_sentences),
                                     'match': None,
                                     'section1': None,
@@ -214,6 +230,7 @@ def process_version(input):
             elif line.startswith('-'):
                 index_in_1 += 1
                 all_sentences.append({'status': 'removed',
+                                      'added_after': None, 
                                     'index': len(all_sentences),
                                     'match': None,
                                     'section1': clean_sentences_1['section'][index_in_1],
@@ -267,6 +284,7 @@ def process_version(input):
                     original_lead += ' ' + line.strip()
 
                 all_sentences.append({'status': 'neutral',
+                                    'added_after': None,
                                     'index': len(all_sentences),
                                     'match': None,
                                     'section1' : clean_sentences_1['section'][index_in_1],
@@ -289,23 +307,38 @@ def process_version(input):
                 section_sentences[sentence['section1']] = []
             section_sentences[sentence['section1']].append(sentence)
 
-        print(all_links_2)
-
+        if all_links_1.shape[0] == 0:
+            all_links_1 = pd.DataFrame(columns=all_links_2.columns)
+         
         all_links = all_links_1.merge(all_links_2, on=['link'], how='outer', suffixes=('_1', '_2'))
         added_links = all_links[all_links['sentid_1'].isnull()]
 
-        for sent in all_sentences:
-            print(sent)
-
+        all_sentences2 = list(filter(lambda x: x['status'] != 'removed', all_sentences))
 
         for _, link in added_links.iterrows():
-            sentences = list(filter(lambda x: link['sentid_2'] in x['ids2'], all_sentences))
+            
+            if link['section_2'] in UNRELEVENT_SECTIONS:
+                continue
+            
+            sentences = list(filter(lambda x: int(link['sentid_2']) in x['ids2'], all_sentences2))
 
             if len(sentences) == 0:
-                print(f"No sentence found for link {link['link']}")
+                print("Sentences2:")
+                for sentence in all_sentences:
+                    print(sentence['clean_sentence'])
+                    print(sentence['ids2'])
+                    print('=========')
+                
+                for _, sentence in sentences_2.iterrows():
+                    print(sentence['text'])
+                    print(sentence['id'])
+                    print('=========')
+
+                print(f"No sentence found for link {link}")
+                raise Exception('No sentence found for link')
                 continue
 
-            sentence = sentences[0]
+            sentence = list(sentences)[0]
 
             if sentence['match'] is None:
                 direct_match = False
@@ -408,21 +441,31 @@ def process_version(input):
                             missing_category = 'missing_span'
 
                 else:
-                    present = link['text'].lower(
-                    ) in sentence['match']['clean_sentence'].lower()
-                    missing_category = 'missing_mention'
+                    present = (link['text_2'].lower() in all_sentences[sentence['match']]['clean_sentence'].lower())
+                    if present:
+                        missing_category = 'missing_mention'
+                    else: 
+                        missing_category = None
 
                 # get target title
                 target_title = fix_target_titles(
                     link['link'][6:].split('#')[0], redirect_1, redirect_2)
                 all_contexts = create_all_contexts(
-                    section_sentences, context, args.side_contexts_size, sentence)
+                    section_sentences, args.side_contexts_size, sentence)
                 if target_title in input['versions'][second_version]:
+                    if missing_category == 'missing_mention':
+                        if sentence['status'] == 'neutral' :
+                            insert_index = sentence['ids1']
+                        else:
+                            insert_index = all_sentences[sentence['match']]['ids1']
+                    else:
+                        insert_index = sentence['added_after']
                     output.append({
                         'source_title': input['source_title'],
                         'source_ID': input['source_ID'],
                         'target_title': target_title,
                         'context': context,
+                        'insert_indices': insert_index,
                         'section': section,
                         'mention_present': present,
                         'source_lead': original_lead.strip(),
@@ -538,7 +581,9 @@ if __name__ == '__main__':
     
     revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)
     output = []
-    pool = Pool(min(cpu_count(), args.n_processes), initializer=initializer)
+    nb_processes_ = min(cpu_count(), args.n_processes)
+    print(f"Running on {nb_processes_} processes")
+    pool = Pool(nb_processes_, initializer=initializer)
     print("Parallel multiprocess")
     for result in tqdm(pool.imap(process_version, revisions_clean), total=len(revisions_clean)):
         output.extend(result)

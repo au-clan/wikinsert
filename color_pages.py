@@ -122,128 +122,34 @@ def dummy_colouring_pipeline(df, save_folder, styles=['text','background','highl
 
         
 
-def get_word_position(sentence, file_text):
-    #split sentence, punctutation should be also used to split
-    word_list = re.findall(r"[\d]{1}|[\w']+|[.,!?;]", sentence)
-    #patterns = [f'\\b{word}\\b' for word in word_list]
-    patterns = [f'\\b{word}\\b' if word not in string.digits else word for word in word_list if word not in string.punctuation]
-    word_list = [word for word in word_list if word not in string.punctuation]
-    word_positions = {word: [match.start() for match in re.finditer(pattern, file_text)]  for word,pattern in zip(word_list,patterns)}
-    
-    return word_positions, word_list
-
-def find_min_span(word_positions, word_list):
-    if len(word_list) == 1:
-        return word_positions[word_list[0]][0], word_positions[word_list[0]][0] + len(word_list[0])
-    
-    span = [None]*len(word_list)
-    #print(word_list)
-    #print(word_positions)
-    start_list = list(filter(lambda x: x < word_positions[word_list[1]][0], word_positions[word_list[0]]))
-    if start_list == []:
-        #print(word_list)
-        #print(word_positions)
-        start = word_positions[word_list[0]][0]
-    else:
-        start = start_list[-1]
-    span[0] = start
-
-    for i,wd in enumerate(word_list[1:]):
-        possible = list(filter(lambda x: x > span[i], word_positions[wd]))
-        if possible == []:
-            return None,None
-        span[i+1] = possible[0]
-        
-    return span[0], span[-1] + len(word_list[-1])
-
-    
-def find_sentence_indices_in_text(html_all_text, sentence):
-    start_index = html_all_text.lower().find(sentence)
-    if start_index == -1:
-        return None,None
-    end_index = start_index + len(sentence)
-    return start_index, end_index
-
-def get_all_spans(contexts, html_path):
-    '''Get all spans of contexts in html
-    input:
-        contexts: list of dictionaries with key and 'color' (and others)
-        html_string: path to html
-    output:
-        contexts: list of dictionaries with key and 'color' and 'start_index', 'end_index' (and others)'''
-
-    with open(html_path, 'r') as file:
-        html_string = file.read()
-
-    last_end = 0
-    soup = BeautifulSoup(html_string, 'html.parser')
-    all_text = soup.get_text()
-    for context in contexts:
-        clean_sentence = context['middle_sentence']['clean_sentence'].lower()
-        start_index, end_index = find_sentence_indices_in_text(all_text[last_end:], clean_sentence)
-        if start_index is not None:
-            start_index += last_end
-            end_index += last_end
-        else:
-            word_positions, word_list = get_word_position(clean_sentence, all_text[last_end:])
-            word_list = [word for word in word_list if word_positions[word] != []]
-            if word_list == []:
-               start_index = last_end
-               end_index = last_end
-               #print(f"Words not found for {clean_sentence}")
-               continue
-            start_index,end_index = find_min_span(word_positions,word_list)
-            if start_index is not None:
-                start_index += last_end
-                end_index += last_end
-            else:
-                super_clean_word_list = [word for word in word_list if len(word)>2 and word != 'title']
-                #remove duplicates, keep second occurence
-                super_clean_word_list = [super_clean_word_list[i] for i in range(len(super_clean_word_list)) if super_clean_word_list[i] not in super_clean_word_list[:i]]
-                if super_clean_word_list == []:
-                    #print(f"Words not found for {clean_sentence}")
-                    start_index = last_end
-                    end_index = last_end
-                    continue
-                start_index,end_index = find_min_span(word_positions,super_clean_word_list)
-                if start_index is not None:
-                    start_index += last_end
-                    end_index += last_end
-                else:
-                    '''print(f"HTML to last_end:\n\n {all_text[:last_end]}\n================\n")
-                    print(f"HTML from last_end:\n\n {all_text[last_end:]}\n================\n")
-                    print(word_list)
-                    print(super_clean_word_list)
-                    print(word_positions)
-                    print(context)
-                    print(f"Could not find min span for super clean sentence:\n\n{super_clean_word_list} \n================\n")'''
-                    start_index = None
-                    end_index = None
-                    return None 
-                continue
-
-        if end_index is not None:
-            last_end = end_index
-        context['start_index'] = start_index
-        context['end_index'] = end_index
-    return contexts
-
 def get_html_paths(data_path, lang, scored_df):
     data_path_in = f"{data_path}/{lang}wiki-NS0-20231001/eval/pages"
     paths = scored_df.progress_apply(lambda x: f"{data_path_in}/{x['source_ID']}_{x['first_version']}.html", axis=1)
 
     return paths
 
-def input_colors(contexts, html_path):
-    '''Input colors in html
-    input:
-        contexts: list of dictionaries with key and 'color' (and others)
-        html: html path
-    output:
-        html: html string with colors'''
+def get_color_store(contexts, missing_category, insert_index):
+    color_store = []
     
+    for context in contexts:
+        middle_sentence = context['middle_sentence']
+        indexes = middle_sentence['ids1']
+        special = (indexes == insert_index)
+        llist = middle_sentence['locList1']
+        if special:
+            if missing_category == 'missing_mention':
+                specials = [True] * len(llist) 
+            else:
+                specials = [False] * len(llist) - 1
+                specials.append(True)
 
-
+        for i,loc in enumerate(llist):
+            loc['color'] = context['color']
+            loc['special'] = special
+            loc['type'] = missing_category
+            color_store.append(loc)
+   
+    return color_store
 
 
 

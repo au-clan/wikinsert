@@ -251,7 +251,7 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         }
         const sentObj = {
             md5: md5(origSentence),
-            id: [numLines],
+            id: numLines,
             text: origSentence,
             startIdx: startIdx+numLeadingSpaces,
             endIdx: endIdx+numLeadingSpaces,
@@ -273,7 +273,7 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
 return sentenceStore ;
 }
 
-function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom, outDir, article, sentenceStore){
+function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, article, sentenceStore){
     // let dom = new JSDOM(htmlText, { includeNodeLocations: true });
     // htmlText = dom.serialize();
     // dom = new JSDOM(htmlText, { includeNodeLocations: true });
@@ -308,7 +308,7 @@ function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom
     let anchorNode = anchorNodes.iterateNext();
     let linkStore = [], link, anchorStart, anchorEnd;
 
-    let sentid;
+    let sentid_;
 
     while (anchorNode) {
         //console.log(anchorNode.textContent);
@@ -320,8 +320,8 @@ function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom
  
         //console.log("Anchor node from html: ",htmlText.substring(dom.nodeLocation(anchorNode).startOffset,dom.nodeLocation(anchorNode).endOffset));
         for(const sentObj of sentenceStore){
-            if(anchorStart >= sentObj.startIdx && anchorEnd <= sentObj.endIdx){
-                sentid = sentObj.id[0];
+            if(anchorEnd >= sentObj.startIdx && anchorEnd <= sentObj.endIdx){
+                sentid_ = sentObj.id;
             }
         }  
         
@@ -332,14 +332,13 @@ function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom
             text: text,
             endIdx: anchorEnd,
             section: getSection(sectionMap, anchorEnd),
-            sentid : sentid
+            sentid : sentid_
         };
 
-        sentid = null;
 
         linkStore.push(linkObj);
         anchorNode = anchorNodes.iterateNext();
-
+        sentid_ = null;
     }
 
     //flink.end();
@@ -357,7 +356,7 @@ function parse(filePath){
 
     const sentenceStore = extractSentences(htmlText, dom, document, sectionMap);
 
-    const linkStore = extractLinks(htmlText, dom, document, sectionMap, sentenceStore);
+    const linkStore = extractLinks(dom, document, sectionMap, sentenceStore);
 
     const sentences = JSON.stringify(sentenceStore);
     const links = JSON.stringify(linkStore);
