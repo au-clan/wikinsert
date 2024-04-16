@@ -251,7 +251,7 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         }
         const sentObj = {
             md5: md5(origSentence),
-            id: numLines,
+            id: [numLines],
             text: origSentence,
             startIdx: startIdx+numLeadingSpaces,
             endIdx: endIdx+numLeadingSpaces,
@@ -316,7 +316,7 @@ function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom
         //console.log("Anchor node from html: ",htmlText.substring(dom.nodeLocation(anchorNode).startOffset,dom.nodeLocation(anchorNode).endOffset));
         for(const sentObj of sentenceStore){
             if(anchorStart >= sentObj.startIdx && anchorEnd <= sentObj.endIdx){
-                sentid = sentObj.id;
+                sentid = sentObj.id[0];
             }
         }  
         

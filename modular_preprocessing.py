@@ -64,8 +64,7 @@ def clean_condition(txt):
 def merge_sentences(row1, row2):
     row = {}
     row['text'] = row1['text'] + ' ' + row2['text']
-    row['md5'] = row1['md5'] + ',' + row2['md5']
-    row['id'] = row1['id']
+    row['id'] = row1['id'] + row2['id']
     row['startIdx'] = row1['startIdx']
     row['endIdx'] = row2['endIdx']
     row['section'] = row1['section']
