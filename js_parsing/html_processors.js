@@ -280,6 +280,11 @@ function extractLinks(htmlText, dom, document, sectionMap, sentenceStore){//(dom
     
     const xpathAnchor = `//div[@id='mw-content-text']//a[
     not(img) and
+    not(ancestor-or-self::noscript) and
+    not(ancestor-or-self::*/@class='mw-headline') and
+    not(ancestor-or-self::style) and 
+    not(ancestor-or-self::cite) and
+    not(ancestor-or-self::script) and
     not(ancestor-or-self::table) and
     starts-with(@href, '/wiki/') and
     not(ancestor::div[

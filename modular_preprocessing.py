@@ -63,12 +63,12 @@ def clean_condition(txt):
 
 def merge_sentences(row1, row2):
     row = {}
-    row['text'] = row1['text'] + ' ' + row2['text']
-    row['id'] = row1['id'] + row2['id']
+    row['text'] = row1['text'] + ' ' + row2['text'] 
+    row['id'] = row1['id'] + row2['id'] #concat list of ids
     row['startIdx'] = row1['startIdx']
     row['endIdx'] = row2['endIdx']
-    row['section'] = row1['section']
-    row['locList'] = row1['locList'] + row2['locList']
+    row['section'] = row1['section'] #section is the same
+    row['locList'] = row1['locList'] + row2['locList'] #concat list of locations
 
     return row
 
@@ -104,7 +104,7 @@ def clean_sentences(sentences_df):
         new_sentences.append(current_unclean)
         
 
-    return pd.DataFrame(new_sentences)
+    return pd.DataFrame(new_sentences).reset_index()
 
 def fix_text(text):
     text = text.strip()
@@ -113,55 +113,21 @@ def fix_text(text):
     text = re.sub('\n +', '\n', text)
     return text
 
-def create_all_contexts(section_sentences, mentions, curr_section, index, correct_context, side_contexts_size):
+def create_all_contexts(section_sentences, side_contexts_size, correct_sentence):
     contexts = []
     context_texts = set([])
     for section in section_sentences:
-        curr_sentences = []
+        curr_sentences = section_sentences[section]
         for i, sentence in enumerate(section_sentences[section]):
-            found = False
-            for mention in mentions:
-               '''if mention.lower() in sentence['clean_sentence'].lower():
-                    found = True
-                    break'''
-            '''if section == curr_section and sentence['index'] == index:
-                found = True'''
-
-            if not found:
-                curr_sentences.append(sentence)
-            else:
-                for i in range(len(curr_sentences)):
-                    min_index = max(0, i - side_contexts_size)
-                    max_index = min(len(curr_sentences), i + side_contexts_size + 1)
-                    context = " ".join([s['clean_sentence']
-                                        for s in curr_sentences[min_index:max_index]]).strip()
-                    #if  context not in context_texts: #len(context.split(' ')) > 10 and
-                    contexts.append({'context': context, 'middle_sentence': curr_sentences[i] ,'section': section, 'correct' : curr_sentences[i]['index'] == index})
-                    context_texts.add(context)
-                    #else:
-                    #    continue
-                curr_sentences = []
-
-        if len(curr_sentences) != 0:
-            for i in range(len(curr_sentences)):
-                min_index = max(0, i - side_contexts_size)
-                max_index = min(len(curr_sentences), i + side_contexts_size + 1)
-                context = " ".join([s['clean_sentence']
-                                    for s in curr_sentences[min_index:max_index]]).strip()
-                #if  context not in context_texts: # and len(context.split(' ')) > 10
-                contexts.append({'context': context, 'middle_sentence': curr_sentences[i] ,'section': section, 'correct' : curr_sentences[i]['index'] == index})
-                context_texts.add(context)
-                #else:
-                #    continue
-    #check all context contains at least one correct
-    if not any([context['correct'] for context in contexts]):
-        print(f"index to look {index}")
-        #print(correct_context)
-        for section in section_sentences:
-            for s in section_sentences[section]:
-                print(s['index'])
-
-        raise Exception('No correct context found')
+            min_index = max(0, i - side_contexts_size)
+            max_index = min(len(curr_sentences), i + side_contexts_size + 1)
+            context = " ".join([s['clean_sentence']
+                                for s in curr_sentences[min_index:max_index]]).strip()
+            #if  context not in context_texts: #len(context.split(' ')) > 10 and
+            contexts.append({'context': context, 'middle_sentence': sentence, 'section': section, 'correct' : correct_sentence})
+            context_texts.add(context)
+            #else:
+            #    continue
 
     return contexts
 
@@ -172,7 +138,7 @@ def process_version(input):
         args.html_dir, f"{input['source_ID']}_{input['first_version']}.html")
     
     sentences_1, all_links_1 = get_sentences_and_links(file_1)
-    if len(sentences_1.shape[0]) == 0:
+    if sentences_1.shape[0] == 0:
         print('No HTML found')
         print(f"{input['source_ID']}_{input['first_version']}.html")
         return []
@@ -185,7 +151,7 @@ def process_version(input):
             args.html_dir, f"{input['source_ID']}_{second_version}.html")
         
         sentences_2, all_links_2 = get_sentences_and_links(file_2)
-        if len(sentences_2.shape[0]) == 0:
+        if sentences_2.shape[0] == 0:
             print('No HTML found')
             print(f"{input['source_ID']}_{second_version}.html")
             return []
@@ -202,19 +168,20 @@ def process_version(input):
                 raise Exception(f'Unexpected line: {diff}')
             elif line.startswith('+'):
                 index_in_2 += 1
-
                 all_sentences.append({'status': 'added',
-                                      'index': len(all_sentences),
-                                      'match': None,
-                                      'section1': None,
-                                      'section2' : clean_sentences_2['section'][index_in_2],
-                                      'clean_sentence': line[2:].strip(),
-                                      'startIdx1': None,
-                                      'endIdx1': None,
-                                      'startIdx2': clean_sentences_1['startIdx'][index_in_2],
-                                      'endIdx2': clean_sentences_1['endIdx'][index_in_2],
-                                      'locList2': None,
-                                      'locList2': clean_sentences_2['locList'][index_in_2]})
+                                    'index': len(all_sentences),
+                                    'match': None,
+                                    'section1': None,
+                                    'section2' : clean_sentences_2['section'][index_in_2],
+                                    'clean_sentence': line[2:].strip(),
+                                    'ids1' : None,
+                                    'ids2' : clean_sentences_2['id'][index_in_2],
+                                    'startIdx1': None,
+                                    'endIdx1': None,
+                                    'startIdx2': clean_sentences_2['startIdx'][index_in_2],
+                                    'endIdx2': clean_sentences_2['endIdx'][index_in_2],
+                                    'locList1': None,
+                                    'locList2': clean_sentences_2['locList'][index_in_2]})
                 
                 words = [word.strip() for word in all_sentences[-1]
                          ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
@@ -247,17 +214,19 @@ def process_version(input):
             elif line.startswith('-'):
                 index_in_1 += 1
                 all_sentences.append({'status': 'removed',
-                                      'index': len(all_sentences),
-                                      'match': None,
-                                      'section1': clean_sentences_1['section'][index_in_1],
-                                      'section2': None,
-                                      'clean_sentence': line[2:].strip(),
-                                      'startIdx2': clean_sentences_1['startIdx'][index_in_1],
-                                      'endIdx2': clean_sentences_1['endIdx'][index_in_1],
-                                      'startIdx1': None,
-                                      'endIdx1': None,
-                                      'locList2': clean_sentences_1['locList'][index_in_1],
-                                      'locList1': None})
+                                    'index': len(all_sentences),
+                                    'match': None,
+                                    'section1': clean_sentences_1['section'][index_in_1],
+                                    'section2': None,
+                                    'clean_sentence': line[2:].strip(),
+                                    'ids1' : clean_sentences_1['id'][index_in_1],
+                                    'ids2' : None,
+                                    'startIdx1': clean_sentences_1['startIdx'][index_in_1],
+                                    'endIdx1': clean_sentences_1['endIdx'][index_in_1],
+                                    'startIdx2': None,
+                                    'endIdx2': None,
+                                    'locList1': clean_sentences_1['locList'][index_in_1],
+                                    'locList2': None})
 
                 words = [word.strip() for word in all_sentences[-1]
                          ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
@@ -292,23 +261,25 @@ def process_version(input):
                     original_lead += ' ' + all_sentences[-1]['clean_sentence']
             else:
                 index_in_1 += 1
-                index_in_2 += 2
+                index_in_2 += 1
 
                 if clean_sentences_1['section'][index_in_1] == 'Lead':
                     original_lead += ' ' + line.strip()
 
                 all_sentences.append({'status': 'neutral',
-                                      'index': len(all_sentences),
-                                      'match': None,
-                                      'section1' : clean_sentences_1['section'][index_in_1],
-                                      'section2' : clean_sentences_2['section'][index_in_2],
-                                      'clean_sentence': line.strip(),
-                                      'startIdx1': clean_sentences_1['startIdx'][index_in_1],
-                                      'endIdx1': clean_sentences_1['endIdx'][index_in_1],
-                                      'startIdx2': clean_sentences_2['startIdx'][index_in_2],
-                                      'endIdx2': clean_sentences_2['endIdx'][index_in_2],
-                                      'locList1': clean_sentences_1['locList'][index_in_1],
-                                      'locList2': clean_sentences_2['locList'][index_in_2]})
+                                    'index': len(all_sentences),
+                                    'match': None,
+                                    'section1' : clean_sentences_1['section'][index_in_1],
+                                    'section2' : clean_sentences_2['section'][index_in_2],
+                                    'clean_sentence': line.strip(),
+                                    'ids1' : clean_sentences_1['id'][index_in_1],
+                                    'ids2' : clean_sentences_2['id'][index_in_2],
+                                    'startIdx1': clean_sentences_1['startIdx'][index_in_1],
+                                    'endIdx1': clean_sentences_1['endIdx'][index_in_1],
+                                    'startIdx2': clean_sentences_2['startIdx'][index_in_2],
+                                    'endIdx2': clean_sentences_2['endIdx'][index_in_2],
+                                    'locList1': clean_sentences_1['locList'][index_in_1],
+                                    'locList2': clean_sentences_2['locList'][index_in_2]})
 
         section_sentences = {}
         for sentence in all_sentences:
@@ -318,21 +289,23 @@ def process_version(input):
                 section_sentences[sentence['section1']] = []
             section_sentences[sentence['section1']].append(sentence)
 
-        all_links = []
+        print(all_links_2)
 
-        for _, link_dict in all_links_1:
-                target_title = fix_target_titles(
-                    link_dict['link'][6:].split('#')[0], redirect_1, redirect_2)
-                all_links.append({
-                    'mention': link_dict['text'],
-                    'target_title': target_title,
-                    'section': link_dict['section']                    
-                })            
+        all_links = all_links_1.merge(all_links_2, on=['link'], how='outer', suffixes=('_1', '_2'))
+        added_links = all_links[all_links['sentid_1'].isnull()]
+
+        for sent in all_sentences:
+            print(sent)
 
 
-        for sentence in all_sentences:
-            if sentence['status'] != 'added':
+        for _, link in added_links.iterrows():
+            sentences = list(filter(lambda x: link['sentid_2'] in x['ids2'], all_sentences))
+
+            if len(sentences) == 0:
+                print(f"No sentence found for link {link['link']}")
                 continue
+
+            sentence = sentences[0]
 
             if sentence['match'] is None:
                 direct_match = False
@@ -421,24 +394,13 @@ def process_version(input):
                 section = all_sentences[sentence['match']]['section1']
                 new_section = sentence['section2']
 
-            if '<a ' not in sentence['raw_sentence']:
-                continue
-            soup = BeautifulSoup(sentence['raw_sentence'], 'html.parser')
-            links = soup.find_all('a')
-            
-            for link in links:
-                # get href
-                href = link.get('href')
-                if href is None or not href.startswith('/wiki/'):
-                    continue
-                link_text = link.text.strip()
                 if sentence['match'] is None:
                     present = False
                     if new_section not in section_sentences:
                         missing_category = 'missing_section'
                     else:
                         if continuous_left_added_text == [] and continuous_right_added_text == []:
-                            if sentence['clean_sentence'].lower().strip() == link_text.lower():
+                            if sentence['status'] == 'neutral':
                                 missing_category = 'missing_mention'
                             else:
                                 missing_category = 'missing_sentence'
@@ -446,19 +408,15 @@ def process_version(input):
                             missing_category = 'missing_span'
 
                 else:
-                    present = link_text.lower(
-                    ) in all_sentences[sentence['match']]['clean_sentence'].lower()
-                    missing_category = None if present else 'missing_mention'
-
-
+                    present = link['text'].lower(
+                    ) in sentence['match']['clean_sentence'].lower()
+                    missing_category = 'missing_mention'
 
                 # get target title
                 target_title = fix_target_titles(
-                    href[6:].split('#')[0], redirect_1, redirect_2)
-                mentions = mentions_map.get(
-                    target_title, [urllib.parse.unquote(target_title).replace('_', ' ')])
+                    link['link'][6:].split('#')[0], redirect_1, redirect_2)
                 all_contexts = create_all_contexts(
-                    section_sentences, mentions, section, sentence['index'], context, args.side_contexts_size)
+                    section_sentences, context, args.side_contexts_size, sentence)
                 if target_title in input['versions'][second_version]:
                     output.append({
                         'source_title': input['source_title'],
@@ -472,8 +430,7 @@ def process_version(input):
                         'second_version': second_version,
                         'direct_match': direct_match,
                         'missing_category': missing_category,
-                        'all_contexts': str(all_contexts),
-                        # 'current_links': str(current_links)
+                        'all_contexts': str(all_contexts)
                     })
                     found_links.append(output[-1])
     return output
