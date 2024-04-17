@@ -58,7 +58,7 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
 def clean_condition(txt):
     # don't allow sentences with less than 10 characters
     #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
-    return len(txt) > 10 and (txt.strip()[0].isupper() or txt[-1] == '.')
+    return len(txt) > 10 and (txt.strip()[0].isupper() or txt.strip()[-1] == '.')
 
 def merge_sentences(row1, row2):
     row = {}
@@ -72,8 +72,6 @@ def merge_sentences(row1, row2):
     return row
 
 def clean_sentences(sentences_df):
-    # don't allow sentences with less than 10 characters
-    #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
     new_sentences = []
     current_unclean = None 
 
@@ -97,7 +95,10 @@ def clean_sentences(sentences_df):
                 current_unclean = None
         else:
             if len(new_sentences) > 0:
-                new_sentences[-1] = merge_sentences(new_sentences[-1], current_unclean)
+                if new_sentences[-1]['section'] == row['section']:
+                    new_sentences[-1] = merge_sentences(new_sentences[-1], current_unclean)
+                else:
+                    new_sentences.append(current_unclean)
             else:
                 new_sentences.append(current_unclean)
             
@@ -121,7 +122,7 @@ def fix_text(text):
     text = re.sub('\n +', '\n', text)
     return text
 
-def create_all_contexts(section_sentences, side_contexts_size, correct_sentence):
+def create_all_contexts(section_sentences, side_contexts_size):
     contexts = []
     context_texts = set([])
     for section in section_sentences:
@@ -132,7 +133,7 @@ def create_all_contexts(section_sentences, side_contexts_size, correct_sentence)
             context = " ".join([s['clean_sentence']
                                 for s in curr_sentences[min_index:max_index]]).strip()
             #if  context not in context_texts: #len(context.split(' ')) > 10 and
-            contexts.append({'context': context, 'middle_sentence': sentence, 'section': section, 'correct' : correct_sentence})
+            contexts.append({'context': context, 'middle_sentence': sentence, 'section': section})
             context_texts.add(context)
             #else:
             #    continue
@@ -186,7 +187,6 @@ def process_version(input):
                 all_sentences.append({'status': 'added',
                                     'added_after': clean_sentences_1['id'][max(index_in_1, 0)],
                                     'index': len(all_sentences),
-                                    'match': None,
                                     'section1': None,
                                     'section2' : clean_sentences_2['section'][index_in_2],
                                     'clean_sentence': line[2:].strip(),
@@ -199,40 +199,11 @@ def process_version(input):
                                     'locList1': None,
                                     'locList2': clean_sentences_2['locList'][index_in_2]})
                 
-                words = [word.strip() for word in all_sentences[-1]
-                         ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
-                freqs = {}
-                for word in words:
-                    freqs[word] = freqs.get(word, 0) + 1
-                norm = math.sqrt(sum([freqs[word]**2 for word in freqs]))
-                best_match = {'index': None, 'score': 0}
-                for i, sentence in enumerate(all_sentences):
-                    if sentence['status'] != 'removed' or sentence['match'] is not None:
-                        continue
-                    words = [word.strip() for word in sentence['clean_sentence'].replace(
-                        '\n', ' ').split(' ') if word != '']
-                    freqs_2 = {}
-                    for word in words:
-                        freqs_2[word] = freqs_2.get(word, 0) + 1
-                    norm_2 = math.sqrt(
-                        sum([freqs_2[word]**2 for word in freqs_2]))
-                    score = 0
-                    for word in freqs:
-                        score += freqs[word] * freqs_2.get(word, 0)
-                    score /= (norm * norm_2)
-                    if score > best_match['score']:
-                        best_match['index'] = i
-                        best_match['score'] = score
-                if best_match['score'] > 0.5:
-                    all_sentences[best_match['index']
-                                  ]['match'] = all_sentences[-1]['index']
-                    all_sentences[-1]['match'] = all_sentences[best_match['index']]['index']
             elif line.startswith('-'):
                 index_in_1 += 1
                 all_sentences.append({'status': 'removed',
-                                      'added_after': None, 
+                                    'added_after': None, 
                                     'index': len(all_sentences),
-                                    'match': None,
                                     'section1': clean_sentences_1['section'][index_in_1],
                                     'section2': None,
                                     'clean_sentence': line[2:].strip(),
@@ -245,37 +216,6 @@ def process_version(input):
                                     'locList1': clean_sentences_1['locList'][index_in_1],
                                     'locList2': None})
 
-                words = [word.strip() for word in all_sentences[-1]
-                         ['clean_sentence'].replace('\n', ' ').split(' ') if word != '']
-                freqs = {}
-                for word in words:
-                    freqs[word] = freqs.get(word, 0) + 1
-                norm = math.sqrt(sum([freqs[word]**2 for word in freqs]))
-                best_match = {'index': None, 'score': 0}
-                for i, sentence in enumerate(all_sentences):
-                    if sentence['status'] != 'added' or sentence['match'] is not None:
-                        continue
-                    words = [word.strip() for word in sentence['clean_sentence'].replace(
-                        '\n', ' ').split(' ') if word != '']
-                    freqs_2 = {}
-                    for word in words:
-                        freqs_2[word] = freqs_2.get(word, 0) + 1
-                    norm_2 = math.sqrt(
-                        sum([freqs_2[word]**2 for word in freqs_2]))
-                    score = 0
-                    for word in freqs:
-                        score += freqs[word] * freqs_2.get(word, 0)
-                    score /= (norm * norm_2)
-                    if score > best_match['score']:
-                        best_match['index'] = i
-                        best_match['score'] = score
-                if best_match['score'] > 0.5:
-                    all_sentences[best_match['index']
-                                  ]['match'] = all_sentences[-1]['index']
-                    all_sentences[-1]['match'] = all_sentences[best_match['index']]['index']
-
-                if clean_sentences_1['section'][index_in_1] == 'Lead':
-                    original_lead += ' ' + all_sentences[-1]['clean_sentence']
             else:
                 index_in_1 += 1
                 index_in_2 += 1
@@ -286,7 +226,6 @@ def process_version(input):
                 all_sentences.append({'status': 'neutral',
                                     'added_after': None,
                                     'index': len(all_sentences),
-                                    'match': None,
                                     'section1' : clean_sentences_1['section'][index_in_1],
                                     'section2' : clean_sentences_2['section'][index_in_2],
                                     'clean_sentence': line.strip(),
@@ -336,146 +275,52 @@ def process_version(input):
 
                 print(f"No sentence found for link {link}")
                 raise Exception('No sentence found for link')
-                continue
 
             sentence = list(sentences)[0]
 
-            if sentence['match'] is None:
-                direct_match = False
-                section = sentence['section1']
-                new_section = sentence['section2']
-                # go through the previous context_size and next context_size sentences
-                # if any of these is neutral and has the same section, use it as context
-                # if any of these is added and has a match and has the same section, use it as context
-                left_index = sentence['index'] - 1
-                left_context = []
-                counter = 0
-                continuous_left_added_text = []
-                accept = True
-                while left_index >= 0 and counter < (2*args.side_contexts_size) and len(left_context) < args.side_contexts_size:
-                    counter += 1
-                    if all_sentences[left_index]['section1'] != sentence['section1']:
-                        break
-                    if all_sentences[left_index]['status'] == 'neutral':
-                        left_context.append(
-                            all_sentences[left_index]['clean_sentence'])
-                        accept = False
-                    elif all_sentences[left_index]['status'] == 'added' and accept and all_sentences[left_index]['match'] is None:
-                        continuous_left_added_text.append(
-                            all_sentences[left_index]['clean_sentence'])
-                    elif all_sentences[left_index]['status'] == 'removed':
-                        accept = False
-                        if all_sentences[left_index]['match'] is not None and all_sentences[left_index]['match'] < sentence['index'] + 2*args.side_contexts_size +1:
-                            left_context.append(
-                                all_sentences[left_index]['clean_sentence'])
-                    left_index -= 1
-                right_index = sentence['index'] + 2*args.side_contexts_size +1
-                right_context = []
-                # rightmost_index = sentence['index'] + 1
-                continuous_right_added_text = []
-                while right_index > sentence['index']:
-                    if right_index >= len(all_sentences) or all_sentences[right_index]['section1'] != sentence['section1']:
-                        right_index -= 1
-                        continue
-                    if all_sentences[right_index]['status'] == 'neutral':
-                        right_context.append(
-                            all_sentences[right_index]['clean_sentence'])
-                        continuous_right_added_text = []
-                        # rightmost_index = max(rightmost_index, right_index)
-                    elif all_sentences[right_index]['status'] == 'added' and all_sentences[right_index]['match'] is None:
-                        continuous_right_added_text.append(
-                            all_sentences[right_index]['clean_sentence'])
-                    elif all_sentences[right_index]['status'] == 'removed':
-                        continuous_right_added_text = []
-                        if all_sentences[right_index]['index'] is not None and all_sentences[right_index]['index'] > sentence['index'] - (2*args.side_contexts_size +1):
-                            right_context.append(
-                                all_sentences[right_index]['clean_sentence'])
-                            # rightmost_index = max(rightmost_index, right_index)
-                    right_index -= 1
-                right_context = right_context[-args.side_contexts_size:]
-                # right_index = rightmost_index
-                context = ' '.join(
-                    left_context[::-1]) + ' '.join(right_context[::-1])
-                # added_text = ' '.join(
-                #     continuous_left_added_text[::-1]) + sentence['clean_sentence'] + ' '.join(continuous_right_added_text[::-1])
+            # get target title
+            target_title = fix_target_titles(
+                link['link'][6:].split('#')[0], redirect_1, redirect_2)
+            
+            all_contexts = create_all_contexts(
+                section_sentences, args.side_contexts_size, sentence)
+            
+            section = sentence['section2'] 
+
+            if sentence['status'] == 'neutral':
+                missing_category = 'missing_mention'
+            elif section not in section_sentences:
+                    missing_category = 'missing_section'  
             else:
-                direct_match = True
-                left_context = []
-                left_index = sentence['match'] - 1
-                while left_index >= 0 and len(left_context) < args.side_contexts_size:
-                    if all_sentences[left_index]['status'] == 'added':
-                        left_index -= 1
-                        continue
-                    if all_sentences[left_index]['section1'] != all_sentences[sentence['match']]['section1']:
-                        break
-                    left_context.append(
-                        all_sentences[left_index]['clean_sentence'])
-                    left_index -= 1
-                right_context = []
-                right_index = sentence['match'] + 1
-                while right_index < len(all_sentences) and len(right_context) < args.side_contexts_size:
-                    if all_sentences[right_index]['status'] == 'added':
-                        right_index += 1
-                        continue
-                    if all_sentences[right_index]['section1'] != all_sentences[sentence['match']]['section1']:
-                        break
-                    right_context.append(
-                        all_sentences[right_index]['clean_sentence'])
-                    right_index += 1
-                context = ' '.join(left_context[::-1]) + ' ' + all_sentences[sentence['match']
-                                                                             ]['clean_sentence'] + ' ' + ' '.join(right_context)
-                section = all_sentences[sentence['match']]['section1']
-                new_section = sentence['section2']
-
-                if sentence['match'] is None:
-                    present = False
-                    if new_section not in section_sentences:
-                        missing_category = 'missing_section'
+                missing_category = 'missing_sentence'
+                    
+            
+            if target_title in input['versions'][second_version]:
+                if missing_category == 'missing_mention':
+                    if sentence['status'] == 'neutral' :
+                        insert_index = sentence['ids1']
                     else:
-                        if continuous_left_added_text == [] and continuous_right_added_text == []:
-                            if sentence['status'] == 'neutral':
-                                missing_category = 'missing_mention'
-                            else:
-                                missing_category = 'missing_sentence'
-                        else:
-                            missing_category = 'missing_span'
-
+                        insert_index = all_sentences[sentence['match']]['ids1']
                 else:
-                    present = (link['text_2'].lower() in all_sentences[sentence['match']]['clean_sentence'].lower())
-                    if present:
-                        missing_category = 'missing_mention'
-                    else: 
-                        missing_category = None
-
-                # get target title
-                target_title = fix_target_titles(
-                    link['link'][6:].split('#')[0], redirect_1, redirect_2)
-                all_contexts = create_all_contexts(
-                    section_sentences, args.side_contexts_size, sentence)
-                if target_title in input['versions'][second_version]:
-                    if missing_category == 'missing_mention':
-                        if sentence['status'] == 'neutral' :
-                            insert_index = sentence['ids1']
-                        else:
-                            insert_index = all_sentences[sentence['match']]['ids1']
-                    else:
-                        insert_index = sentence['added_after']
-                    output.append({
-                        'source_title': input['source_title'],
-                        'source_ID': input['source_ID'],
-                        'target_title': target_title,
-                        'context': context,
-                        'insert_indices': insert_index,
-                        'section': section,
-                        'mention_present': present,
-                        'source_lead': original_lead.strip(),
-                        'first_version': input['first_version'],
-                        'second_version': second_version,
-                        'direct_match': direct_match,
-                        'missing_category': missing_category,
-                        'all_contexts': str(all_contexts)
-                    })
-                    found_links.append(output[-1])
+                    insert_index = sentence['added_after']
+                output.append({
+                    'source_title': input['source_title'],
+                    'source_ID': input['source_ID'],
+                    'target_title': target_title,
+                    'context': None,
+                    'insert_indices': insert_index,
+                    'link_sentence': sentence['clean_sentence'],
+                    'link_text': link['text_2'],
+                    'section': section,
+                    'mention_present': None,
+                    'source_lead': original_lead.strip(),
+                    'first_version': input['first_version'],
+                    'second_version': second_version,
+                    'direct_match': None,
+                    'missing_category': missing_category,
+                    'all_contexts': str(all_contexts)
+                })
+                found_links.append(output[-1])
     return output
 
 
@@ -602,7 +447,7 @@ if __name__ == '__main__':
     print(f"The length of the output is {len(output)}")
 
     df_output = pd.DataFrame(output)
-    df_output['context'] = df_output['context'].progress_apply(fix_text)
+    #df_output['context'] = df_output['context'].progress_apply(fix_text)
     df_output['source_lead'] = df_output['source_lead'].progress_apply(
         fix_text)
     df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))

@@ -87,7 +87,7 @@ function findSections(document,dom) {
     let sectionNode = sectionNodes.iterateNext();
     let sectionNodeId = 0;
     let sectionNodes2Offset = [];
-    sectionNodes2Offset.push({'start':0, 'section':'lead'});
+    sectionNodes2Offset.push({'start':0, 'section':'Lead'});
 
     while (sectionNode) {
         const sectionLocation = dom.nodeLocation(sectionNode);
