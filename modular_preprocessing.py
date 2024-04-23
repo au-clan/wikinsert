@@ -286,7 +286,7 @@ def process_version(input):
                                         'removed' if sign == '-' else 'neutral')
                 
                 if sign == '+':
-                    new_sentence['added_after'] = [index_in_1]
+                    new_sentence['added_after'] = clean_sentences_1['id'][index_in_1]
 
 
                 if sign == ' ' or sign == '-':
