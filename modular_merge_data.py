@@ -153,7 +153,7 @@ if __name__ == '__main__':
             
             print(f"Originally, there are {len(df_links)} links for language {lang}")
             
-            df_removed = df_links['all_contexts'] == '[]'
+            df_removed = df_links['all_contexts'].apply(len) == 0
             df_links = df_links[~df_removed]
             print(f"Removed {df_removed.sum()} links because of empty contexts")
             

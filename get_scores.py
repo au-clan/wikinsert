@@ -138,7 +138,7 @@ if __name__ == '__main__':
                 df['target_title'] = df['target_title'].apply(fix_title)
                 
                 df['idx'] = df.index
-                df['all_contexts'] = df['all_contexts'].apply(eval)
+                df['all_contexts'] = df['all_contexts']
                 df_contexts = df.explode('all_contexts').reset_index()
                 df_contexts['contexts'] = df_contexts['all_contexts'].apply(lambda x : x['context'])
                 df_contexts['sections'] = df_contexts['all_contexts'].apply(lambda x : x['section'])

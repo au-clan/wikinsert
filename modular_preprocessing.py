@@ -13,6 +13,7 @@ from multiprocessing import Pool, cpu_count
 import json
 tqdm.pandas()
 import execjs
+import time
 
 
 HTML_PROCESSORS = "js_parsing/html_processors.js"
@@ -28,7 +29,10 @@ html_processors_compiled = execjs.compile(html_processors)
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
 def get_sentences_and_links(file_path):
+    start = time.time()
     results = html_processors_compiled.call(PARSER, file_path)
+    time_after_parsing = time.time()
+    #print(f"Time for parsing: {time_after_parsing - start}")
     sentences = json.loads(results['sentences'])
     links = json.loads(results['links'])
     sentences = pd.DataFrame(sentences)
@@ -36,7 +40,8 @@ def get_sentences_and_links(file_path):
         sentences = sentences.drop(columns = ['md5'])
 
     links = pd.DataFrame(links)
-
+    time_after_processing = time.time()
+    #print(f"Time for processing: {time_after_processing - time_after_parsing}")
     return sentences, links
 
 def fix_target_titles(title, redirect_map_1, redirect_map_2):
@@ -81,6 +86,8 @@ def clean_sentences(sentences_df):
     for _, row in sentences_df.iterrows():
         if row['section'] in UNRELEVENT_SECTIONS:
             continue
+        if row['text'] == '':
+            continue
 
         row = row.to_dict()
         if current_unclean is None:
@@ -124,7 +131,6 @@ def fix_text(text):
 
 def create_all_contexts(section_sentences, side_contexts_size):
     contexts = []
-    context_texts = set([])
     for section in section_sentences:
         curr_sentences = section_sentences[section]
         for i, sentence in enumerate(section_sentences[section]):
@@ -134,32 +140,105 @@ def create_all_contexts(section_sentences, side_contexts_size):
                                 for s in curr_sentences[min_index:max_index]]).strip()
             #if  context not in context_texts: #len(context.split(' ')) > 10 and
             contexts.append({'context': context, 'middle_sentence': sentence, 'section': section})
-            context_texts.add(context)
             #else:
             #    continue
 
     return contexts
 
+def get_group_indexes(diff):
+    spe_indexes = [i for i, line in enumerate(diff) if line.startswith('?')]
+    all_starts = [line[0] for line in diff]
+
+    group_indexes = []
+    last_added = -1
+    for idx in spe_indexes:
+        if idx == 0:
+            raise Exception('Index 0')
+        if all_starts[idx-1] == ' ':
+            raise Exception('Space before ?')
+        if all_starts[idx-1] == '+':
+            if idx == 1:
+                raise Exception('? Index 1 after +')
+            if all_starts[idx-2] == ' ':
+                raise Exception('Space before +?')
+            if all_starts[idx-2] == '+':
+                raise Exception('++?')
+            if all_starts[idx-2] == '-':
+                group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, idx-2))
+                group_indexes.append({idx-2 : '-', idx-1 : '+', idx : '?'})
+                last_added = idx
+                continue
+            if all_starts[idx-2] == '?':
+                if idx == 2:
+                    raise Exception('? Index -2 after +') 
+                if all_starts[idx-3] == ' ' or all_starts[idx-3] == '+':
+                    raise Exception(' " "or+ ?+? ')
+                continue
+        if all_starts[idx-1] == '-':
+            if idx == len(diff) - 1:
+                raise Exception('-? att the end')
+            if all_starts[idx+1] == ' ':
+                raise Exception('Space after -?')
+            if all_starts[idx+1] == '-':
+                raise Exception('- -?')
+            
+            if all_starts[idx+1] == '+':
+                if idx == len(diff) - 2:
+                    group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, idx-1))
+                    group_indexes.append({idx-1: '-', idx : '?', idx+1 : '+'})
+                    last_added = idx+1
+                    continue
+                
+                if all_starts[idx+2] == '?':
+                    group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, idx-1))
+                    group_indexes.append({idx-1: '-', idx : '?', idx+1 : '+', idx+2 : '?'})
+                    last_added = idx+2
+                    continue
+                else:
+                    group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, idx-1))
+                    group_indexes.append({idx-1: '-', idx : '?', idx+1 : '+'})
+                    last_added = idx+1
+                    continue
+    
+    if last_added != len(diff) - 1:
+        group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, len(diff)))
+
+    return group_indexes
+    
 def process_version(input):
+    
     output = []
     d = difflib.Differ()
     file_1 = os.path.join(
         args.html_dir, f"{input['source_ID']}_{input['first_version']}.html")
-    
+    start_time = time.time()
     sentences_1, all_links_1 = get_sentences_and_links(file_1)
+    time_after_parsing_1 = time.time()
     if sentences_1.shape[0] == 0:
         print('No HTML found')
         print(f"{input['source_ID']}_{input['first_version']}.html")
         return []
     
     clean_sentences_1 = clean_sentences(sentences_1)
- 
+    
+    time_after_cleaning_1 = time.time()
+
+    times_after_parsing_2 = []
+    times_afer_cleaning_2 = []
+    times_after_diff = []
+    times_afer_all_sentences = []
+    times_after_merging_links = []
+    times_after_processing_links = []
+
     for second_version in input['versions']:
         found_links = []
         file_2 = os.path.join(
             args.html_dir, f"{input['source_ID']}_{second_version}.html")
         
         sentences_2, all_links_2 = get_sentences_and_links(file_2)
+
+        times_after_parsing_2.append(time.time())
+
         if sentences_2.shape[0] == 0:
             print('No HTML found')
             print(f"{input['source_ID']}_{second_version}.html")
@@ -172,71 +251,95 @@ def process_version(input):
 
         clean_sentences_2 = clean_sentences(sentences_2)
 
+        times_afer_cleaning_2.append(time.time())
+
         original_lead = ''
         all_sentences = []
-        diff = d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text']))
+        diff = list(d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text'])))
+
+        group_indexes = get_group_indexes(diff)
+
+        #for d in diff:
+        #    print(d)
+        
+        #for g in group_indexes:
+        #    print(g)
+
+        times_after_diff.append(time.time())
+
         index_in_1 = -1
         index_in_2 = -1
+        #print("======================")
+        for group in group_indexes:
+            new_sentence = {}
+            new_sentence['index'] = len(all_sentences)
+            if len(group) == 1:
+                i = list(group.keys())[0]
+                sign = group[i]
 
-        for i, line in enumerate(diff):
-            if line.startswith('?'):
-                continue
-            
-            elif line.startswith('+'):
-                index_in_2 += 1
-                all_sentences.append({'status': 'added',
-                                    'added_after': clean_sentences_1['id'][max(index_in_1, 0)],
-                                    'index': len(all_sentences),
-                                    'section1': None,
-                                    'section2' : clean_sentences_2['section'][index_in_2],
-                                    'clean_sentence': line[2:].strip(),
-                                    'ids1' : None,
-                                    'ids2' : clean_sentences_2['id'][index_in_2],
-                                    'startIdx1': None,
-                                    'endIdx1': None,
-                                    'startIdx2': clean_sentences_2['startIdx'][index_in_2],
-                                    'endIdx2': clean_sentences_2['endIdx'][index_in_2],
-                                    'locList1': None,
-                                    'locList2': clean_sentences_2['locList'][index_in_2]})
+                if sign not in ['+', '-', ' ']:
+                    raise Exception('Invalid sign')
+
+
+                new_sentence['clean_sentence'] = diff[i][2:].strip()
+                new_sentence['status'] = 'added' if sign == '+' else (
+                                        'removed' if sign == '-' else 'neutral')
                 
-            elif line.startswith('-'):
-                index_in_1 += 1
-                all_sentences.append({'status': 'removed',
-                                    'added_after': None, 
-                                    'index': len(all_sentences),
-                                    'section1': clean_sentences_1['section'][index_in_1],
-                                    'section2': None,
-                                    'clean_sentence': line[2:].strip(),
-                                    'ids1' : clean_sentences_1['id'][index_in_1],
-                                    'ids2' : None,
-                                    'startIdx1': clean_sentences_1['startIdx'][index_in_1],
-                                    'endIdx1': clean_sentences_1['endIdx'][index_in_1],
-                                    'startIdx2': None,
-                                    'endIdx2': None,
-                                    'locList1': clean_sentences_1['locList'][index_in_1],
-                                    'locList2': None})
+                if sign == '+':
+                    new_sentence['added_after'] = [index_in_1]
+
+
+                if sign == ' ' or sign == '-':
+                    index_in_1 += 1
+                    new_sentence['section1'] = clean_sentences_1['section'][index_in_1]
+                    new_sentence['ids1'] = clean_sentences_1['id'][index_in_1]
+                    new_sentence['startIdx1'] = clean_sentences_1['startIdx'][index_in_1]
+                    new_sentence['endIdx1'] = clean_sentences_1['endIdx'][index_in_1]
+                    new_sentence['locList1'] = clean_sentences_1['locList'][index_in_1]
+                
+                if sign == ' ' or sign == '+':
+                    index_in_2 += 1
+                    new_sentence['section2'] = clean_sentences_2['section'][index_in_2]
+                    new_sentence['ids2'] = clean_sentences_2['id'][index_in_2]
+                    new_sentence['startIdx2'] = clean_sentences_2['startIdx'][index_in_2]
+                    new_sentence['endIdx2'] = clean_sentences_2['endIdx'][index_in_2]
+                    new_sentence['locList2'] = clean_sentences_2['locList'][index_in_2]
 
             else:
+                signs = list(group.values())
+
+                if signs not in [['-', '+', '?'], ['-', '?', '+', '?'], ['-', '?', '+']]:
+                    raise Exception('Invalid signs')
+                keys = list(group.keys())
+
                 index_in_1 += 1
                 index_in_2 += 1
 
-                if clean_sentences_1['section'][index_in_1] == 'Lead':
-                    original_lead += ' ' + line.strip()
+                i1 = keys[0]
+                i2 = keys[1] if signs == ['-', '+', '?'] else keys[2]
 
-                all_sentences.append({'status': 'neutral',
-                                    'added_after': None,
-                                    'index': len(all_sentences),
-                                    'section1' : clean_sentences_1['section'][index_in_1],
-                                    'section2' : clean_sentences_2['section'][index_in_2],
-                                    'clean_sentence': line.strip(),
-                                    'ids1' : clean_sentences_1['id'][index_in_1],
-                                    'ids2' : clean_sentences_2['id'][index_in_2],
-                                    'startIdx1': clean_sentences_1['startIdx'][index_in_1],
-                                    'endIdx1': clean_sentences_1['endIdx'][index_in_1],
-                                    'startIdx2': clean_sentences_2['startIdx'][index_in_2],
-                                    'endIdx2': clean_sentences_2['endIdx'][index_in_2],
-                                    'locList1': clean_sentences_1['locList'][index_in_1],
-                                    'locList2': clean_sentences_2['locList'][index_in_2]})
+                new_sentence['clean_sentence'] = diff[i1][2:].strip()
+                new_sentence['clean_sentence2'] = diff[i2][2:].strip()
+                new_sentence['ids1'] = clean_sentences_1['id'][index_in_1]
+                new_sentence['ids2'] = clean_sentences_2['id'][index_in_2]
+                new_sentence['section1'] = clean_sentences_1['section'][index_in_1]
+                new_sentence['section2'] = clean_sentences_2['section'][index_in_2]
+                new_sentence['startIdx1'] = clean_sentences_1['startIdx'][index_in_1]
+                new_sentence['startIdx2'] = clean_sentences_2['startIdx'][index_in_2]
+                new_sentence['endIdx1'] = clean_sentences_1['endIdx'][index_in_1]
+                new_sentence['endIdx2'] = clean_sentences_2['endIdx'][index_in_2]
+                new_sentence['locList1'] = clean_sentences_1['locList'][index_in_1]
+                new_sentence['locList2'] = clean_sentences_2['locList'][index_in_2]
+                new_sentence['status'] = 'modified'
+                new_sentence['modifications'] = [diff[keys[2]]] if signs == ['-', '?', '+'] else (
+                                        [diff[keys[1]],diff[keys[3]]] if signs == ['-', '?', '+', '?'] else [diff[keys[1]]])
+
+
+            all_sentences.append(new_sentence)
+
+
+            
+        times_afer_all_sentences.append(time.time())
 
         section_sentences = {}
         for sentence in all_sentences:
@@ -248,9 +351,13 @@ def process_version(input):
 
         if all_links_1.shape[0] == 0:
             all_links_1 = pd.DataFrame(columns=all_links_2.columns)
-         
+        
+
         all_links = all_links_1.merge(all_links_2, on=['link'], how='outer', suffixes=('_1', '_2'))
         added_links = all_links[all_links['sentid_1'].isnull()]
+
+        times_after_merging_links.append(time.time())
+
 
         all_sentences2 = list(filter(lambda x: x['status'] != 'removed', all_sentences))
 
@@ -261,6 +368,7 @@ def process_version(input):
             
             sentences = list(filter(lambda x: int(link['sentid_2']) in x['ids2'], all_sentences2))
 
+            '''
             if len(sentences) == 0:
                 print("Sentences2:")
                 for sentence in all_sentences:
@@ -275,6 +383,7 @@ def process_version(input):
 
                 print(f"No sentence found for link {link}")
                 raise Exception('No sentence found for link')
+            '''
 
             sentence = list(sentences)[0]
 
@@ -283,26 +392,30 @@ def process_version(input):
                 link['link'][6:].split('#')[0], redirect_1, redirect_2)
             
             all_contexts = create_all_contexts(
-                section_sentences, args.side_contexts_size, sentence)
-            
+                section_sentences, args.side_contexts_size)
+        
             section = sentence['section2'] 
 
             if sentence['status'] == 'neutral':
                 missing_category = 'missing_mention'
             elif section not in section_sentences:
                     missing_category = 'missing_section'  
+            elif sentence['status'] == 'modified':
+                missing_category = 'missing_mention_with_sentence_modification'
             else:
-                missing_category = 'missing_sentence'
+                if all_sentences[max(sentence['index'] - 1, 0 )]['status'] != 'added' and all_sentences[min(sentence['index'] + 1, len(all_sentences) - 1)]['status'] != 'added':
+                    missing_category = 'missing_sentence'
+                else:
+                    missing_category = 'missing_span'
                     
             
             if target_title in input['versions'][second_version]:
-                if missing_category == 'missing_mention':
-                    if sentence['status'] == 'neutral' :
-                        insert_index = sentence['ids1']
-                    else:
-                        insert_index = all_sentences[sentence['match']]['ids1']
-                else:
+                if missing_category == 'missing_mention' or missing_category == 'missing_mention_with_sentence_modification':
+                    insert_index = sentence['ids1']
+                elif missing_category == 'missing_sentence' or missing_category == 'missing_span':
                     insert_index = sentence['added_after']
+                else: insert_index = None
+
                 output.append({
                     'source_title': input['source_title'],
                     'source_ID': input['source_ID'],
@@ -318,9 +431,40 @@ def process_version(input):
                     'second_version': second_version,
                     'direct_match': None,
                     'missing_category': missing_category,
-                    'all_contexts': str(all_contexts)
+                    'all_contexts': all_contexts
                 })
                 found_links.append(output[-1])
+
+    times_after_processing_links.append(time.time())
+
+    time_for_parsing_1 = time_after_parsing_1 - start_time
+    time_for_cleaning_1 = time_after_cleaning_1 - time_after_parsing_1
+    times_for_parsing_2 = []
+    if len(times_after_parsing_2) > 0:
+        times_for_parsing_2.append(times_after_parsing_2[0] - time_after_cleaning_1)
+
+    for i in range(1, len(times_after_parsing_2)):
+        times_for_parsing_2.append(times_after_parsing_2[i] - times_after_processing_links[i-1])
+    
+    times_for_cleaning_2 = [times_afer_cleaning_2[i] - times_after_parsing_2[i] for i in range(len(times_afer_cleaning_2))]
+    times_for_diff = [times_after_diff[i] - times_afer_cleaning_2[i] for i in range(len(times_after_diff))]
+    times_for_all_sentences = [times_afer_all_sentences[i] - times_after_diff[i] for i in range(len(times_afer_all_sentences))]
+    times_for_merging_links = [times_after_merging_links[i] - times_afer_all_sentences[i] for i in range(len(times_after_merging_links))]
+    times_for_processing_links = [times_after_processing_links[i] - times_after_merging_links[i] for i in range(len(times_after_merging_links))]
+
+    total_time = times_after_processing_links[-1] - start_time
+
+    '''print(f"Time for parsing 1: {time_for_parsing_1}")
+    print(f"Time for cleaning 1: {time_for_cleaning_1}")
+    print(f"Times for parsing 2: {times_for_parsing_2}")
+    print(f"Times for cleaning 2: {times_for_cleaning_2}")
+    print(f"Times for diff: {times_for_diff}")
+    print(f"Times for all sentences: {times_for_all_sentences}")
+    print(f"Times for merging links: {times_for_merging_links}")
+    print(f"Times for processing links: {times_for_processing_links}")
+    print(f"Total time: {total_time}")'''
+
+
     return output
 
 
@@ -424,7 +568,7 @@ if __name__ == '__main__':
             else:
                 mentions_map[target_title].append(row['mention'])
     
-    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)
+    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)[:100]
     output = []
     nb_processes_ = min(cpu_count(), args.n_processes)
     print(f"Running on {nb_processes_} processes")
@@ -447,8 +591,9 @@ if __name__ == '__main__':
     print(f"The length of the output is {len(output)}")
 
     df_output = pd.DataFrame(output)
-    #df_output['context'] = df_output['context'].progress_apply(fix_text)
+
     df_output['source_lead'] = df_output['source_lead'].progress_apply(
         fix_text)
+    
     df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))
 
