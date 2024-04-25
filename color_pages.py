@@ -101,9 +101,9 @@ def overlay_heatmap(colored_contexts, source_ID, first_version, missing_category
     output_path = f"{save_folder}/{source_ID}_{first_version}_{missing_category}_{style}.html"
 
 
-    heat_map_util_compiled.call(HEAT_MAP_BUILDER, color_store,  style, file_path, output_path)
+    heat_map_util_compiled.call(HEAT_MAP_BUILDER, color_store, file_path, output_path)
 
-def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_funcs_pairs = [('highlight', blue_to_red), ('text', black_to_red)], smoothing_params = [1], overlaying_func = overlay_heatmap):
+def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_funcs_pairs = [('highlight', blue_to_red)], smoothing_params = [1], overlaying_func = overlay_heatmap):
     '''Color contexts with different styles
     input:
         df: dataframe with columns 'contexts'
@@ -143,50 +143,124 @@ def get_html_paths(data_path, lang, scored_df):
 
 def get_color_store(contexts, missing_category, insert_index, link_sentence, link_text):
     color_store = []
-    
     for context in contexts:
         middle_sentence = context['middle_sentence']
         indexes = middle_sentence['ids1']
         llist = middle_sentence['locList1']
         
         special = all([i == j for i, j in zip(indexes, insert_index)])
-        specials = [False] * len(llist)
-        if special:
+
+        if not special:
+            for lindexes in llist:
+                loc = {
+                    'start': lindexes['start'],
+                    'end': lindexes['end'],
+                    'color': context['color'],
+                    'special': False,
+                    'missing_category': missing_category
+                }
+                color_store.append(loc)
+        else:
+            if missing_category == 'missing_sentence' or missing_category == 'missing_span':
+                for lindexes in llist[:-1]:
+                    loc = {
+                        'start': lindexes['start'],
+                        'end': lindexes['end'],
+                        'color': context['color'],
+                        'special': False,
+                        'missing_category': missing_category
+                    }
+                    color_store.append(loc)
+                
+                color_store.append({
+                    'start': llist[-1]['start'],
+                    'end': llist[-1]['end'],
+                    'color': context['color'],
+                    'special': True,
+                    'missing_category': missing_category,
+                    'link_sentence_parts': link_sentence.split(link_text,1),
+                    'link_text': link_text
+                })
+
             if missing_category == 'missing_mention':
-                specials = [True] * len(llist) #+ 2
-            else:
-                specials = [False] * (len(llist) - 1) 
-                specials.append(True)
+                start_underline = link_sentence.find(link_text)
+                end_underline = start_underline + len(link_text)
 
+                for lindexes in llist:
+                    start_underline += lindexes['start']
+                    end_underline += lindexes['start']
+                    
+                    if lindexes['end'] < start_underline or lindexes['start'] > end_underline: #no overlap
+                        
+                        loc = {
+                            'start': lindexes['start'],
+                            'end': lindexes['end'],
+                            'color': context['color'],
+                            'special': True,
+                            'underlined': False,
+                            'missing_category': missing_category
+                        }
+                        color_store.append(loc)
 
-        '''if special and missing_category == 'missing_mention':
-            #get string position of link_text
-            link_text_start = middle_sentence['clean_sentence'].find(link_text)
-            if link_text_start == -1:
-                raise ValueError('Link text not found in sentence')
-            link_text_end = link_text_start + len(link_text)
+                        #print((loc['start'], loc['end']))
 
-            sent_start = llist[0]['start']
-            link_text_start += sent_start
-            link_text_end += sent_start
-            pos_in_html = None
-            for i,loc in enumerate(llist):
-                if loc['end'] >= link_text_start:
-                    pos_in_html = i
-                    break
-            
-            if pos_in_html is None:
-                raise ValueError('Link text indexes not found in html')'''
-            
+                    else: #some overlap
 
-        for i,loc in enumerate(llist):
-            loc['color'] = context['color']
-            loc['special'] = specials[i]
-            loc['type'] = missing_category
-            if loc['special'] and missing_category != 'missing_mention':
-                loc['link_sentence_parts'] = link_sentence.split(link_text,1)
-                loc['link_text'] = link_text
-            color_store.append(loc)
+                        if lindexes['start'] < start_underline:
+                            loc1 = {
+                                'start': lindexes['start'],
+                                'end': start_underline - 1,
+                                'color': context['color'],
+                                'special': True,
+                                'underlined': False,
+                                'missing_category': missing_category
+                            }
+
+                            #print((loc1['start'], loc1['end']))
+
+                            color_store.append(loc1)
+                            loc2 = {
+                                'start': start_underline,
+                                'end': min(lindexes['end'], end_underline),
+                                'color': context['color'],
+                                'special': True,
+                                'underlined': True,
+                                'missing_category': missing_category
+                            }
+                            color_store.append(loc2)
+
+                            #print(f"loc2:{(loc2['start'], loc2['end'])}")
+
+                        else:
+
+                            loc = {
+                                'start': lindexes['start'],
+                                'end': min(lindexes['end'], end_underline),
+                                'color': context['color'],
+                                'special': True,
+                                'underlined': True,
+                                'missing_category': missing_category
+                            }
+
+                            #print(f"loc:{(loc['start'], loc['end'])}")
+
+                        if lindexes['end'] > end_underline:
+                            loc3 = {
+                                'start': end_underline + 1,
+                                'end': lindexes['end'],
+                                'color': context['color'],
+                                'special': True,
+                                'underlined': False,
+                                'missing_category': missing_category
+                            }
+
+                            #print((loc3['start'], loc3['end']))
+
+                            color_store.append(loc3)
+                        
+                    start_underline -= lindexes['end']
+                    end_underline -= lindexes['end']
+
     return color_store
 
 

@@ -286,7 +286,7 @@ def process_version(input):
                                         'removed' if sign == '-' else 'neutral')
                 
                 if sign == '+':
-                    new_sentence['added_after'] = clean_sentences_1['id'][index_in_1]
+                    new_sentence['added_after'] = clean_sentences_1['id'][index_in_1] if index_in_1 >= 0 else [-1]
 
 
                 if sign == ' ' or sign == '-':
@@ -334,6 +334,9 @@ def process_version(input):
                 new_sentence['modifications'] = [diff[keys[2]]] if signs == ['-', '?', '+'] else (
                                         [diff[keys[1]],diff[keys[3]]] if signs == ['-', '?', '+', '?'] else [diff[keys[1]]])
 
+
+            if new_sentence.get('section1') == 'Lead':
+                original_lead += new_sentence['clean_sentence'] + ' '
 
             all_sentences.append(new_sentence)
 
@@ -403,18 +406,39 @@ def process_version(input):
             elif sentence['status'] == 'modified':
                 missing_category = 'missing_mention_with_sentence_modification'
             else:
-                if all_sentences[max(sentence['index'] - 1, 0 )]['status'] != 'added' and all_sentences[min(sentence['index'] + 1, len(all_sentences) - 1)]['status'] != 'added':
+                prev_index = max(sentence['index'] - 1, 0)
+                next_index = min(sentence['index'] + 1, len(all_sentences) - 1)
+                prev_status = all_sentences[prev_index]['status']
+                next_status = all_sentences[next_index]['status']
+                if (
+                    (prev_status != 'added' or all_sentences[prev_index]['section2'] != section) and
+                    (next_status != 'added' or all_sentences[next_index]['section2'] != section)
+                    ):
                     missing_category = 'missing_sentence'
                 else:
                     missing_category = 'missing_span'
                     
             
-            if target_title in input['versions'][second_version]:
-                if missing_category == 'missing_mention' or missing_category == 'missing_mention_with_sentence_modification':
-                    insert_index = sentence['ids1']
-                elif missing_category == 'missing_sentence' or missing_category == 'missing_span':
-                    insert_index = sentence['added_after']
-                else: insert_index = None
+  
+            if missing_category == 'missing_mention' or missing_category == 'missing_mention_with_sentence_modification':
+                insert_index = sentence['ids1']
+            elif missing_category == 'missing_sentence' or missing_category == 'missing_span':
+                insert_index = sentence['added_after']
+            else: insert_index = None
+            
+            if missing_category == 'missing_span':
+                link_sentence = ''
+                i = sentence['index'] - 1
+                while i >= 0 and all_sentences[i]['status'] == 'added' and all_sentences[i]['section2'] == section:
+                    link_sentence = all_sentences[i]['clean_sentence'] + ' ' + link_sentence
+                    i -= 1
+                i = sentence['index'] + 1
+                while i < len(all_sentences) and all_sentences[i]['status'] == 'added' and all_sentences[i]['section2'] == section:
+                    link_sentence = link_sentence + ' ' + all_sentences[i]['clean_sentence']
+                    i += 1
+
+            else:
+                link_sentence = sentence['clean_sentence']            
 
                 output.append({
                     'source_title': input['source_title'],
@@ -422,7 +446,7 @@ def process_version(input):
                     'target_title': target_title,
                     'context': None,
                     'insert_indices': insert_index,
-                    'link_sentence': sentence['clean_sentence'],
+                    'link_sentence': link_sentence,
                     'link_text': link['text_2'],
                     'section': section,
                     'mention_present': None,
@@ -596,4 +620,3 @@ if __name__ == '__main__':
         fix_text)
     
     df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))
-

@@ -146,13 +146,13 @@ if __name__ == '__main__':
             # load links
             try:
                 df_links = pd.read_parquet(os.path.join(args.test_data_dir, lang, f'context_size_{j}', 'test_data.parquet'))
+
             except:
                 print(f'Error reading file {os.path.join(args.test_data_dir, lang, f"context_size_{j}", "test_data.parquet")}')
                 continue
             print(f'Loaded links for context_size_{j}')
             
             print(f"Originally, there are {len(df_links)} links for language {lang}")
-            
             df_removed = df_links['all_contexts'].apply(len) == 0
             df_links = df_links[~df_removed]
             print(f"Removed {df_removed.sum()} links because of empty contexts")
