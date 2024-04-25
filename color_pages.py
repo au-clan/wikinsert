@@ -261,6 +261,9 @@ def get_color_store(contexts, missing_category, insert_index, link_sentence, lin
                     start_underline -= lindexes['end']
                     end_underline -= lindexes['end']
 
+        #for i, loc in enumerate(color_store[:-1]):
+        #    assert loc['end'] != color_store[i+1]['start'] 
+
     return color_store
 
 

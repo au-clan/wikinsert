@@ -229,9 +229,9 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         const startNodeNum = parseInt(startNode), endNodeNum = parseInt(endNode);
         if(startNodeNum === endNodeNum){
             if(endNode.includes('-')){
-                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[endNodeNum].start + parseInt(relPos2End)});
+                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].start + parseInt(relPos2End)});
             } else{
-                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[endNodeNum].end + parseInt(relPos2End)});
+                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].end + parseInt(relPos2End)});
             }
         } else{
             locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].end});
@@ -258,10 +258,31 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
             section: getSection(sectionMap, endIdx),
             locList: locList
         };
+     
+
         if(numLines>0){
             sentObj.startIdx = Math.max(sentenceStore[numLines-1].endIdx, sentObj.startIdx);
         }
         sentenceStore.push(sentObj);
+
+        //Print to check
+        let reconst_sent = "";
+        for(const loc of locList){
+            reconst_sent += htmlText.substring(loc.start, loc.end);}
+        
+        if (reconst_sent != origSentence){
+            console.log(origSentence);
+            console.log(reconst_sent);
+            //console.log(startIdx, endIdx);
+            //console.log(htmlText.substring(startIdx, endIdx));
+            for (const loc of locList){
+                //console.log(loc.start, loc.end);
+                console.log(htmlText.substring(loc.start, loc.end));
+            }  
+        console.log("===============");
+        }
+        
+
         //fdata.write(JSON.stringify(sentObj)+"\n");
         //sentences.write(sentObj.text+"\n");
         //console.log("\n\n");
