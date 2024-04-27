@@ -177,35 +177,38 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         //     break;
         // }
         //console.log(`Annotated sentence: ${sentence}`);
-        firstControl = sentence.match(/<<[O|C]\d+>>/);
-        lastControl = sentence.match(/<<[O|C]\d+>>(?!.*<<[O|C]\d+>>)/);
-        //console.log(firstControl[0], lastControl[0]);
-        if(firstControl && firstControl[0].includes('<<O')){
+        firstControl = sentence.match(/<<[O|C]\d+>>/); //first occurence of <<0 textNodeId>> or <<C textNodeId>>
+        lastControl = sentence.match(/<<[O|C]\d+>>(?!.*<<[O|C]\d+>>)/); //last occurence of <<0 textNodeId>> or <<C textNodeId>>
+        //console.log(`Controls: ${firstControl[0]}, ${lastControl[0]}`);
+
+
+        if(firstControl && firstControl[0].includes('<<O')){ //case sentence contains a control and it's first is the control of start of node
             //console.log("First node is O");
-            startNode = firstControl[0].match(/<<O(\d+)>>/)[1];
-            relPos2Start = 0;
-        } else {
+            startNode = firstControl[0].match(/<<O(\d+)>>/)[1]; //First node Id of the sentence
+            relPos2Start = 0; 
+        } else {  //case sentence does not contain a control character or its first control character is the control of end of a node 
             //console.log("First node is either C or Null")
             startNode = currentNode;
             relPos2Start = relPos2End;
         }
-        if(lastControl){
-            if(lastControl[0].includes('<<C')){
+        if(lastControl){ //case sentence contains a control
+            if(lastControl[0].includes('<<C')){ //case last control is the control of end of node
                 //console.log("Last node is C");
                 endNode = (lastControl[0].match(/<<C(\d+)>>/)[1])+"+";
                 relPos2End = 0;
-            } else { // control character is O
-                //console.log("Last node is O", relPos2Start);
+            } else { // case last control is the control of start of node
+                //console.log("Last node is O")//, relPos2Start);
                 currentNode = lastControl[0].match(/<<O(\d+)>>/)[1];
                 endNode = currentNode+"-";
                 relPos2End = sentence.length - (lastControl.index + lastControl[0].length);
             }
-        } else { // control character is NULL
+        } else { // case sentence does not contain a control character, i.e start witihn a node and end within the same node
             //console.log("Last node is null", relPos2Start);
-            relPos2End += sentence.length;
+            relPos2End += sentence.length + 1; //+ because substring(start,end) is exclusive at end 
         }
         const origSentence = sentence.replace(/<<[C|O]\d+>>/g,'');
         if(origSentence === ''){
+            //console.log("Empty sentence");
             continue;
         }
         //console.log(`Original Sentence: ${origSentence}`);
@@ -227,12 +230,13 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         //console.log(`HTML of sentence: ${htmlText.substring(startIdx+numLeadingSpaces, endIdx+numLeadingSpaces)}`);
         let locList = [];
         const startNodeNum = parseInt(startNode), endNodeNum = parseInt(endNode);
-        if(startNodeNum === endNodeNum){
+        if(startNodeNum === endNodeNum){ //case no inner node 
             if(endNode.includes('-')){
                 locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].start + parseInt(relPos2End)});
             } else{
                 locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].end + parseInt(relPos2End)});
             }
+
         } else{
             locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].end});
             for(i = startNodeNum+1; i<endNodeNum; i++){
@@ -249,6 +253,28 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
                 locList.push({start: textNodes2Offset[endNodeNum].start, end: textNodes2Offset[endNodeNum].end + parseInt(relPos2End)});
             }
         }
+
+        if(numLines>0){
+            startIdx = Math.max(sentenceStore[numLines-1].endIdx, startIdx);
+            locList[0].start = Math.max(startIdx, locList[0].start);
+        }
+        
+
+
+        if (numLeadingSpaces > 0){
+            locList[0].start += numLeadingSpaces;
+            if (locList[locList.length-1].end === endIdx){
+                locList[locList.length-1].end += numLeadingSpaces;
+            }
+            else{
+                locList.push({start: endIdx, end: endIdx+numLeadingSpaces});
+            }
+        }
+
+        //Rempving elements where start and end are the same
+        locList = locList.filter(loc => loc.start !== loc.end);
+
+
         const sentObj = {
             md5: md5(origSentence),
             id: numLines,
@@ -258,30 +284,9 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
             section: getSection(sectionMap, endIdx),
             locList: locList
         };
-     
 
-        if(numLines>0){
-            sentObj.startIdx = Math.max(sentenceStore[numLines-1].endIdx, sentObj.startIdx);
-        }
         sentenceStore.push(sentObj);
-
-        //Print to check
-        let reconst_sent = "";
-        for(const loc of locList){
-            reconst_sent += htmlText.substring(loc.start, loc.end);}
-        
-        if (reconst_sent != origSentence){
-            console.log(origSentence);
-            console.log(reconst_sent);
-            //console.log(startIdx, endIdx);
-            //console.log(htmlText.substring(startIdx, endIdx));
-            for (const loc of locList){
-                //console.log(loc.start, loc.end);
-                console.log(htmlText.substring(loc.start, loc.end));
-            }  
-        console.log("===============");
-        }
-        
+                
 
         //fdata.write(JSON.stringify(sentObj)+"\n");
         //sentences.write(sentObj.text+"\n");
