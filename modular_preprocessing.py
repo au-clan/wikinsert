@@ -356,8 +356,17 @@ def process_version(input):
             all_links_1 = pd.DataFrame(columns=all_links_2.columns)
         
 
-        all_links = all_links_1.merge(all_links_2, on=['link'], how='outer', suffixes=('_1', '_2'))
-        added_links = all_links[all_links['sentid_1'].isnull()]
+        all_links = all_links_1.merge(all_links_2, on=['text'], how='outer', suffixes=('_1', '_2'))
+
+        added_links = all_links[all_links['sentid_1'].isnull()].copy()
+
+        added_links.drop(columns=['link_1'], inplace=True)
+        added_links.rename(columns={'link_2': 'link'}, inplace=True)
+
+        #kept_link = all_links[all_links['sentid_1'].notnull() & all_links['sentid_2'].notnull()]
+        #if (kept_link['link_1'] != kept_link['link_2']).sum() > 0:
+        #    print(kept_link)
+        #    print("================")
 
         times_after_merging_links.append(time.time())
 
@@ -447,7 +456,7 @@ def process_version(input):
                     'context': None,
                     'insert_indices': insert_index,
                     'link_sentence': link_sentence,
-                    'link_text': link['text_2'],
+                    'link_text': link['text'],
                     'section': section,
                     'mention_present': None,
                     'source_lead': original_lead.strip(),
@@ -592,7 +601,7 @@ if __name__ == '__main__':
             else:
                 mentions_map[target_title].append(row['mention'])
     
-    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)[:100]
+    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)#[:100]
     output = []
     nb_processes_ = min(cpu_count(), args.n_processes)
     print(f"Running on {nb_processes_} processes")

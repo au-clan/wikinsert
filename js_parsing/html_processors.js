@@ -171,6 +171,7 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
     let startIdx, endIdx;
     let firstControl, lastControl;
     let numLeadingSpaces = 0;
+    let numLeadingSpacesFirst = 0;
 
     for(sentence of sentences){
         // if(numLines>5){
@@ -255,23 +256,24 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
         }
 
         if(numLines>0){
-            startIdx = Math.max(sentenceStore[numLines-1].endIdx, startIdx);
-            locList[0].start = Math.max(startIdx, locList[0].start);
+            let new_startIdx = Math.max(sentenceStore[numLines-1].endIdx, startIdx);       
+            startIdx = new_startIdx;
         }
         
+        numLeadingSpacesFirst = htmlText.substring(locList[0].startIdx, locList[0].endIdx).search(/\S/);
+        locList[0].start += numLeadingSpacesFirst;
 
+        //add space at the end of the sentence if possible
+        //check if the character after locList[locList.length-1].end is a space/newline, while it is, increment locList[locList.length-1].end
 
-        if (numLeadingSpaces > 0){
-            locList[0].start += numLeadingSpaces;
-            if (locList[locList.length-1].end === endIdx){
-                locList[locList.length-1].end += numLeadingSpaces;
-            }
-            else{
-                locList.push({start: endIdx, end: endIdx+numLeadingSpaces});
-            }
-        }
-
-        //Rempving elements where start and end are the same
+        //let endChar = htmlText.substring(locList[locList.length-1].end, locList[locList.length-1].end+1);
+        
+        //while(endChar === ' ' || endChar === '\n'){
+        //    locList[locList.length-1].end++;
+        //    endChar = htmlText.substring(locList[locList.length-1].end, locList[locList.length-1].end+1);
+        //}
+        
+        //Removing elements where start and end are the same
         locList = locList.filter(loc => loc.start !== loc.end);
 
 
@@ -296,6 +298,15 @@ function extractSentences(htmlText, dom, document, sectionMap){ //extractSentenc
     //fdata.end();
     //fsentences.end();
     //process.stdout.write(JSON.stringify(sentenceStore));
+let reconst = "";
+for (sentObj of sentenceStore){
+    for (loc of sentObj.locList){
+        reconst += `[s]${loc.start}[s]${htmlText.substring(loc.start, loc.end)}[e]${loc.end}[e]`;
+    }
+}
+
+console.log(reconst);
+
 return sentenceStore ;
 }
 
