@@ -10,3 +10,4 @@ scored_data/*
 __pycache__/*
 __.DS_Store
 
+colored_html/
