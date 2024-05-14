@@ -3,7 +3,7 @@
 # set default values
 input_dir="/dlabdata1/tsoares/wikidumps/"
 output_dir="/dlabdata1/boulenge/wikidumps_data"
-processes=64
+processes=48
 max_samples_per_lang=1000
 
 

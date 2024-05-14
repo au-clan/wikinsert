@@ -16,8 +16,76 @@ const HTML_CHAR_ENTITIES = {
     '160': '&nbsp;'
 };
 const XPATH_CONDITIONS = {
-    NOT_STARTS_WITH_NON_NS_0: "not(starts-with(@href, '/wiki/Talk:')) and\n    not(starts-with(@href, '/wiki/talk:')) and\n    not(starts-with(@href, '/wiki/User:')) and\n    not(starts-with(@href, '/wiki/user:')) and\n    not(starts-with(@href, '/wiki/User talk:')) and\n    not(starts-with(@href, '/wiki/user talk:')) and\n    not(starts-with(@href, '/wiki/Wikipedia:')) and\n    not(starts-with(@href, '/wiki/wikipedia:')) and\n    not(starts-with(@href, '/wiki/Wikipedia talk:')) and\n    not(starts-with(@href, '/wiki/wikipedia talk:')) and\n    not(starts-with(@href, '/wiki/File:')) and\n    not(starts-with(@href, '/wiki/file:')) and\n    not(starts-with(@href, '/wiki/File talk:')) and\n    not(starts-with(@href, '/wiki/file talk:')) and\n    not(starts-with(@href, '/wiki/MediaWiki:')) and\n    not(starts-with(@href, '/wiki/mediawiki:')) and\n    not(starts-with(@href, '/wiki/MediaWiki talk:')) and\n    not(starts-with(@href, '/wiki/mediawiki talk:')) and\n    not(starts-with(@href, '/wiki/Template:')) and\n    not(starts-with(@href, '/wiki/template:')) and\n    not(starts-with(@href, '/wiki/Template talk:')) and\n    not(starts-with(@href, '/wiki/template talk:')) and\n    not(starts-with(@href, '/wiki/Help:')) and\n    not(starts-with(@href, '/wiki/help:')) and\n    not(starts-with(@href, '/wiki/Help talk:')) and\n    not(starts-with(@href, '/wiki/help talk:')) and\n    not(starts-with(@href, '/wiki/Category:')) and\n    not(starts-with(@href, '/wiki/category:')) and\n    not(starts-with(@href, '/wiki/Category talk:')) and\n    not(starts-with(@href, '/wiki/category talk:')) and\n    not(starts-with(@href, '/wiki/Portal:')) and\n    not(starts-with(@href, '/wiki/portal:')) and\n    not(starts-with(@href, '/wiki/Portal talk:')) and\n    not(starts-with(@href, '/wiki/portal talk:')) and\n    not(starts-with(@href, '/wiki/Draft:')) and\n    not(starts-with(@href, '/wiki/draft:')) and\n    not(starts-with(@href, '/wiki/Draft talk:')) and\n    not(starts-with(@href, '/wiki/draft talk:')) and\n    not(starts-with(@href, '/wiki/TimedText:')) and\n    not(starts-with(@href, '/wiki/timedtext:')) and\n    not(starts-with(@href, '/wiki/TimedText talk:')) and\n    not(starts-with(@href, '/wiki/timedtext talk:')) and\n    not(starts-with(@href, '/wiki/Module:')) and\n    not(starts-with(@href, '/wiki/module:')) and\n    not(starts-with(@href, '/wiki/Module talk:')) and\n    not(starts-with(@href, '/wiki/module talk:')) and\n    not(starts-with(@href, '/wiki/Book:')) and\n    not(starts-with(@href, '/wiki/book:')) and\n    not(starts-with(@href, '/wiki/Book talk:')) and\n    not(starts-with(@href, '/wiki/book talk:')) and\n    not(starts-with(@href, '/wiki/Education Program:')) and\n    not(starts-with(@href, '/wiki/education program:')) and\n    not(starts-with(@href, '/wiki/Education Program talk:')) and\n    not(starts-with(@href, '/wiki/education program talk:')) and\n    not(starts-with(@href, '/wiki/Gadget:')) and\n    not(starts-with(@href, '/wiki/gadget:')) and\n    not(starts-with(@href, '/wiki/Gadget talk:')) and\n    not(starts-with(@href, '/wiki/gadget talk:')) and\n    not(starts-with(@href, '/wiki/Gadget definition:')) and\n    not(starts-with(@href, '/wiki/gadget definition:')) and\n    not(starts-with(@href, '/wiki/Gadget definition talk:')) and\n    not(starts-with(@href, '/wiki/gadget definition talk:')) and\n    not(starts-with(@href, '/wiki/Special:')) and\n    not(starts-with(@href, '/wiki/special:')) and\n    not(starts-with(@href, '/wiki/Media')) and\n    not(starts-with(@href, '/wiki/media')) and\n    not(starts-with(@href, '/wiki/Image')) and\n    not(starts-with(@href, '/wiki/image'))"
-};
+    NOT_STARTS_WITH_NON_NS_0: `not(contains(@href, '/wiki/Talk:')) and
+        not(contains(@href, '/wiki/talk:')) and
+        not(contains(@href, '/wiki/User:')) and
+        not(contains(@href, '/wiki/user:')) and
+        not(contains(@href, '/wiki/User talk:')) and
+        not(contains(@href, '/wiki/user talk:')) and
+        not(contains(@href, '/wiki/Wikipedia:')) and
+        not(contains(@href, '/wiki/wikipedia:')) and
+        not(contains(@href, '/wiki/Wikipedia talk:')) and
+        not(contains(@href, '/wiki/wikipedia talk:')) and
+        not(contains(@href, '/wiki/File:')) and
+        not(contains(@href, '/wiki/file:')) and
+        not(contains(@href, '/wiki/File talk:')) and
+        not(contains(@href, '/wiki/file talk:')) and
+        not(contains(@href, '/wiki/MediaWiki:')) and
+        not(contains(@href, '/wiki/mediawiki:')) and
+        not(contains(@href, '/wiki/MediaWiki talk:')) and
+        not(contains(@href, '/wiki/mediawiki talk:')) and
+        not(contains(@href, '/wiki/Template:')) and
+        not(contains(@href, '/wiki/template:')) and
+        not(contains(@href, '/wiki/Template talk:')) and
+        not(contains(@href, '/wiki/template talk:')) and
+        not(contains(@href, '/wiki/Help:')) and
+        not(contains(@href, '/wiki/help:')) and
+        not(contains(@href, '/wiki/Help talk:')) and
+        not(contains(@href, '/wiki/help talk:')) and
+        not(contains(@href, '/wiki/Category:')) and
+        not(contains(@href, '/wiki/category:')) and
+        not(contains(@href, '/wiki/Category talk:')) and
+        not(contains(@href, '/wiki/category talk:')) and
+        not(contains(@href, '/wiki/Portal:')) and
+        not(contains(@href, '/wiki/portal:')) and
+        not(contains(@href, '/wiki/Portal talk:')) and
+        not(contains(@href, '/wiki/portal talk:')) and
+        not(contains(@href, '/wiki/Draft:')) and
+        not(contains(@href, '/wiki/draft:')) and
+        not(contains(@href, '/wiki/Draft talk:')) and
+        not(contains(@href, '/wiki/draft talk:')) and
+        not(contains(@href, '/wiki/TimedText:')) and
+        not(contains(@href, '/wiki/timedtext:')) and
+        not(contains(@href, '/wiki/TimedText talk:')) and
+        not(contains(@href, '/wiki/timedtext talk:')) and
+        not(contains(@href, '/wiki/Module:')) and
+        not(contains(@href, '/wiki/module:')) and
+        not(contains(@href, '/wiki/Module talk:')) and
+        not(contains(@href, '/wiki/module talk:')) and
+        not(contains(@href, '/wiki/Book:')) and
+        not(contains(@href, '/wiki/book:')) and
+        not(contains(@href, '/wiki/Book talk:')) and
+        not(contains(@href, '/wiki/book talk:')) and
+        not(contains(@href, '/wiki/Education Program:')) and
+        not(contains(@href, '/wiki/education program:')) and
+        not(contains(@href, '/wiki/Education Program talk:')) and
+        not(contains(@href, '/wiki/education program talk:')) and
+        not(contains(@href, '/wiki/Gadget:')) and
+        not(contains(@href, '/wiki/gadget:')) and
+        not(contains(@href, '/wiki/Gadget talk:')) and
+        not(contains(@href, '/wiki/gadget talk:')) and
+        not(contains(@href, '/wiki/Gadget definition:')) and
+        not(contains(@href, '/wiki/gadget definition:')) and
+        not(contains(@href, '/wiki/Gadget definition talk:')) and
+        not(contains(@href, '/wiki/gadget definition talk:')) and
+        not(contains(@href, '/wiki/Special:')) and
+        not(contains(@href, '/wiki/special:')) and
+        not(contains(@href, '/wiki/Media')) and
+        not(contains(@href, '/wiki/media')) and
+        not(contains(@href, '/wiki/Image')) and
+        not(contains(@href, '/wiki/image'))
+`
+        };
 
 /**
  * Convert parsed HTML character entities used in wikipedia text to their corresponding HTML representations
@@ -61,7 +129,7 @@ function getSection(rangeMap, input) {
     return null; // No section found for the input
 }
 
-function findSections(document,dom) {
+async function findSections(document,dom) {
     
     const xpathSections = `//div[@id='mw-content-text']//h2[
         not(ancestor-or-self::noscript) and 
@@ -110,7 +178,7 @@ function findSections(document,dom) {
  * @param htmlText
  * @returns {Promise<*>}
  */
-function extractSentences(htmlText, dom, document, sectionMap){ //extractSentences(dom, htmlText, outDir, article) {
+async function extractSentences(htmlText, dom, document, sectionMap){ //extractSentences(dom, htmlText, outDir, article) {
     // let dom = new JSDOM(htmlText, { includeNodeLocations: true });
     // htmlText = dom.serialize();
 
@@ -310,7 +378,7 @@ console.log(reconst);
 return sentenceStore ;
 }
 
-function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, article, sentenceStore){
+async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, article, sentenceStore){
     // let dom = new JSDOM(htmlText, { includeNodeLocations: true });
     // htmlText = dom.serialize();
     // dom = new JSDOM(htmlText, { includeNodeLocations: true });
@@ -323,7 +391,8 @@ function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, 
     not(ancestor-or-self::cite) and
     not(ancestor-or-self::script) and
     not(ancestor-or-self::table) and
-    starts-with(@href, '/wiki/') and
+    (starts-with(@href, '/wiki/')
+    or contains(@href, '.wikipedia.org/wiki')) and
     not(ancestor::div[
         contains(@class, "thumb") or 
         contains(@role, "navigation") or 
@@ -383,17 +452,17 @@ function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, 
     return linkStore;
 }
 
-function parse(filePath){
+async function parse(filePath){
 
     const htmlText = fs.readFileSync(filePath, 'utf-8');
 
     let dom = new JSDOM(htmlText, { includeNodeLocations: true });
     let document = dom.window.document;
-    let sectionMap = findSections(document, dom);
+    let sectionMap = await findSections(document, dom);
 
-    const sentenceStore = extractSentences(htmlText, dom, document, sectionMap);
+    const sentenceStore = await extractSentences(htmlText, dom, document, sectionMap);
 
-    const linkStore = extractLinks(dom, document, sectionMap, sentenceStore);
+    const linkStore = await extractLinks(dom, document, sectionMap, sentenceStore);
 
     const sentences = JSON.stringify(sentenceStore);
     const links = JSON.stringify(linkStore);

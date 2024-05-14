@@ -12,6 +12,7 @@ import matplotlib.colors as mcolors
 import seaborn as sns
 tqdm.pandas()
 import execjs
+
 HEAT_MAP_UTIL = 'js_parsing/heatmap_utils.js'
 HEAT_MAP_BUILDER = 'overlayHeatMap'
 
@@ -99,7 +100,7 @@ def overlay_heatmap(colored_contexts, source_ID, first_version, missing_category
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
     color_store = get_color_store(colored_contexts, missing_category, insert_indices, link_sentence, link_text)
-    file_path = f"{html_folder_path}/{lang}wiki-NS0-20231001/eval/pages/{source_ID}_{first_version}.html"
+    file_path = f"{html_folder_path}/{source_ID}_{first_version}.html"
     output_path = f"{save_folder}/{source_ID}_{first_version}_{link_text.replace('/', '')}.html"
 
     heat_map_util_compiled.call(HEAT_MAP_BUILDER, color_store, file_path, output_path)
@@ -135,7 +136,7 @@ def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_
 
 
 def get_html_paths(data_path, lang, scored_df):
-    data_path_in = f"{data_path}/{lang}wiki-NS0-20231001/eval/pages"
+    data_path_in = f"{data_path}"
     paths = scored_df.progress_apply(lambda x: f"{data_path_in}/{x['source_ID']}_{x['first_version']}.html", axis=1)
 
     return paths

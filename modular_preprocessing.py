@@ -6,6 +6,7 @@ from bs4 import MarkupResemblesLocatorWarning
 import re
 import difflib
 import math
+import numpy as np
 from tqdm import tqdm
 import os
 import warnings
@@ -14,35 +15,18 @@ import json
 tqdm.pandas()
 import execjs
 import time
+from collections import Counter
 
 
-HTML_PROCESSORS = "js_parsing/html_processors.js"
-PARSER = "parse" 
+
 
 UNRELEVENT_SECTIONS = ["References", "Other Websites"]
 
-with open(HTML_PROCESSORS, 'r') as f:
-    html_processors = f.read()
 
-html_processors_compiled = execjs.compile(html_processors)
+
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
-def get_sentences_and_links(file_path):
-    start = time.time()
-    results = html_processors_compiled.call(PARSER, file_path)
-    time_after_parsing = time.time()
-    #print(f"Time for parsing: {time_after_parsing - start}")
-    sentences = json.loads(results['sentences'])
-    links = json.loads(results['links'])
-    sentences = pd.DataFrame(sentences)
-    if sentences.shape[0] > 0:
-        sentences = sentences.drop(columns = ['md5'])
-
-    links = pd.DataFrame(links)
-    time_after_processing = time.time()
-    #print(f"Time for processing: {time_after_processing - time_after_parsing}")
-    return sentences, links
 
 def fix_target_titles(title, redirect_map_1, redirect_map_2):
     counter = 0
@@ -61,13 +45,12 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
     return title
 
 def clean_condition(txt):
-    # don't allow sentences with less than 10 characters
-    #don't allow list items to be splitted accros sentences: case dos no start with capital and does not end with point
-    return len(txt) > 10 and (txt.strip()[0].isupper() or txt.strip()[-1] == '.')
+    # don't allow sentences with less than 10 characters adn non sentence like
+    return (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']']) or len(txt) > 1000
 
 def merge_sentences(row1, row2):
     row = {}
-    row['text'] = row1['text'] + ' ' + row2['text'] 
+    row['text'] = row1['text'] + '. ' + row2['text'] 
     row['id'] = row1['id'] + row2['id'] #concat list of ids
     row['startIdx'] = row1['startIdx']
     row['endIdx'] = row2['endIdx']
@@ -76,10 +59,22 @@ def merge_sentences(row1, row2):
 
     return row
 
+def compute_sentence_similarity(sentence1, sentence2):
+    words1 = [word.strip() for word in sentence1.replace('\n', ' ').split(' ') if word != '']
+    words2 = [word.strip() for word in sentence2.replace('\n', ' ').split(' ') if word != '']
+    
+    freqs1 = Counter(words1)
+    freqs2 = Counter(words2)
+    norm1 = math.sqrt(sum([freqs1[word]**2 for word in freqs1]))
+    norm2 = math.sqrt(sum([freqs2[word]**2 for word in freqs2]))
+    
+    dot_product = sum(freqs1[word] * freqs2[word] for word in freqs1 if word in freqs2)
+    score = dot_product / (norm1 * norm2)  
+    return score
+
 def clean_sentences(sentences_df):
     new_sentences = []
     current_unclean = None 
-
     sentences_df['id'] = sentences_df['id'].apply(lambda x: [x])
     sentences_df['text'] = sentences_df['text'].apply(lambda x: x.strip())
 
@@ -209,16 +204,26 @@ def process_version(input):
     
     output = []
     d = difflib.Differ()
-    file_1 = os.path.join(
-        args.html_dir, f"{input['source_ID']}_{input['first_version']}.html")
-    start_time = time.time()
-    sentences_1, all_links_1 = get_sentences_and_links(file_1)
-    time_after_parsing_1 = time.time()
-    if sentences_1.shape[0] == 0:
-        print('No HTML found')
-        print(f"{input['source_ID']}_{input['first_version']}.html")
-        return []
+    sentences_1_path = os.path.join(
+        args.parsed_html_dir, f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
     
+    links_1_path = os.path.join(
+        args.parsed_html_dir, f"{input['source_ID']}_{input['first_version']}_links.jsonl")
+
+    if not os.path.exists(sentences_1_path):
+            print('No parsed HTML found')
+            print(f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
+            return []
+
+    if not os.path.exists(links_1_path):
+            print('No links 1 found')
+            print(f"{input['source_ID']}_{input['first_version']}_links.jsonl")
+            return []
+    
+    sentences_1 = pd.read_json(sentences_1_path, lines=True)
+    all_links_1 = pd.read_json(links_1_path, lines=True)
+    time_after_parsing_1 = time.time()
+
     clean_sentences_1 = clean_sentences(sentences_1)
     
     time_after_cleaning_1 = time.time()
@@ -232,22 +237,33 @@ def process_version(input):
 
     for second_version in input['versions']:
         found_links = []
-        file_2 = os.path.join(
-            args.html_dir, f"{input['source_ID']}_{second_version}.html")
+        sentences_2_path = os.path.join(
+            args.parsed_html_dir, f"{input['source_ID']}_{second_version}.jsonl")
+
+        links_2_path = os.path.join(
+            args.parsed_html_dir, f"{input['source_ID']}_{second_version}_links.jsonl")
         
-        sentences_2, all_links_2 = get_sentences_and_links(file_2)
+        if not os.path.exists(sentences_2_path):
+            print('No parsed HTML found')
+            print(f"{input['source_ID']}_{second_version}.jsonl")
+            continue
+        
+        if not os.path.exists(links_2_path):
+            print('No links 2 found')
+            print(f"{input['source_ID']}_{second_version}_links.jsonl")
+            continue
 
-        times_after_parsing_2.append(time.time())
+        sentences_2 = pd.read_json(sentences_2_path, lines=True)
+        all_links_2 = pd.read_json(links_2_path, lines=True)
 
-        if sentences_2.shape[0] == 0:
-            print('No HTML found')
-            print(f"{input['source_ID']}_{second_version}.html")
-            return []
+        times_after_parsing_2.append(time.time())            
 
         if all_links_2.shape[0] == 0:
             print('No links found')
-            print(f"{input['source_ID']}_{second_version}.html")
-            return []
+            print(f"{input['source_ID']}_{second_version}_links.jsonl")
+            continue
+
+
 
         clean_sentences_2 = clean_sentences(sentences_2)
 
@@ -258,12 +274,6 @@ def process_version(input):
         diff = list(d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text'])))
 
         group_indexes = get_group_indexes(diff)
-
-        #for d in diff:
-        #    print(d)
-        
-        #for g in group_indexes:
-        #    print(g)
 
         times_after_diff.append(time.time())
 
@@ -340,13 +350,54 @@ def process_version(input):
 
             all_sentences.append(new_sentence)
 
+        added_sentences = list(filter(lambda x: x['status'] == 'added', all_sentences))
+        removed_sentences = list(filter(lambda x: x['status'] == 'removed', all_sentences))
+
+        scores = np.zeros((len(added_sentences), len(removed_sentences)))
+        for i, sentence1 in enumerate(added_sentences):
+            for j, sentence2 in enumerate(removed_sentences):
+                scores[i, j] = compute_sentence_similarity(sentence1['clean_sentence'], sentence2['clean_sentence'])
+         
+
+        #get positions (i,j) in order of decreasing score
+        #print(scores)
+        positions = (np.argsort(-scores, axis=None))
+        indices = np.unravel_index(positions, scores.shape)
+        index_tuples = list(zip(*indices))
+        #print(index_tuples)
+
+        #filter that each index should only appear once
+        added_indexes_i = []
+        added_indexes_j = []
+        filtered_pos = []
+        for i,j in index_tuples:
+            if i not in added_indexes_i and j not in added_indexes_j:
+                filtered_pos.append((i,j))
+                added_indexes_i.append(i)
+                added_indexes_j.append(j)
+
+        #print(filtered_pos)
+
+        for i, j in [pos for pos in filtered_pos if scores[pos] >= 0.67]:
+            idx_added = added_sentences[i]['index']
+            idx_removed = removed_sentences[j]['index']
+            if scores[i, j] >= 0.99:
+                all_sentences[idx_added]['status'] = 'moved_from'
+                all_sentences[idx_added]['moved_from'] = idx_removed
+                all_sentences[idx_removed]['status'] = 'moved_to'
+                all_sentences[idx_removed]['moved_to'] = idx_added
+            else:
+                all_sentences[idx_added]['status'] = 'moved_from_with_modifications'
+                all_sentences[idx_added]['moved_from'] = idx_removed
+                all_sentences[idx_removed]['status'] = 'moved_to_with_modifications'
+                all_sentences[idx_removed]['moved_to'] = idx_added
 
             
         times_afer_all_sentences.append(time.time())
 
         section_sentences = {}
         for sentence in all_sentences:
-            if sentence['status'] == 'added':
+            if sentence['status'] in ['added', 'moved_from','moved_from_with_modifications']:
                 continue
             if sentence['section1'] not in section_sentences:
                 section_sentences[sentence['section1']] = []
@@ -371,7 +422,7 @@ def process_version(input):
         times_after_merging_links.append(time.time())
 
 
-        all_sentences2 = list(filter(lambda x: x['status'] != 'removed', all_sentences))
+        all_sentences2 = list(filter(lambda x: x['status'] not in ['removed', 'moved_to', 'moved_to_with_modifications'], all_sentences))
 
         for _, link in added_links.iterrows():
             
@@ -401,7 +452,7 @@ def process_version(input):
 
             # get target title
             target_title = fix_target_titles(
-                link['link'][6:].split('#')[0], redirect_1, redirect_2)
+                link['link'].split("wiki/")[1].split('#')[0], redirect_1, redirect_2)
             
             all_contexts = create_all_contexts(
                 section_sentences, args.side_contexts_size)
@@ -410,10 +461,14 @@ def process_version(input):
 
             if sentence['status'] == 'neutral':
                 missing_category = 'missing_mention'
+            elif sentence['status'] == 'moved_to':
+                missing_category = 'missing_mention_in_moved_sentence'
             elif section not in section_sentences:
                     missing_category = 'missing_section'  
             elif sentence['status'] == 'modified':
                 missing_category = 'missing_mention_with_sentence_modification'
+            elif sentence['status'] == 'moved_to_with_modifications':
+                missing_category = 'missing_mention_in_moved_sentence_with_modifications'
             else:
                 prev_index = max(sentence['index'] - 1, 0)
                 next_index = min(sentence['index'] + 1, len(all_sentences) - 1)
@@ -433,6 +488,8 @@ def process_version(input):
                 insert_index = sentence['ids1']
             elif missing_category == 'missing_sentence' or missing_category == 'missing_span':
                 insert_index = sentence['added_after']
+            elif missing_category == 'missing_mention_in_moved_sentence' or missing_category == 'missing_mention_in_moved_sentence_with_modifications':
+                insert_index = all_sentences[sentence['moved_from']]['ids1']
             else: insert_index = None
             
             if missing_category == 'missing_span':
@@ -505,8 +562,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--versions_file', type=str,
                         required=True, help='Path to the versions file')
-    parser.add_argument('--html_dir', type=str, required=True,
-                        help='Path to the directory containing all the HTML files')
+    parser.add_argument('--parsed_html_dir', type=str, required=True,
+                        help='Path to the directory containing all the parsed HTML files, both links and sentences')
     parser.add_argument('--redirect_1', type=str, required=True,
                         help='Path to the first redirect file')
     parser.add_argument('--redirect_2', type=str, required=True,
@@ -524,9 +581,10 @@ if __name__ == '__main__':
 
     # check if input files exist
     if not os.path.exists(args.versions_file):
+        print(args.versions_file)
         raise Exception('Versions file does not exist')
     if not os.path.exists(args.html_dir):
-        raise Exception('HTML directory does not exist')
+        raise Exception(f'parsed HTML directory {args.parsed_html_dir} does not exist')
     if not os.path.exists(args.redirect_1):
         raise Exception('Redirect file 1 does not exist')
     if not os.path.exists(args.redirect_2):
@@ -601,7 +659,7 @@ if __name__ == '__main__':
             else:
                 mentions_map[target_title].append(row['mention'])
     
-    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)#[:100]
+    revisions_clean = sorted(revisions_clean, key=lambda x: len(x['versions']), reverse=True)
     output = []
     nb_processes_ = min(cpu_count(), args.n_processes)
     print(f"Running on {nb_processes_} processes")
@@ -628,4 +686,5 @@ if __name__ == '__main__':
     df_output['source_lead'] = df_output['source_lead'].progress_apply(
         fix_text)
     
+
     df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))
