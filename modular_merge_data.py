@@ -35,8 +35,6 @@ if __name__ == '__main__':
                         required=True, help='Sizes of side contexts to merge')
     parser.add_argument('--output_dir', type=str, required=True,
                         help='Path to the output dir')
-    parser.add_argument('--max_samples_per_lang', '-n', type=int,
-                        default=1000, help='Maximum number of samples per language')
     parser.add_argument('--ignore_warnings', action='store_true', default=False,
                         help='Ignore warnings')
     parser.set_defaults(ignore_warnings=False)
@@ -166,10 +164,6 @@ if __name__ == '__main__':
             print(f"Removed {df_removed.sum()} links because of missing section")
             
             print(f"After cleaning, there are {len(df_links)} links for language {lang}")
-            
-            if len(df_links) > args.max_samples_per_lang:
-                print(f'There are {len(df_links)} links for language {lang}, sampling {args.max_samples_per_lang}')
-                df_links = df_links.sample(args.max_samples_per_lang)
             
             df_links['target_lead'] = df_links['target_title'].apply(lambda x: pages[x])
             df_links = df_links.reset_index(drop=True)

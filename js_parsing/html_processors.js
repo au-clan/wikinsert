@@ -382,12 +382,12 @@ async function extractSentences(htmlText, dom, document, sectionMap){ //extractS
 
 //console.log(reconst);
 
-console.log('sentences');
-console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
-console.log(`Time to find nodes: ${time_to_find_nodes - time_to_xpath} ms`);
-console.log(`Time to tokenize: ${time_to_tokenize - time_to_find_nodes} ms`);
-console.log(`Time to find sub indexes: ${time_to_find_sub_indexes - time_to_tokenize} ms`);
-console.log(`End of sentences`);
+//console.log('sentences');
+//console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
+//console.log(`Time to find nodes: ${time_to_find_nodes - time_to_xpath} ms`);
+//console.log(`Time to tokenize: ${time_to_tokenize - time_to_find_nodes} ms`);
+//console.log(`Time to find sub indexes: ${time_to_find_sub_indexes - time_to_tokenize} ms`);
+//console.log(`End of sentences`);
 
 return sentenceStore ;
 }
@@ -465,10 +465,10 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
     time_to_find_links = performance.now();
 
     //flink.end();
-    console.log('links')
-    console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
-    console.log(`Time to find links: ${time_to_find_links - time_to_xpath} ms`);
-    console.log(`End of links`);
+    //console.log('links')
+    //console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
+    //console.log(`Time to find links: ${time_to_find_links - time_to_xpath} ms`);
+    //console.log(`End of links`);
 
 
     return linkStore;
@@ -517,15 +517,15 @@ async function parse(filePath, outPath){
 
     let time_to_write = performance.now();
 
-    console.log(`Time to open file: ${time_to_open - start_time} ms`);
-    console.log(`Time to create dom: ${time_to_dom - time_to_open} ms`);
-    console.log(`Time to create document: ${time_to_document - time_to_dom} ms`);
-    console.log(`Time to find sections: ${time_to_sections - time_to_document} ms`);
-    console.log(`Time to extract sentences: ${time_to_sentences - time_to_sections} ms`);
-    console.log(`Time to extract links: ${time_to_links - time_to_sentences} ms`);
-    console.log(`Time to write sentences json: ${time_to_sentences_json - time_to_links} ms`);
-    console.log(`Time to write links json: ${time_to_links_json - time_to_sentences_json} ms`);
-    console.log(`Time to write to files: ${time_to_write - time_to_links_json} ms`);
+    //console.log(`Time to open file: ${time_to_open - start_time} ms`);
+    //console.log(`Time to create dom: ${time_to_dom - time_to_open} ms`);
+    //console.log(`Time to create document: ${time_to_document - time_to_dom} ms`);
+    //console.log(`Time to find sections: ${time_to_sections - time_to_document} ms`);
+    //console.log(`Time to extract sentences: ${time_to_sentences - time_to_sections} ms`);
+    //console.log(`Time to extract links: ${time_to_links - time_to_sentences} ms`);
+    //console.log(`Time to write sentences json: ${time_to_sentences_json - time_to_links} ms`);
+    //console.log(`Time to write links json: ${time_to_links_json - time_to_sentences_json} ms`);
+    //console.log(`Time to write to files: ${time_to_write - time_to_links_json} ms`);
 
 }
 

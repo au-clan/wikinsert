@@ -9,8 +9,6 @@ import os
 from urllib import parse
 from tqdm import tqdm
 import random
-from glob import glob
-from ast import literal_eval
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -53,6 +51,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    os.makedirs(args.output_dir, exist_ok=True)
+
     # check if data path exists
     if not os.path.exists(args.data_dir):
         raise ValueError('Data directory does not exist')
@@ -62,7 +62,7 @@ if __name__ == '__main__':
 
     output_dimension = 1
 
-    batch_size = 1
+    batch_size = 64
 
     # process each language sequentially
 

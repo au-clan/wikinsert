@@ -10,6 +10,7 @@ import os
 from multiprocessing import Pool, cpu_count
 import matplotlib.colors as mcolors
 import seaborn as sns
+from matplotlib.colors import LinearSegmentedColormap
 tqdm.pandas()
 import execjs
 
@@ -46,6 +47,12 @@ def blue_to_red(scores, smoothing_param):
     colors = [(color[0]*255, color[1]*255, color[2]*255, 255) for color in colors]
     return colors
 
+def grey_to_red(scores, smoothing_param):
+    scores = normalize_scores(scores, smoothing_param)
+    palette = sns.color_palette(palette='blend:gray,r', as_cmap=True)
+    colors = palette(scores)
+    colors = [(color[0]*255, color[1]*255, color[2]*255, (score+ 0.3)/4) for score,color in zip(scores,colors)]
+    return colors
 
 def color_contexts(contexts, coloring_func, smoothing_param):
     '''Color contexts
@@ -57,55 +64,23 @@ def color_contexts(contexts, coloring_func, smoothing_param):
     colors = coloring_func([context['score'] for context in contexts], smoothing_param) 
     for context,color in zip(contexts,colors):
         try:
-            context['color'] = int(color[0]), int(color[1]), int(color[2]), int(color[3])
+            context['color'] = int(color[0]), int(color[1]), int(color[2]), color[3]
         except ValueError as e:
             print(color)
             raise e
 
     return contexts
 
-def dummy_input_colors(contexts, style='text', show_gt=True):
-    '''Input colors in HTML with different styles
-    input:
-        contexts: list of dictionaries (in correct order) with keys 'color' (r,g,b) as 0->255 ints and 'clean sentence'
-        style: string, style of the text (options: 'text', 'background', 'highlight')
-        highlight_gt: bool, whether to highlight contexts marked as correct
-    output:
-        html: dummy HTML string with text colors
-    '''
-
-    # Define the formating style based on the input 'style'
-    if style == 'text':
-        format  = '<span style="color: rgb({r}, {g}, {b});">{sentence}</span> '
-    elif style == 'background':
-        format  = '<span style="background-color: rgb({r}, {g}, {b})">{sentence}</span> '
-    elif style == 'highlight':
-        format  = '<span style="background-color: rgba({r}, {g}, {b}, 0.35);">{sentence}</span>'
-
-
-    # Create html string with colors and specified style
-    html = ''
-    for context in contexts:
-        r, g, b = context["color"]
-        sentence = context["middle_sentence"]["clean_sentence"]
-        if show_gt and context['correct']:
-            html += '<span style="border: 3px solid red; padding: 2px;">'
-            html += format.format(r=int(r), g=int(g), b=int(b), sentence=sentence)
-            html += '</span>'
-        else:
-            html += format.format(r=int(r), g=int(g), b=int(b), sentence=sentence)
-    return html
-
-def overlay_heatmap(colored_contexts, source_ID, first_version, missing_category, insert_indices, link_text, link_sentence, html_folder_path, lang, save_folder, style):
+def overlay_heatmap(colored_contexts, source_ID, first_version, missing_category, insert_indices, moved_insertion_marker, link_text, link_sentence, html_folder_path, lang, save_folder, style):
     if not os.path.exists(save_folder):
         os.makedirs(save_folder)
-    color_store = get_color_store(colored_contexts, missing_category, insert_indices, link_sentence, link_text)
+    color_store = get_color_store(colored_contexts, missing_category, insert_indices, moved_insertion_marker, link_sentence, link_text)
     file_path = f"{html_folder_path}/{source_ID}_{first_version}.html"
     output_path = f"{save_folder}/{source_ID}_{first_version}_{link_text.replace('/', '')}.html"
 
     heat_map_util_compiled.call(HEAT_MAP_BUILDER, color_store, file_path, output_path)
 
-def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_funcs_pairs = [('highlight', blue_to_red)], smoothing_params = [1], overlaying_func = overlay_heatmap):
+def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_funcs_pairs = [('highlight', grey_to_red)], smoothing_params = [1], overlaying_func = overlay_heatmap):
     '''Color contexts with different styles
     input:
         df: dataframe with columns 'contexts'
@@ -127,6 +102,7 @@ def colouring_pipeline(df, save_folder, html_folder_path, lang, styles_coloring_
                                                         x['first_version'],
                                                         x['missing_category'],
                                                         x['insert_indices'],
+                                                        x['moved_insertion_marker'],
                                                         x['link_text'],
                                                         x['link_sentence'],
                                                         html_folder_path,
@@ -141,15 +117,36 @@ def get_html_paths(data_path, lang, scored_df):
 
     return paths
 
-def get_color_store(contexts, missing_category, insert_index, link_sentence, link_text):
+def get_color_store(contexts, missing_category, insert_index, moved_insertion_marker, link_sentence, link_text):
     color_store = []
+    one_special = False
+
+    if insert_index == -1:
+        if missing_category not in ['missing_sentence', 'missing_span']:
+            raise ValueError('Insert index not found')
+        
+        first_llist = contexts[0]['middle_sentence']['locList1'] 
+        first_color = contexts[0]['color']
+        color_store.append({
+                'start': first_llist[0]['start'],
+                'end': first_llist[0]['start'],
+                'color': first_color,
+                'special': True,
+                'sentence_end': 0,
+                'missing_category': missing_category,
+                'link_sentence_parts': link_sentence.split(link_text,1),
+                'link_text': link_text,
+                'last': True
+            })
+        one_special = True
+
+
     for context in contexts:
         middle_sentence = context['middle_sentence']
         indexes = middle_sentence['ids1']
         llist = middle_sentence['locList1']
-        
+        sent_end = middle_sentence['endIdx1']
         special = all([i == j for i, j in zip(indexes, insert_index)])
-
         if not special:
             for lindexes in llist:
                 loc = {
@@ -157,10 +154,12 @@ def get_color_store(contexts, missing_category, insert_index, link_sentence, lin
                     'end': lindexes['end'],
                     'color': context['color'],
                     'special': False,
+                    'sentence_end': sent_end,
                     'missing_category': missing_category
                 }
                 color_store.append(loc)
         else:
+            one_special = True
             if missing_category == 'missing_sentence' or missing_category == 'missing_span':
                 for lindexes in llist[:-1]:
                     loc = {
@@ -168,6 +167,7 @@ def get_color_store(contexts, missing_category, insert_index, link_sentence, lin
                         'end': lindexes['end'],
                         'color': context['color'],
                         'special': False,
+                        'sentence_end': sent_end,
                         'missing_category': missing_category
                     }
                     color_store.append(loc)
@@ -177,18 +177,24 @@ def get_color_store(contexts, missing_category, insert_index, link_sentence, lin
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
+                    'sentence_end': sent_end,
                     'missing_category': missing_category,
                     'link_sentence_parts': link_sentence.split(link_text,1),
-                    'link_text': link_text
+                    'link_text': link_text,
+                    'last': True
                 })
 
-            if missing_category == 'missing_mention':
+                if color_store[-1]['special'] and color_store[-1]['last'] and color_store[-1]['sentence_end'] > color_store[-1]['end']:
+                    print("Yeah")
+
+            if missing_category in ['missing_mention', 'missing_mention_in_moved_sentence']:
                 for lindexes in llist[:-1]:
                     loc = {
                         'start': lindexes['start'],
                         'end': lindexes['end'],
                         'color': context['color'],
                         'special': True,
+                        'sentence_end': sent_end,
                         'missing_category': missing_category,
                         'last': False
                     }
@@ -199,141 +205,85 @@ def get_color_store(contexts, missing_category, insert_index, link_sentence, lin
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
+                    'sentence_end': sent_end,
                     'missing_category': missing_category,
                     'last': True,
                     'link_text': link_text,
                 })
 
-                '''start_underline = link_sentence.find(link_text)
-                end_underline = start_underline + len(link_text)
-                lengths = [l['end'] - l['start'] for l in llist]
-                total_length = sum(lengths)
-                print("=====================")
-                print(f"Link sentence: {link_sentence}")
-                print(f"Total length indices: {total_length}")
-                print(f"Length of porcessed sentence: {len(link_sentence)}")
-                if "deuterium" in link_sentence:
-                    print(middle_sentence['clean_sentence'])
-                    print(link_sentence)
-                    print(link_text)
-                    print(f"start_underline:{start_underline}")
-                    print(f"end_underline:{end_underline}")
-                    
-                    print(link_sentence[start_underline:end_underline])
-                    print(llist)
-                
-                for lindexes in llist:
-                    start_underline += lindexes['start']
-                    end_underline += lindexes['start']
-                    if "hydrogen bomb" in link_sentence:
-                        print(f"start_underline:{start_underline}")
-                        print(f"end_underline:{end_underline}")
-                    
-                    if lindexes['end'] <= start_underline or lindexes['start'] >= end_underline: #no overlap
-                        
+               
+            if missing_category in ['missing_mention_with_sentence_modifications','missing_mention_in_moved_sentence_with_modifications']:
+                if link_text in middle_sentence['clean_sentence']:
+                    for lindexes in llist[:-1]:
                         loc = {
                             'start': lindexes['start'],
                             'end': lindexes['end'],
                             'color': context['color'],
                             'special': True,
-                            'underlined': False,
-                            'missing_category': missing_category
+                            'sentence_end': sent_end,
+                            'missing_category': "missing_mention",
+                            'last': False
                         }
                         color_store.append(loc)
-
-                        if "hydrogen bomb" in link_sentence:
-                            print(f"no overlap {loc}")
-
-                    else: #some overlap
-
-                        if lindexes['start'] < start_underline:
-                            loc1 = {
-                                'start': lindexes['start'],
-                                'end': start_underline,
-                                'color': context['color'],
-                                'special': True,
-                                'underlined': False,
-                                'missing_category': missing_category
-                            }
-                            if "hydrogen bomb" in link_sentence:
-                                print(f"loc1:{loc1}")
-
-                            color_store.append(loc1)
-                            
-                            loc2 = {
-                                'start': start_underline,
-                                'end': min(lindexes['end'], end_underline),
-                                'color': context['color'],
-                                'special': True,
-                                'underlined': True,
-                                'missing_category': missing_category
-                            }
-                            
-                            color_store.append(loc2)
-
-                            if "hydrogen bomb" in link_sentence:
-                                print(f"loc2:{loc2}")
-                            #print(f"loc2:{(loc2['start'], loc2['end'])}")
-
-                        else:
-
-                            loc = {
-                                'start': lindexes['start'],
-                                'end': min(lindexes['end'], end_underline),
-                                'color': context['color'],
-                                'special': True,
-                                'underlined': True,
-                                'missing_category': missing_category
-                            }
-
-                            #print(f"loc:{(loc['start'], loc['end'])}")
-                            color_store.append(loc)
-                            if "hydrogen bomb" in link_sentence:
-                               print(f"loc:{loc}")
-
-                        if lindexes['end'] > end_underline:
-                            loc3 = {
-                                'start': end_underline,
-                                'end': lindexes['end'],
-                                'color': context['color'],
-                                'special': True,
-                                'underlined': False,
-                                'missing_category': missing_category
-                            }
-
-                            if "hydrogen bomb" in link_sentence:
-                                print(f"loc3:{loc3}")
-
-                            #print((loc3['start'], loc3['end']))
-
-                            color_store.append(loc3)
-                        
-                    start_underline -= lindexes['end']
-                    end_underline -= lindexes['end']'''
-            if missing_category == 'missing_mention_with_sentence_modification':
-                for lindexes in llist[:-1]:
-                    loc = {
-                        'start': lindexes['start'],
-                        'end': lindexes['end'],
-                        'color': context['color'],
-                        'special': True,
-                        'missing_category': missing_category,
-                        'last': False
-                    }
-                    color_store.append(loc)
-                new_sentence_parts = middle_sentence['clean_sentence2'].split(link_text,1)
-                #print(new_sentence_parts)
-                color_store.append({
+                
+                    color_store.append({
                     'start': llist[-1]['start'],
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
-                    'missing_category': missing_category,
+                    'sentence_end': sent_end,
+                    'missing_category': "missing_mention",
                     'last': True,
-                    'new_sentence_parts': new_sentence_parts,
                     'link_text': link_text,
                 })
+                
+                else:
+                    for lindexes in llist[:-1]:
+                        loc = {
+                            'start': lindexes['start'],
+                            'end': lindexes['end'],
+                            'color': context['color'],
+                            'special': False,
+                            'sentence_end': sent_end,
+                            'missing_category': missing_category,
+                            'last': False
+                        }
+                        color_store.append(loc)
 
+
+                    if missing_category == 'missing_mention_with_sentence_modifications':
+                        new_sentence_parts = middle_sentence['clean_sentence2'].split(link_text,1)
+                    else:
+                        new_sentence_parts = ["", ""]
+
+                    color_store.append({
+                        'start': llist[-1]['start'],
+                        'end': llist[-1]['end'],
+                        'color': context['color'],
+                        'special': True,
+                        'sentence_end': sent_end,
+                        'missing_category': missing_category,
+                        'last': True,
+                        'new_sentence_parts': new_sentence_parts,
+                        'link_text': link_text,
+                    })
+
+        if moved_insertion_marker:
+            marker = all([i == j for i, j in zip(indexes, moved_insertion_marker)])
+
+            if marker:
+                loc = {
+                    'start': llist[-1]['start'],
+                    'end': llist[-1]['start'],
+                    'color': context['color'],
+                    'sentence_end': sent_end,
+                    'special': True,
+                    'missing_category': 'marker'
+                }
+                color_store.append(loc)
+
+    if not one_special:
+        raise ValueError('No special context found')
 
     return color_store
 
