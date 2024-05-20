@@ -121,7 +121,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
     color_store = []
     one_special = False
 
-    if insert_index == -1:
+    if all([i == j for i, j in zip([-1], insert_index)]):
         if missing_category not in ['missing_sentence', 'missing_span']:
             raise ValueError('Insert index not found')
         
@@ -171,7 +171,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         'missing_category': missing_category
                     }
                     color_store.append(loc)
-                
+
                 color_store.append({
                     'start': llist[-1]['start'],
                     'end': llist[-1]['end'],
@@ -183,9 +183,6 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'link_text': link_text,
                     'last': True
                 })
-
-                if color_store[-1]['special'] and color_store[-1]['last'] and color_store[-1]['sentence_end'] > color_store[-1]['end']:
-                    print("Yeah")
 
             if missing_category in ['missing_mention', 'missing_mention_in_moved_sentence']:
                 for lindexes in llist[:-1]:
@@ -251,10 +248,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         color_store.append(loc)
 
 
-                    if missing_category == 'missing_mention_with_sentence_modifications':
-                        new_sentence_parts = middle_sentence['clean_sentence2'].split(link_text,1)
-                    else:
-                        new_sentence_parts = ["", ""]
+                    new_sentence_parts = middle_sentence['clean_sentence2'].split(link_text,1)
 
                     color_store.append({
                         'start': llist[-1]['start'],
@@ -293,6 +287,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--scored_data_dir', type=str,
                         required=True, help='Path to scored data directory')
+    parser.add_argument('--html_dir', type=str,
+                        required=True, help='Path to raw html directory')
+    parser.add_argument('--output_dir', type=str,
+                        required=True, help='Path to output directory')
     parser.add_argument('--langs', type=str, nargs='+', required=True,
                         help='Languages to benchmark')
     parser.add_argument('--side_contexts_sizes', type=str, nargs='+', required=True,
@@ -311,10 +309,15 @@ if __name__ == '__main__':
     
     for lang in args.langs:
         for size in args.side_contexts_sizes:
+            save_folder = f"{args.output_dir}/{lang}_{size}"
+            os.makedirs(save_folder, exist_ok=True)
+
             print(f'Processing language {lang} with side contexts size {size}')
             scored_data = pd.read_parquet(f"{args.scored_data_dir}/{lang}_{size}_scored.parquet")
-            scored_data['contexts'] = scored_data['contexts'].progress_apply(softmax_scores, desc='Normalizing scores')
-            scored_data['contexts'] = scored_data['contexts'].progress_apply(color_contexts, desc='Computing colors')
-            scored_data['html'] = scored_data.progress_apply(lambda x: input_colors(x['contexts'], x['html']), axis=1)
-            scored_data.to_parquet(f"{args.scored_data_dir}/{lang}_{size}_scored_colored.parquet")
-            print(f'Processed language {lang} with side contexts size {size}')
+            colouring_pipeline(
+                scored_data,
+                save_folder,
+                args.html_dir,
+                lang
+            )
+            

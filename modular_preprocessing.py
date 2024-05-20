@@ -18,7 +18,7 @@ from collections import Counter
 
 
 
-UNRELEVENT_SECTIONS = ["References", "Other Websites"]
+UNRELEVENT_SECTIONS = ["References", "Other Websites", "Related pages"]
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
@@ -40,7 +40,7 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
 
 def clean_condition(txt):
     # don't allow sentences with less than 10 characters adn non sentence like
-    return True #len(txt) > 50 or (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']', ':', ';']) 
+    return len(txt) > 50 or (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']', ':', ';']) 
 
 def merge_sentences(row1, row2):
     row = {}
@@ -470,6 +470,7 @@ def process_version(input):
                     link_sentence = all_sentences[i]['clean_sentence'] + ' ' + link_sentence
                     i -= 1
                 i = sentence['index'] + 1
+                link_sentence += sentence['clean_sentence']
                 while i < len(all_sentences) and all_sentences[i]['status'] == 'added' and all_sentences[i]['section2'] == section:
                     link_sentence = link_sentence + ' ' + all_sentences[i]['clean_sentence']
                     i += 1

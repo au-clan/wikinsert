@@ -4,7 +4,7 @@
 raw_data_dir="/dlabdata1/tsoares/wikidumps/"
 processed_data_dir="/dlabdata1/boulenge/wikidumps_data"
 processes=48
-max_samples_per_lang=100
+max_samples_per_lang=250
 
 
 while [ : ]; do
@@ -80,7 +80,7 @@ for lang in $langs; do
         --n_processes $processes
 done
 
-#COMMENT_BLOCK
+
 
 echo "Generating Test data"
 for lang in $langs; do
@@ -108,6 +108,7 @@ python modular_merge_data.py \
     --output_dir ${processed_data_dir}/ready_to_score_data \
     --ignore_warnings
 
+#COMMENT_BLOCK
 echo "Score all contexts"
 
 python get_scores.py \
