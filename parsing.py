@@ -27,6 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
 
+
     args = parser.parse_args()
 
     # check if input files exist
