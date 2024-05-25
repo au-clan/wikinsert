@@ -47,14 +47,12 @@ if __name__ == '__main__':
     redirect_1 = redirect_1.to_dict()['redirect']
     redirect_2 = redirect_2.to_dict()['redirect']
 
-    print('Fixing target titles')
-    df_versions['target_title'] = df_versions['target_title'].progress_apply(
+    df_versions['target_title'] = df_versions['target_title'].apply(
         lambda x: fix_target_titles(x, redirect_1, redirect_2))
 
-    print('Creating revisions dictionary')
     df_versions = df_versions.to_dict('records')
     expected_links = len(df_versions)
-    print(f'Expected links: {expected_links}')
+    #print(f'Expected links: {expected_links}')
     revisions = {}
     for row in tqdm(df_versions, total=expected_links, desc='Creating revisions dictionary'):
         if row['first_version'] not in revisions:
@@ -108,7 +106,7 @@ if __name__ == '__main__':
     revisions_df = pd.DataFrame(revisions_clean)
 
     if args.max_samples is not None:
-        revisions_df = revisions_df.sample(args.max_samples, random_state=42)
+        revisions_df = revisions_df.sample(min(args.max_samples, revisions_df.shape[0]), random_state=42)
 
     revisions_df['len_vers'] = revisions_df['versions'].apply(len)
     revisions_df = revisions_df.sort_values(by='len_vers', ascending=False).reset_index(drop=True)

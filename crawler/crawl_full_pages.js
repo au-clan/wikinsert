@@ -10,11 +10,13 @@ let titles = [];
 let curids = [];
 let oldids = [];
 let directory = "";
-
+let lang = ""
 let reader = "";
 
 for (let i = 0; i < args.length; i++) {
-    if (args[i] === '-p') {
+    if (args[i] === '-l') {
+        reader = "lang";
+    } else if (args[i] === '-p') {
         reader = "path"
     } else if (args[i] === '-t') {
         // Next arguments are input paths
@@ -28,6 +30,9 @@ for (let i = 0; i < args.length; i++) {
         reader = "oldid";
     }
     else {
+        if (reader === "lang") {
+            lang = args[i];
+        }
         if (reader === "path") {
           directory = args[i];
         }
@@ -53,8 +58,10 @@ for (let i = 0; i < titles.length; i++) {
     let title = titles[i];
     let curid = curids[i];
     let oldid = oldids[i];
-    preparedUrls.push(`https://en.wikipedia.org/w/index.php?title=${encodeURIComponent(title)}&curid=${curid}&oldid=${oldid}`);
+    preparedUrls.push(`https://${lang}.wikipedia.org/w/index.php?title=${title}&curid=${curid}&oldid=${oldid}`);
 }
+
+
 
 if (preparedUrls.length === 0) {
     console.error('No URLs to clone');
@@ -62,7 +69,7 @@ if (preparedUrls.length === 0) {
 }
 
 (async () => {
-    const numThreads = 5;
+    const numThreads = 20;
 
     // Ensure the output directory exists
     if (!fs.existsSync(directory)) {

@@ -40,7 +40,7 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
 
 def clean_condition(txt):
     # don't allow sentences with less than 10 characters adn non sentence like
-    return len(txt) > 50 or (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']', ':', ';']) 
+    return len(txt) > 70 or (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']', ':', ';']) 
 
 def merge_sentences(row1, row2):
     row = {}
@@ -197,10 +197,10 @@ def process_version(input):
     output = []
     d = difflib.Differ()
     sentences_1_path = os.path.join(
-        args.parsed_html_dir, f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
+        first_versions_html_dir, f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
     
     links_1_path = os.path.join(
-        args.parsed_html_dir, f"{input['source_ID']}_{input['first_version']}_links.jsonl")
+       first_versions_html_dir, f"{input['source_ID']}_{input['first_version']}_links.jsonl")
 
     if not os.path.exists(sentences_1_path):
             print('No parsed HTML found')
@@ -214,7 +214,7 @@ def process_version(input):
     
     sentences_1 = pd.read_json(sentences_1_path)
     if sentences_1.shape[0] == 0:
-        print('No sentences found')
+        print('No sentences found in 1')
         print(f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
         return []
     
@@ -242,7 +242,7 @@ def process_version(input):
 
         sentences_2 = pd.read_json(sentences_2_path)
         if sentences_2.shape[0] == 0:
-            print('No sentences found')
+            print('No sentences found in 2')
             print(f"{input['source_ID']}_{second_version}_sentences.jsonl")
             continue
 
@@ -456,9 +456,6 @@ def process_version(input):
             elif missing_category == 'missing_sentence' or missing_category == 'missing_span':
                 insert_index = sentence['added_after']
             elif missing_category == 'missing_mention_in_moved_sentence' or missing_category == 'missing_mention_in_moved_sentence_with_modifications':
-                print(all_sentences[sentence['moved_from']])
-                print(sentence)
-                print("==========")
                 insert_index = all_sentences[sentence['moved_from']]['ids1']
                 moved_insertion_marker = sentence['added_after']
             else: insert_index = None
@@ -506,6 +503,7 @@ if __name__ == '__main__':
                         required=True, help='Path to the revisions file')
     parser.add_argument('--parsed_html_dir', type=str, required=True,
                         help='Path to the directory containing all the parsed HTML files, both links and sentences')
+    parser.add_argument('--first_versions_specific_parsed_html_dir', type=str, required=False, default=None)
     parser.add_argument('--redirect_1', type=str, required=True,
                         help='Path to the first redirect file')
     parser.add_argument('--redirect_2', type=str, required=True,
@@ -521,12 +519,19 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
+    if args.first_versions_specific_parsed_html_dir is None:
+        first_versions_html_dir = args.parsed_html_dir
+    else:
+        first_versions_html_dir = args.first_versions_specific_parsed_html_dir
+
     # check if input files exist
     if not os.path.exists(args.revisions_path):
         print(args.revisions_path)
         raise Exception('Revisions file does not exist')
     if not os.path.exists(args.parsed_html_dir):
         raise Exception(f'parsed HTML directory {args.parsed_html_dir} does not exist')
+    if not os.path.exists(first_versions_html_dir):
+        raise Exception(f'parsed HTML directory {first_versions_html_dir} does not exist')
     if not os.path.exists(args.redirect_1):
         raise Exception('Redirect file 1 does not exist')
     if not os.path.exists(args.redirect_2):

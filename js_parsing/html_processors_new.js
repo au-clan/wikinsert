@@ -1,15 +1,9 @@
-// const jsdom = require("jsdom");
-//const JSDOM = require("jsdom-no-css");
 const wgxpath = require('wgxpath');
 const fs = require('fs');
 const tokenizer = require('sbd');
 const md5 = require('md5');
-const S = require('string');
 const { JSDOM } = require('jsdom');
-const { stderr } = require('process');
-const { time } = require('console');
 const xpath = require('xpath');
-//const wgxpath = require('wicked-good-xpath')
 
 const HTML_CHAR_ENTITIES = {
     '38': '&amp;',

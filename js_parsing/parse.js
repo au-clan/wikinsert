@@ -1,14 +1,5 @@
 #!/usr/bin/env node
-
-const fs = require('fs');
-const { JSDOM } = require('jsdom');
 const { parse } = require('./html_processors');
-const wgxpath = require('wgxpath');
-const path = require('path'); 
-const tokenizer = require('sbd');
-const md5 = require('md5');
-const S = require('string');
-const { stderr } = require('process');
 
 const args = process.argv.slice(2); // remove first two arguments (node executable path and script file path)
 let filePaths = [];

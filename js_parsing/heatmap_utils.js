@@ -27,6 +27,9 @@ function overlayHeatMap(coloreStore, file_path, outpath){
         if (special & (type == "missing_mention" || type == "missing_mention_in_moved_sentence")) {
             sent_span = `<span style="border-top: 1px solid red; padding: 1px; border-bottom: 1px solid red; padding: 2px; background-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">${htmlText.substring(start, end)}</span>`;
             if (loc.last) {
+                if (loc.sentence_end > end) {
+                    sent_span += htmlText.substring(end, loc.sentence_end);
+                }
                 sent_span += `<span style="color: rgb(255, 0, 0); text-decoration: underline;">--{${loc.link_text}}</span>`;
             }
 

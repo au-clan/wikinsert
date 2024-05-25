@@ -10,18 +10,29 @@ from modular_preprocessing import *
 import subprocess
 
 
-def call_crawler(titles, curids, oldids, outfolder):
+def call_crawler(titles, curids, oldids, outfolder, lang):
     #run crawler/crawl_full_pages.js using command, it can take all at once
+    for title, curid, oldid in zip(titles, curids, oldids):
+        command = ['node', 'crawler/crawl_full_pages.js'] + ['-l'] + [lang] + ['-p'] + [outfolder] + ['-t'] + [title] + ['-c'] + [curid] + ['-o'] + [oldid]
+        subprocess.run(command, check=True)
 
-    command = ['node', 'crawler/crawl_full_pages.js'] + ['-p'] + [outfolder] + ['-t'] + titles + ['-c'] + curids + ['-o'] + oldids
+def move_file(current_path, new_path):
+    os.rename(current_path, new_path)
 
-    subprocess.run(command, check=True)
+def move_page_files(crawled_files_name, curid_oldid, crawling_outdir):
 
+    index_file_path = f"{crawling_outdir}/{curid_oldid}"
 
-def move_file(inpath, oupath):
-    for inpath, oupath in zip(inpaths, oupaths):
-        os.rename(inpath, oupath)
-
+    for crawled_file in crawled_files_name:
+        file_path = f"{index_file_path}/{crawled_file}"
+        if crawled_file == "index.html":
+            move_file(file_path, f"{crawling_outdir}/{curid_oldid}.html")
+        
+def move_pages_files(crawled_pages_dirs, crawling_outdir):
+        for crawled_page_dir in tqdm(crawled_pages_dirs, desc='Moving files'):
+            page_dir = f"{crawling_outdir}/{crawled_page_dir}"
+            page_files_name = list(os.listdir(page_dir))
+            move_page_files(page_files_name, crawled_page_dir, crawling_outdir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -31,10 +42,10 @@ if __name__ == '__main__':
                         help='Path to the output directory')
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
+    parser.add_argument('--lang', type=str, required=True,
+                        help='Language of the pages')
     parser.add_argument('--crawl_second_versions', type=bool, required=False, default=False,
                         help='Whether to crawl the second versions')
-    parser.add_argument('--future_colored_htmls_path', type=str, required=True,
-                        help='Path to the future colored htmls file')
 
     
     args = parser.parse_args()
@@ -47,6 +58,7 @@ if __name__ == '__main__':
     # create the output directory if it does not exist
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
+    
 
     revisions_clean = pd.read_parquet(args.revisions_path)
 
@@ -55,6 +67,7 @@ if __name__ == '__main__':
     titles = [row['source_title']          for _, row in revisions_clean.iterrows()]
 
     if args.crawl_second_versions:
+        print("here")
         curids += [str(row['source_ID'])    for _, row in revisions_clean.iterrows() for _ in row['versions']]
         oldids += [str(version)             for _, row in revisions_clean.iterrows() for version in row['versions']]
         titles += [row['source_title']      for _, row in revisions_clean.iterrows() for _ in row['versions']]
@@ -74,7 +87,7 @@ if __name__ == '__main__':
     print(f"Running crawling on {nb_processes_} processes")
     print("Parallel multiprocess")
     with Pool(processes=nb_processes_) as pool:
-        pool.starmap(call_crawler, zip(batched_titles, batched_curids, batched_oldids, [args.output_dir]*len(batched_titles)))
+        pool.starmap(call_crawler, zip(batched_titles, batched_curids, batched_oldids, [args.output_dir]*len(batched_titles), [args.lang]*len(batched_titles)))
 
     print("Crawling finished, post processing...")
 
@@ -82,11 +95,11 @@ if __name__ == '__main__':
 
     all_crawled_pages = list(os.listdir(args.output_dir))
 
-    for page in all_crawled_pages:
-        crawled_files = list(os.listdir(f"{args.output_dir}/{page}"))
-        os.makedirs(f"{args.futur_colored_htmls_path}/{page}", exist_ok=True)
-        for crawled_file in crawled_files:
-            if crawled_file.endswith(".html"):
-                os.rename(f"{args.output_dir}/{page}/{crawled_file}", f"{args.output_dir}/{page}.html")
-            else:
-                os.rename(f"{args.output_dir}/{page}/{crawled_file}", f"{args.futur_colored_htmls_path}/{page}/{crawled_file}")
+    if any([".html" in page for page in all_crawled_pages]):
+        print("Warning: Some pages have already been crawled and moved here, please remove the output directory and rerun the script. Right they we be automatically removed")
+        for page in all_crawled_pages:
+            if page.endswith(".html"):
+                os.remove(f"{args.output_dir}/{page}")
+        all_crawled_pages = list(os.listdir(args.output_dir))
+
+    move_pages_files(all_crawled_pages, args.output_dir)
