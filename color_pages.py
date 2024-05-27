@@ -375,7 +375,7 @@ if __name__ == '__main__':
 
             for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
                 rel_colored_page_folder = f"../{rel_save_dir}/{source_ID}_{first_version}"
-                paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}.html"})
+                paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index%20copy.html"})
 
             first_row = scored_data.iloc[0]
             potential_raw_html_file_path = f"{args.html_dir}/{lang}/{first_row['source_ID']}_{first_row['first_version']}.html"
@@ -395,5 +395,5 @@ if __name__ == '__main__':
             html_path_dict = dict_to_html_list(paths_dict)
             
             #save the html
-            with open(f"{args.files_link_output_dir}/{lang}_{size}.html", 'w') as f:
+            with open(f"{args.files_link_output_dir}/{lang}_{size}.html", 'w', encoding='utf-8') as f:
                 f.write(html_path_dict)
