@@ -1,5 +1,4 @@
 import fs from 'fs'
-import path from 'path';
 
 import { clonePages } from '/scratch/boulenge/wikinsert/crawler/wiki_utils.js';
 
