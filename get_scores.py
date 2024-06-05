@@ -62,12 +62,20 @@ if __name__ == '__main__':
 
     output_dimension = 1
 
-    batch_size = 256
+    batch_size = 128
 
     # process each language sequentially
 
-    for lang in args.langs:
+    langs = args.langs[0].split(',')
+    side_contexts_sizes = args.side_contexts_sizes[0].split(',')
+
+    for lang in langs:
         print('Processing language', lang)
+        if all([os.path.exists(os.path.join(args.output_dir, f'{lang}_{side_contexts_size}_scored.parquet'))
+                        for side_contexts_size in side_contexts_sizes]):
+            print(f'{lang} already done fro all conexts_sizes :{side_contexts_sizes}, passing')
+            continue
+                
         models = {}
         if os.path.exists(os.path.join(args.models_dir, args.models_prefix + '_' + lang)) and not args.only_multilingual:
             models[lang] = {}
@@ -131,9 +139,18 @@ if __name__ == '__main__':
                 mention_map[title] = ' '.join(mention_map[title])
 
 
-            for side_contexts_size in args.side_contexts_sizes:
+            for side_contexts_size in side_contexts_sizes:
                 print('Processing context size', side_contexts_size )
+                if os.path.exists(os.path.join(args.output_dir, f'{lang}_{side_contexts_size}_scored.parquet')):
+                    print(f'{lang}_{side_contexts_size}_scored.parquet already done, passing')
+                    continue
+                
                 df = pd.read_parquet(os.path.join(args.data_dir, f'{lang}_{side_contexts_size}.parquet'))
+                if df.shape[0] == 0:
+                    print(f"Nothing to score for {lang} and {side_contexts_size}")
+                    df.to_parquet(os.path.join(args.output_dir, f'{lang}_{side_contexts_size}_scored.parquet'))
+                    continue
+
 
                 df['target_title'] = df['target_title'].apply(fix_title)
                 

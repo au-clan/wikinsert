@@ -575,15 +575,19 @@ if __name__ == '__main__':
     
     output = []
     nb_processes_ = min(cpu_count(), args.n_processes)
-    print(f"Running on {nb_processes_} processes")
-    pool = Pool(nb_processes_, initializer=initializer)
-    print("Parallel multiprocess")
-    for result in tqdm(pool.imap(process_version, revisions_clean), total=len(revisions_clean)):
-        output.extend(result)
-    pool.close()
-    pool.join()
-
     
+
+    if nb_processes_ > 1:
+        print(f"Running on {nb_processes_} processes")
+        pool = Pool(nb_processes_, initializer=initializer)
+        print("Parallel multiprocess")
+        for result in tqdm(pool.imap(process_version, revisions_clean), total=len(revisions_clean)):
+            output.extend(result)
+        pool.close()
+        pool.join()
+    else:
+        print(f"Running on {nb_processes_} processes")
+        output = [output for revision in tqdm(revisions_clean, total=len(revisions_clean)) for output in process_version(revision)]
 
     '''for i in range(0, len(output), 100_000):
         df_output = pd.DataFrame(output[i:i+100_000])
@@ -595,7 +599,7 @@ if __name__ == '__main__':
     print(f"The length of the output is {len(output)}")
 
     df_output = pd.DataFrame(output)
-
+    #print(df_output.head(5))
     df_output['source_lead'] = df_output['source_lead'].progress_apply(
         fix_text)
     

@@ -293,7 +293,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         'link_text': link_text,
                     })
 
-        if moved_insertion_marker:
+        if moved_insertion_marker is not None:
             marker = all([i == j for i, j in zip(indexes, moved_insertion_marker)])
 
             if marker:
@@ -321,9 +321,9 @@ if __name__ == '__main__':
                         required=True, help='Path to raw html directory')
     parser.add_argument('--files_link_output_dir', type=str,
                         required=True, help='Path to output directory')
-    parser.add_argument('--langs', type=str, nargs='+', required=True,
+    parser.add_argument('--langs', type=str, required=True,
                         help='Languages to benchmark')
-    parser.add_argument('--side_contexts_sizes', type=str, nargs='+', required=True,
+    parser.add_argument('--side_contexts_sizes', type=str, required=True,
                         help='Size of side contexts to benchmark')
     parser.add_argument('--extra_crawled_files_dir', type=str, required=False, default=None)
 
@@ -344,9 +344,11 @@ if __name__ == '__main__':
         colored_htmls_save_dir = os.path.dirname(args.files_link_output_dir.rstrip('/'))
         os.makedirs(colored_htmls_save_dir, exist_ok=True)
 
+    langs = args.langs.split(',')
+    side_contexts_sizes = args.side_contexts_sizes.split(',')
 
-    for lang in args.langs:
-        for size in args.side_contexts_sizes:
+    for lang in langs:
+        for size in side_contexts_sizes:
             if not os.path.exists(f"{args.scored_data_dir}/{lang}_{size}_scored.parquet"):
                 raise ValueError('Scored data directory does not exist')
     
@@ -356,12 +358,14 @@ if __name__ == '__main__':
     rel_save_folder = os.path.relpath(colored_htmls_save_dir, common_pref)
 
 
-    for lang in args.langs:
-        for size in args.side_contexts_sizes:
+    for lang in langs:
+        for size in side_contexts_sizes:
             print(f'Processing language {lang} with side contexts size {size}')
             links_page_path = f"{colored_htmls_save_dir}/{lang}"
 
             scored_data = pd.read_parquet(f"{args.scored_data_dir}/{lang}_{size}_scored.parquet")
+            if scored_data.shape[0] == 0:
+                continue
 
             paths_dict = {missing_catgory : [] for missing_catgory in scored_data['missing_category'].unique()}
 
@@ -375,7 +379,7 @@ if __name__ == '__main__':
 
             for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
                 rel_colored_page_folder = f"../{rel_save_dir}/{source_ID}_{first_version}"
-                paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index%20copy.html"})
+                paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index.html"})
 
             first_row = scored_data.iloc[0]
             potential_raw_html_file_path = f"{args.html_dir}/{lang}/{first_row['source_ID']}_{first_row['first_version']}.html"

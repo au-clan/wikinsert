@@ -46,34 +46,37 @@ if __name__ == '__main__':
     
     if not os.path.exists(args.raw_data_dir):
         raise ValueError('Raw Data directory does not exist')
-    
+
+    langs = args.langs[0].split(',')
+    side_contexts_sizes = args.side_contexts_sizes[0].split(',')
+
     # check if all the language specific files exist
-    for lang in args.langs:
-        for side_contexts_size in args.side_contexts_sizes:
+    for lang in langs:
+        for side_contexts_size in side_contexts_sizes:
             if not os.path.exists(os.path.join(args.test_data_dir, lang, f'context_size_{side_contexts_size}', 'test_data.parquet')):
-                if lang in args.langs:
-                    args.langs.remove(lang)
+                if lang in langs:
+                    langs.remove(lang)
                 if not args.ignore_warnings:
                     raise ValueError(f'Link file for language {lang} and context size {side_contexts_size} does not exist')
                 else:
                     print(f'Warning: link file for language {lang} and context size {side_contexts_size} does not exist')
         if not os.path.exists(os.path.join(args.raw_data_dir, f'{lang}wiki-NS0-20231001', 'processed_data', 'redirect_map.parquet')):
-            if lang in args.langs:
-                args.langs.remove(lang)
+            if lang in langs:
+                langs.remove(lang)
             if not args.ignore_warnings:
                 raise ValueError(f'Redirect file 1 for language {lang} does not exist')
             else:
                 print(f'Warning: redirect file 1 for language {lang} does not exist')
         if not os.path.exists(os.path.join(args.raw_data_dir, f'{lang}wiki-NS0-20231101', 'processed_data', 'redirect_map.parquet')):
-            if lang in args.langs:
-                args.langs.remove(lang)
+            if lang in langs:
+                langs.remove(lang)
             if not args.ignore_warnings:
                 raise ValueError(f'Redirect file 2 for language {lang} does not exist')
             else:
                 print(f'Warning: redirect file 2 for language {lang} does not exist')
         if not os.path.exists(os.path.join(args.raw_data_dir, f'{lang}wiki-NS0-20231001', 'processed_data', 'good_pages')):
-            if lang in args.langs:
-                args.langs.remove(lang)
+            if lang in langs:
+                langs.remove(lang)
             if not args.ignore_warnings:
                 raise ValueError(f'Pages files for language {lang} do not exist')
             else:
@@ -84,8 +87,8 @@ if __name__ == '__main__':
         os.makedirs(args.output_dir)
         
     print('Saving mention maps')
-    for i, lang in enumerate(args.langs):
-        print(f'Processing language {lang} ({i+1}/{len(args.langs)})')
+    for i, lang in enumerate(langs):
+        print(f'Processing language {lang} ({i+1}/{len(langs)})')
         df_mentions = pd.read_parquet(os.path.join(args.raw_data_dir, f'{lang}wiki-NS0-20231001', 'processed_data', 'mention_map.parquet'))
         df_mentions.to_parquet(os.path.join(args.output_dir, f'mention_map_{lang}.parquet'))
         df_mentions = None
@@ -94,8 +97,8 @@ if __name__ == '__main__':
         print(f'Finished processing language {lang}')
         
     # process each language sequentially
-    for i, lang in enumerate(args.langs):
-        print(f'Processing language {lang} ({i+1}/{len(args.langs)})')
+    for i, lang in enumerate(langs):
+        print(f'Processing language {lang} ({i+1}/{len(langs)})')
         
         # load pages
         files = glob(os.path.join(args.raw_data_dir, f'{lang}wiki-NS0-20231001', 'processed_data', 'good_pages*'))
@@ -139,7 +142,7 @@ if __name__ == '__main__':
         df_pages = None
         del df_pages
 
-        for j in  args.side_contexts_sizes:
+        for j in  side_contexts_sizes:
             print(f'Processing context size {j}')
             # load links
             try:
