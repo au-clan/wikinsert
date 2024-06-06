@@ -37,13 +37,11 @@ At training stage only the text was required and hence we could crawl the `.html
 
 ### 1.3 Step 2: Parsing the pages
 
-Once a page is crawled we need to parse it and tokenize its text into sentences. At training stage it was enough to extract all the text along the sections and tokenize it. Now, for the visulization purpose, we need to ba able to input back a sentence in the original index. To do so, we have to store the raw html start and end indices of each sentence.
-- More precisely each peace of text within a single html node 
-- can't use Beatiful soup so node js : jsdom
-- Xpath evaluation and then... 
-- Finding the sections
-- Finindg the sentences, challenging to store the exact indices, must loop over etc.
-- Finding the links
+After a Wikipedia page is crawled, we parse it and tokenize its text into sentences. During the training phase, extracting and seentence-tokenizing all text along with its sections was enough. However, for visualization purposes, it is now essential that our process supports the later mapping of each sentence back to its original index in the raw HTML. To do so se implement the storage of the raw HTML start and end indices for each sentence. More precisely, for each piece of sentence belonging to a single html node, we store the start and end indices of the currated piece of text. Here is an example:
+
+To achieve this, each text segment within a single HTML node must be addressed. As the use of Beautiful Soup is not permissible, Node.js with the jsdom library will be utilized. The process involves employing XPath to accurately locate and evaluate sections within the HTML document. Sections within the HTML are identified to facilitate the subsequent tokenization process. Sentences within each section are then identified and tokenized. Storing the precise indices of each sentence presents a challenge that necessitates iterating over the text methodically to capture the exact start and end positions within the raw HTML. Additionally, hyperlinks within the text are identified, ensuring their indices are also accurately recorded.
+
+This methodology ensures that during visualization, each sentence can be precisely mapped back to its original position within the raw HTML, thereby preserving the context and structural integrity of the original document.
 
 ### 1.4 Step 3: Preprocessing
 
