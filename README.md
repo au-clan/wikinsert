@@ -19,8 +19,8 @@ The detection of `warm insertion spots` relies on the scoring of each sentence o
 - *Missing span*: the link is added along a new span, which is defined as at least 2 sentences within a sinlge section.
 - *Missing section*: the link is added within a new section, this case is filter out since there is no relevent context to infer on.
 - *Missing mention with sentence modifications*: the link is added in a pre-existing sentence, but which was modified. Modifications should be moderate enough so the sentence can still be recognized.
-- *Moved sentence*: the link is added in a pre-existing sentence, but whic was mooved at a different spot of the page.
-- *Moved sentence with modifications*: the link is added in a pre-existing sentence, but which was mooved at a different spot of the page and which was modified. Modifications should be moderate enough so the sentence can still be recognized.
+- *Missing mention in moved sentence*: the link is added in a pre-existing sentence, but whic was mooved at a different spot of the page.
+- *Missing mention in moved sentence with modifications*: the link is added in a pre-existing sentence, but which was mooved at a different spot of the page and which was modified. Modifications should be moderate enough so the sentence can still be recognized.
 
 Note that the latter three were not considered at training and first evaluation stages in the previous study, but now we distinguish them for vizualization purposes in the qualitative analysis.
 
@@ -68,9 +68,41 @@ In the case of the qualitative analysis, we need to process two versions of the 
 - A version 1, say v1, which is the page at time $t$ and is the one we are computing the score on and that we are colouring
 - A version 2, say v2, wich is the page at time $t+1$ and that may contain more hyperlinks than the v1, the `insterted links`. No context is built nor scorea computed from this page.
 Here is how we pre-process in parallel both pages. Once the sentences of both pages are "clean" we:
-- sdsfgh
-- sdfg
-- dsfg 
+- Use the `compare` method from the `difflib` library on both list of sentences
+- We process the `difflib compare` objects using its `+,-,?` symbols to detect the following cases:
+    - *neutral*: sentence appears in both versions and remained unchanged
+    - *added*: sentence appears in v2 but not in v1
+    - *removed*: sentence appears in v1 but not in v2
+    - *modified*: sentence appears in both versions but with a few difference. The sentences must be at the same spot (modulo additions and removals) and difference moderate.
+- The difflib object does not detect when a sentence was moved or moved & modified since it relies on the order of appearance. To considere these we implement a fuzzy match based on a word frequency similarirty metric. This way we identify the folowing cases:
+    - *moved*: sentence which appeared both as *added* and *removed* but which are in fact the same (similarity metric > 99%)
+    - *moved with modifications*: sentence which appeared both as *added* and *removed* but which are in fact the same with lower similarity (> 68%)
+    Note that the thresholds we heuristically chosen.
+
+- Once the sentences are categorized, we look for the links that are in v2 but not in v1 and hereby determine the `missing category` for each of these `inserted link`, depending on the sentence they belong to:
+    - -> *missing section*
+        - *added* 
+        - **AND** in a non pre-existing section 
+    - -> *missing mention*
+        - *neutral* 
+    - -> *missing sentence*
+        - *added* 
+        - **AND** the preceding sentence is not *added* or belongs to a different section
+        - **AND** the following sentence is not *added* or belongs to a different section 
+    -  -> *missing span*
+        - *added*  
+        - **AND** 
+            - the preceding sentence is *added* and belongs to the same section 
+            - **OR** the following sentence is *added* and belongs to the same section
+    - -> *missing mention with modifications*
+        - *modified*
+    - -> *Missing mention in moved sentence*
+        - *moved*
+    - -> *Missing mention in moved sentence with modifications*
+        - *moved with modifications*
+ 
+    
+
 
 #### Building the contexts
 For each sentence, called the `middle sentence` we construct the input of the model that we call context. Givan the `context size` parameter $k$, it consists in the concatenation of:
@@ -79,10 +111,11 @@ For each sentence, called the `middle sentence` we construct the input of the mo
     - the $k$ following sentences
 The preceding and following sentence must belong to same section the `middle sentence` belongs to. In case there is not anough such senences we take the maximum < $k$ on each side we can.
 
-![Alt](figures/contexts_construction.png?raw=true)
-Construction of the contexts
+![Alt](figures/context_construction.png?raw=true)
 
-- **Merging**
+Construction of context $l$ of sentence $l$
+ 
+- #### Merging
 
 ### Step 4: Scoring the contexts
 
