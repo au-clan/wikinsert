@@ -11,25 +11,36 @@ We present `WikInsert`, an AI-powered visualisation tool that aids in the `Entit
 
 ## 1. Methods
 
-The detection of `warm insertion spots` relies on the scoring of each sentence of the source page using an LLM, the higher the score, the more relevent the sentence is to insert the given link "around" and the warmer the color is on the final ouptut. By "around", we mean that the link could be inserted direclty in the sentence, but also inserted along new text. More precisely, we give the LLM a a sentence, say the `middle sentence`, within its context and along `target lead`. The context comprehend the $k$ sentences prior the `middle sentence` as well as the $k$ sentences after, constraining that they belong to the same section. The `target lead` is basically the introduction/top section of the target article.
+### 1.1 Overview
+
+The detection of `warm insertion spots` relies on the scoring of each sentence of the source page using an LLM, the higher the score, the more relevent the sentence is to insert the given link "around" and the warmer the color of this sentence is on the final ouptut. By "around", we mean that the link could be inserted direclty in the sentence, but also inserted along new text following this sentence. Hereby, we handle the 55% cases described above in which the piece of text did not exist prior the link insertion. About this we define [??] missing link categories. Our model's role is not to predict these, but they are imprtant to define to understand the task and latter conduct qulitative analysis:
+- *Missing mention*: 
+- *Missing sentence*:
+- *Missing span*:
+- *Missing section*:
+- *Missing sentence with modifications*:
+- *Moved sentence*:
+- *Moved sentence with modifications*:
+
+More precisely about the scoreing, we give the LLM a sentence, say the `middle sentence`, within its context and along the `target lead`. The context comprehend the $k$ sentences prior the `middle sentence` as well as the $k$ sentences after, constraining that they belong to the a single section. The `target lead` is basically the introduction/top section of the target article.
 
 The process of colouring the pages is divided into 5 steps, as shown in the following figure:
 
 [Big picture figure]
 
-### 1.1 Crawling pages
+### 1.2  Step 1: Crawling pages
 
 At training stage only the text was required and hence we could crawl the `.html` index only. Now, fro our vizualization purpose we doownload all files necessary for qasi-exact similarity with the pasges we can read on the Wikipedia website itself. We use the library `webstie_scraper` in node.js and perform an importstn modification of the pluggin `node_modules/website-scraper/lib/plugins/generate-filenamy-by-type-plugin.js`.
 
-### 1.2 Parsing the pages
+### 1.3 Step 2: Parsing the pages
 
 At training stage 
 
-### 1.3 Preprocessing
+### 1.4 Step 3: Preprocessing
 
-### 1.4 Scoring the contexts
+### 1.4 Step 4: Scoring the contexts
 
-### 1.5 Colouring the contexts
+### 1.5 Step 5: Colouring the contexts
 
 ## 2. Results and qualitative analysis
 
