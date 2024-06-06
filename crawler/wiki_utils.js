@@ -5,7 +5,6 @@ import fetch from 'node-fetch';
 import retry from 'async-retry';
 import scrape from 'website-scraper';
 import SaveToExistingDirectoryPlugin from 'website-scraper-existing-directory';
-import byTypeFilenameGenerator from 'website-scraper';
 
 const { JSDOM } = jsdom;
 const { get } = pkg;
