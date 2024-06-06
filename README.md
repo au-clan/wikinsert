@@ -11,7 +11,7 @@ We present `WikInsert`, an AI-powered visualisation tool that aids in the `Entit
 
 ## 1. Methods
 
-### 1.1 Overview
+### Overview
 
 The detection of `warm insertion spots` relies on the scoring of each sentence of the source page using an LLM, the higher the score, the more relevent the sentence is to insert the given link "around" and the warmer the color of this sentence is on the final ouptut. By "around", we mean that the link could be inserted direclty in the sentence, but also inserted along new text following this sentence. Hereby, we handle the 55% cases described above in which the piece of text did not exist prior the link insertion. About this we define 7 missing link categories. Our model's role is not to predict these, but they are imprtant to define to understand the task and latter conduct qulitative analysis:
 - *Missing mention*: the link is added in a pre-existing sentence. 
@@ -31,11 +31,11 @@ The process of colouring the pages is divided into 5 steps, as shown in the foll
 ![Alt](figures/big_picture.png?raw=true)
 Big picture of the colouring process
 
-### 1.2  Step 1: Crawling pages
+### Step 1: Crawling pages
 
 At training stage only the text was required and hence we could crawl the `.html` index only. For our visualization purposes, we need to download all files necessary to achieve a close resemblance (if not an exact match) to the pages as they appear on the Wikipedia website. We use the node js library `webstie_scraper` and perform an important modification of the pluggin `node_modules/website-scraper/lib/plugins/generate-filenamy-by-type-plugin.js` regarding the naming of the different crawled files. We crawl using the url format `https://${lang}.wikipedia.org/w/index.php?title=${title}&curid=${curid}&oldid=${oldid}` which allows us crawl specific version of a page and later conduct a the qualitative analysis. We make sure to use the required selectors to considere all necessary files such as `{selector: 'img', attr: 'src'}`, `{selector: 'img', attr: 'srcset'}` etc.
 
-### 1.3 Step 2: Parsing the pages
+### Step 2: Parsing the pages
 
 After a Wikipedia page is crawled, we parse it and tokenize its text into sentences. During the training phase, extracting and seentence-tokenizing all text along with its sections was enough. However, for visualization purposes, it is now essential that our process supports the later mapping of each sentence back to its original index in the raw HTML. To do so se implement the storage of the raw HTML start and end indices for each sentence. More precisely, for each piece of sentence belonging to a single html node, we store the start and end indices of the currated piece of text. Here is an example for the following sample:
 
@@ -48,21 +48,45 @@ Example of parsing & tokenizing storing the indices.
 
 As the use of usual `Python` libaries such as `Beautiful Soup` does not offer such feature, we us Node.js with the jsdom library. The process involves employing XPath to accurately locate and evaluate sections, sentences within the HTML document. Sentences within each section are then identified using a sentence tokenizer. Storing the precise indices of each sentence presents a challenge that necessitates iterating over the nodes in paralelly ot the sentences methodically to capture the exact start and end positions within the raw HTML. Additionally, hyperlinks within the text are identified as they are needed in source-target pairing and ground-truth comparison.
 
-### 1.4 Step 3: Preprocessing
+### Step 3: Preprocessing
 
-- **Cleaning of sentences**
+#### Cleaning of sentences
+The first part of the preprocessing is to clean the sentences text as follow:
+- Removing extra spaces in the begining or at the end
+- Making sure it is "enough of" a sentence:
+    - Contains more than 10 characters
+    - Ends with a special character: `'.','!','?'` etc. (Languages for which it applies only)
+    - We do not require a capital as first letter as it 
+- When a sentence does not verify the above, we merge it with the following sentence if it belongs to the same section, otherwise with the preceding sentence if it belongs to the same section, otherwise leave it as it is.
+- We considere a sentence with more than 70 characters valid in any case to avoid accumulation.
 
-- **Specific with-groundtruth and qualitative analysis preprocessing**
-    - xcdfg
-    - sdgfhg
+#### Extracting the source lead
+We concatenate the sentences whose section is `lead` and store them as `source lead` as they could be used as target lead in the case the considered page is target of another.
 
-- **Building the contexts**
+#### Specific with-groundtruth and qualitative analysis preprocessing
+In the case of the qualitative analysis, we need to process two versions of the source page:
+- A version 1, say v1, which is the page at time $t$ and is the one we are computing the score on and that we are colouring
+- A version 2, say v2, wich is the page at time $t+1$ and that may contain more hyperlinks than the v1, the `insterted links`. No context is built nor scorea computed from this page.
+Here is how we pre-process in parallel both pages. Once the sentences of both pages are "clean" we:
+- sdsfgh
+- sdfg
+- dsfg 
+
+#### Building the contexts
+For each sentence, called the `middle sentence` we construct the input of the model that we call context. Givan the `context size` parameter $k$, it consists in the concatenation of:
+    - the $k$ preceding sentences
+    - the `middle sentence`
+    - the $k$ following sentences
+The preceding and following sentence must belong to same section the `middle sentence` belongs to. In case there is not anough such senences we take the maximum < $k$ on each side we can.
+
+![Alt](figures/contexts_construction.png?raw=true)
+Construction of the contexts
 
 - **Merging**
 
-### 1.4 Step 4: Scoring the contexts
+### Step 4: Scoring the contexts
 
-### 1.5 Step 5: Colouring the contexts
+### Step 5: Colouring the contexts
 
 #### 1.5.1 Scores to colors
 
