@@ -37,17 +37,28 @@ At training stage only the text was required and hence we could crawl the `.html
 
 ### 1.3 Step 2: Parsing the pages
 
-After a Wikipedia page is crawled, we parse it and tokenize its text into sentences. During the training phase, extracting and seentence-tokenizing all text along with its sections was enough. However, for visualization purposes, it is now essential that our process supports the later mapping of each sentence back to its original index in the raw HTML. To do so se implement the storage of the raw HTML start and end indices for each sentence. More precisely, for each piece of sentence belonging to a single html node, we store the start and end indices of the currated piece of text. Here is an example:
+After a Wikipedia page is crawled, we parse it and tokenize its text into sentences. During the training phase, extracting and seentence-tokenizing all text along with its sections was enough. However, for visualization purposes, it is now essential that our process supports the later mapping of each sentence back to its original index in the raw HTML. To do so se implement the storage of the raw HTML start and end indices for each sentence. More precisely, for each piece of sentence belonging to a single html node, we store the start and end indices of the currated piece of text. Here is an example for the following sample:
 
-To achieve this, each text segment within a single HTML node must be addressed. As the use of Beautiful Soup is not permissible, Node.js with the jsdom library will be utilized. The process involves employing XPath to accurately locate and evaluate sections within the HTML document. Sections within the HTML are identified to facilitate the subsequent tokenization process. Sentences within each section are then identified and tokenized. Storing the precise indices of each sentence presents a challenge that necessitates iterating over the text methodically to capture the exact start and end positions within the raw HTML. Additionally, hyperlinks within the text are identified, ensuring their indices are also accurately recorded.
+```html
+...<p>It was the first period of 1,000 years in the Anno Domini and Common Era. It is distinct from the millennium known as the <b>0s</b> which had 999 years that began on January 1, 1 AD and ended on December 31, 999 AD.</p>...
+```
 
-This methodology ensures that during visualization, each sentence can be precisely mapped back to its original position within the raw HTML, thereby preserving the context and structural integrity of the original document.
+![Alt](figures/parsing_example.png?raw=true)
+Example of parsing & tokenizing storing the indices.
+
+As the use of usual `Python` libaries such as `Beautiful Soup` does not offer such feature, we us Node.js with the jsdom library. The process involves employing XPath to accurately locate and evaluate sections, sentences within the HTML document. Sentences within each section are then identified using a sentence tokenizer. Storing the precise indices of each sentence presents a challenge that necessitates iterating over the nodes in paralelly ot the sentences methodically to capture the exact start and end positions within the raw HTML. Additionally, hyperlinks within the text are identified as they are needed in source-target pairing and ground-truth comparison.
 
 ### 1.4 Step 3: Preprocessing
 
-#### 1.4.1 Preprocessing with groundtruth for qualitative analysis
+- **Cleaning of sentences**
 
-#### 1.4.2 Preprocessing for inference only
+- **Specific with-groundtruth and qualitative analysis preprocessing**
+    - xcdfg
+    - sdgfhg
+
+- **Building the contexts**
+
+- **Merging**
 
 ### 1.4 Step 4: Scoring the contexts
 
