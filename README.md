@@ -168,7 +168,7 @@ We ran the process on languages *Simple* (simple english), *French*, *German* an
 
 - *Missing mention*:
 ![Alt](figures/missing_mention_example.png?raw=true)
-The underlined and overlined sentence is the one the link was inserted. The inserted link is the one shown at the end of this sentence. As we can see, this where it is roughly the warmest.
+The underlined + overlined sentence is the one the link was inserted in. The inserted link shown at the end of this sentence. As we can see, this senence is in the region where it is roughly the warmest.
 - *Missing sentence*: 
 ![Alt](figures/missing_sentence_example.png?raw=true)
 - *Missing span*:
@@ -189,7 +189,7 @@ Please refer to the notebook `demo_nb.ipynb` to see the whole process in action.
 
 ## 4. Future work
 
-- Generalize adn evaluate on more languages, especially the tokenizing into sentences
+- Generalize to and evaluate on more languages, especially the tokenizing into sentences
 - Perfectionning of the colouring, smoothing parameter etc.
 - Creation of a Dlab hosted server to observe several heat-maps
 - Implementation of the non ground-truth process on new pages
