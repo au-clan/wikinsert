@@ -30,7 +30,7 @@ function overlayHeatMap(coloreStore, file_path, outpath){
                 if (loc.sentence_end > end) {
                     sent_span += htmlText.substring(end, loc.sentence_end);
                 }
-                sent_span += `<span style="color: rgb(255, 0, 0); text-decoration: underline;">--{${loc.link_text}}</span>`;
+                sent_span += `<span style="color: rgb(255, 0, 0);">[GT]{${loc.link_text}}[GT]</span>`;
             }
 
         }
@@ -48,7 +48,7 @@ function overlayHeatMap(coloreStore, file_path, outpath){
         if (special & (type == "missing_mention_with_sentence_modifications" || type == "missing_mention_in_moved_sentence_with_modifications") & loc.last){
             sent_span += `<span style="color: rgb(255, 0, 0)">[updated-sentence]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.new_sentence_parts[0]}</span>`;
-            sent_span += `<span style="color: rgb(255, 0, 0); text-decoration: underline;">${loc.link_text}</span>`;
+            sent_span += `<span style="color: rgb(255, 0, 0);">[GT]${loc.link_text}[GT]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.new_sentence_parts[1]}</span>`;
             sent_span += `<span style="color: rgb(255, 0, 0)">[updated-sentence]</span>`;
         }
@@ -56,7 +56,7 @@ function overlayHeatMap(coloreStore, file_path, outpath){
         if (special & type == "missing_sentence") {
             sent_span += `<span style="color: rgb(255, 0, 0)">[added-sentence]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.link_sentence_parts[0]}</span>`;
-            sent_span += `<span style="color: rgb(255, 0, 0); text-decoration: underline;">${loc.link_text}</span>`;
+            sent_span += `<span style="color: rgb(255, 0, 0);">[GT]${loc.link_text}[GT]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.link_sentence_parts[1]}</span>`;
             sent_span += `<span style="color: rgb(255, 0, 0)">[added-sentence]</span>`;
         }
@@ -64,7 +64,7 @@ function overlayHeatMap(coloreStore, file_path, outpath){
         if (special & type == "missing_span") {
             sent_span += `<span style="color: rgb(255, 0, 0)">[added-span]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.link_sentence_parts[0]}</span>`;
-            sent_span += `<span style="color: rgb(255, 0, 0); text-decoration: underline;"> ${loc.link_text}</span>`;
+            sent_span += `<span style="color: rgb(255, 0, 0);">[GT]${loc.link_text}[GT]</span>`;
             sent_span += `<span style="color: rgb(0, 0, 0)">${loc.link_sentence_parts[1]}</span>`;
             sent_span += `<span style="color: rgb(255, 0, 0)">[added-span]</span>`;
         }
