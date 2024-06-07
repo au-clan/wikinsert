@@ -137,7 +137,7 @@ For each target we considere, either found by the specific with-groundtruth and 
 
 ### Step 4: Scoring the contexts
 
-We use the LLMs trained in the previous study, more precisely the one we use predomenanlty is a fine-tuned version of `Roberta`: `roberta_full_multilingual-all` as it was the one showing the best performaces accros several languages. The final input corresponding to one sentence of the `source article` is the concatenation of:
+We use the LLMs trained in the previous study, more precisely the one we use predomenanlty is a fine-tuned version of `Roberta` [[3]](#3): `roberta_full_multilingual-all` as it was the one showing the best performaces accros several languages. The final input corresponding to one sentence of the `source article` is the concatenation of:
     - the `target title`
     - the `target lead section`
     - the `context` associated to this sentence
@@ -162,44 +162,37 @@ which was heuristically chosen.
     ```
     - For qualitative analysis, we also add special visual markers to meterialize the ground-truth.
 
-## 2. Results and qualitative analysis
+## 2. A few results
+
+We ran the process on languages *Simple* (simple english), *French*, *German* and *Spanish* on a random sample of 100 source pages. We usually obtain more than one heat-map per source page in case there are several targets for one source (i.e more tha one link is inserted from one month to the other). The pages we use are from October (v1) and November (v2) 2023. We diaplay a few examples here, but you may observe many more in `dlabdata1/boulenge/wikidumps_data/report_examples.zip`. Download the zip file locally, open one of the files in `colored_pages` and choose the heat map you want to see. Ground-Truth insertions are preceded and followed by `[GT]`.
 
 - *Missing mention*:
+![Alt](figures/missing_mention_example.png?raw=true)
+The underlined and overlined sentence is the one the link was inserted. The inserted link is the one shown at the end of this sentence. As we can see, this where it is roughly the warmest.
 - *Missing sentence*: 
+![Alt](figures/missing_sentence_example.png?raw=true)
 - *Missing span*:
-- *Missing section*:
+![Alt](figures/missing_span_example.png?raw=true)
 - *Missing mention with sentence modifications*:
+![Alt](figures/missing_mention_with_modifications.png?raw=true)
 - *Moved sentence*:
+This is a rare case and it was not present in our current sample.
 - *Moved sentence with modifications*:
+![Alt](figures/missing_mention_moved_sentence_modif_example.png?raw=true)
+We display the sentence where it is originally and materialize where it was moved with `sentence_moved_here`.
 
-## 3. More details about the source code, how to use the tool?
+Here we are showing a few examples only, a more detailed and larger scale qulitative analysis will be conducted later.
 
+## 3. The source code
 
+Please refer to the notebook `demo_nb.ipynb` to see the whole process in action. It was use to generate the above examples
 
+## 4. Future work
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+- Generalize adn evaluate on more languages, especially the tokenizing into sentences
+- Perfectionning of the colouring, smoothing parameter etc.
+- Creation of a Dlab hosted server to observe several heat-maps
+- Implementation of the non ground-truth process on new pages
 
 
 ## References
@@ -208,3 +201,8 @@ Arora et al. *Orphan Articles: The Dark Matter of Wikipedia*. arXiv [Cs.SI], 6 J
 
 <a id="2">[2]</a> 
 Soores et al. *Multilingual Entity Insertion in Wikipedia*
+Jan 2024
+
+<a id="3">[3]</a> 
+Yinhan Liu and Myle Ott and Naman Goyal and Jingfei Du and Mandar Joshi and Danqi Chen and Omer Levy and Mike Lewis and Luke Zettlemoyer and Veselin Stoyanov, 2019
+*RoBERTa: A Robustly Optimized BERT Pretraining Approach*. arXiv [cs.CL], 2019, https://arxiv.org/abs/1907.11692
