@@ -80,30 +80,29 @@ Here is how we pre-process in parallel both pages. Once the sentences of both pa
     Note that the thresholds we heuristically chosen.
 
 - Once the sentences are categorized, we look for the links that are in v2 but not in v1 and hereby determine the `missing category` for each of these `inserted link`, depending on the sentence they belong to:
-    - -> *missing section*
+    - If:
         - *added* 
-        - **AND** in a non pre-existing section 
-    - -> *missing mention*
-        - *neutral* 
-    - -> *missing sentence*
+        - **AND** in a non pre-existing section
+    - -> *missing section*
+    - If: *neutral* -> *missing mention*
+    - If:
         - *added* 
         - **AND** the preceding sentence is not *added* or belongs to a different section
-        - **AND** the following sentence is not *added* or belongs to a different section 
-    -  -> *missing span*
+        - **AND** the following sentence is not *added* or belongs to a different section
+    - -> *missing sentence*
+         
+    - If:
         - *added*  
         - **AND** 
             - the preceding sentence is *added* and belongs to the same section 
             - **OR** the following sentence is *added* and belongs to the same section
-    - -> *missing mention with modifications*
-        - *modified*
-    - -> *Missing mention in moved sentence*
-        - *moved*
-    - -> *Missing mention in moved sentence with modifications*
-        - *moved with modifications*
+    -  -> *missing span*
+    - If: *modified* -> *missing mention with modifications*
+    - If: *moved* -> *Missing mention in moved sentence*
+    - If: *moved with modifications* -> *Missing mention in moved sentence with modifications*
+
+The missing section are then filtered out because the LLMs are were not trained to support this case, hence there is no point of conducting a qualitative analysis on them. We also store the locations of the *added* sentence, whre a setence was *moved* etc. and will use these latter when showing the ground truth along the heatmap.
  
-    
-
-
 #### Building the contexts
 For each sentence, called the `middle sentence` we construct the input of the model that we call context. Givan the `context size` parameter $k$, it consists in the concatenation of:
     - the $k$ preceding sentences
@@ -114,16 +113,38 @@ The preceding and following sentence must belong to same section the `middle sen
 ![Alt](figures/context_construction.png?raw=true)
 
 Construction of context $l$ of sentence $l$
+
+Note that we have now implemented to possibility of chossing the $k$ parameter for further study; although we kept to the original the orginal value whcih was used for training: 5.
  
-- #### Merging
+#### Merging
+For each target we considere, either found by the specific with-groundtruth and qualitative analysis preprocessing or given as input, we must extract its lead paragraph. This is already done for most pages we considere now but otherwise a it can be extracted as it is done in above.
 
 ### Step 4: Scoring the contexts
 
+We use the LLMs trained in the previous study, more precisely the one we use predomenanlty is a fine-tuned version of `Roberta`: `roberta_full_multilingual-all` as it was the one showing the best performaces accros several languages. The final input corresponding to one sentence of the `source article` is the concatenation of:
+    - the `target title`
+    - the `target lead section`
+    - the `context` associated to this sentence
+We then get a float score for each sentence of the `source article`. 
+
 ### Step 5: Colouring the contexts
 
-#### 1.5.1 Scores to colors
-
-#### 1.5.2 Displaying the groundtruths
+- The next step is to normalize the scores accros one page:
+$$ \forall \text{score} \in \text{scores},\quad  \text{normalized\_score} = \frac{\text{score} - \min(\text{scores})}{\max_{sc \in \text{scores}}(\text{sc} - \min(\text{scores}))}$$
+This way we make sure that all scores are in $[0,1]$ and that the maximum socres is 1 and the minimum is 0. 
+- We map each normalized score to a color using color map. We chose `sns.color_palette("coolwarm", as_cmap=True)` which, rougly, goes from gray to red.
+- On top of this we add a transparency paramter:
+$$\alpha(\text{{score}}) = (\text{score} + 0.3)/4$$
+which was hearistically chosen.
+- Once each score is mapped to a color, i.e. each senence is mapped to a color, we can construct the heatmap:
+    - We iterate accross each sub sentence (i.e part of the sentence wich belong to a single html node, as defined above) to progressively construct the final html string. Namely, let `sub_sen` be the current sub sentence with start index $s$, end index $e$, color $c$ and `final_html` be the current state of the final input. At this step:
+    ```javascript
+        final_html = final_html + orignal_html.substring(last_e,s)
+        final_html = final_html + `<span style="background-color: rgba(c)">${orignal_html.substring(s,e)}</span>`;
+        last_e = e
+  
+    ```
+    - For qualitative analysis, we also add special visual markers to meterialize the ground-truth
 
 ## 2. Results and qualitative analysis
 
