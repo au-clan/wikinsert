@@ -6,7 +6,7 @@ import os
 from multiprocessing import Pool, cpu_count
 tqdm.pandas()
 import time
-from modular_preprocessing import *
+from preprocessing import *
 import subprocess
 
 
@@ -19,7 +19,7 @@ def call_crawler(titles, curids, oldids, outfolder, lang):
 def move_file(current_path, new_path):
     os.rename(current_path, new_path)
 
-def move_page_files(crawled_files_name, curid_oldid, crawling_outdir):
+def move_single_page_files(crawled_files_name, curid_oldid, crawling_outdir):
 
     index_file_path = f"{crawling_outdir}/{curid_oldid}"
 
@@ -28,11 +28,11 @@ def move_page_files(crawled_files_name, curid_oldid, crawling_outdir):
         if crawled_file == "index.html":
             move_file(file_path, f"{crawling_outdir}/{curid_oldid}.html")
         
-def move_pages_files(crawled_pages_dirs, crawling_outdir):
+def move_all_pages_files(crawled_pages_dirs, crawling_outdir):
         for crawled_page_dir in tqdm(crawled_pages_dirs, desc='Moving files'):
             page_dir = f"{crawling_outdir}/{crawled_page_dir}"
             page_files_name = list(os.listdir(page_dir))
-            move_page_files(page_files_name, crawled_page_dir, crawling_outdir)
+            move_single_page_files(page_files_name, crawled_page_dir, crawling_outdir)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -73,7 +73,6 @@ if __name__ == '__main__':
         titles += [row['source_title']      for _, row in revisions_clean.iterrows() for _ in row['versions']]
 
 
-
     print(f"Total number of pages to crawl: {len(curids)}")
 
     nb_processes_ = min(cpu_count(), args.n_processes)
@@ -85,7 +84,6 @@ if __name__ == '__main__':
     batched_titles = [titles[i:i + batch_size_1] for i in range(0, len(titles), batch_size_1)]
 
     print(f"Running crawling on {nb_processes_} processes")
-    print("Parallel multiprocess")
     with Pool(processes=nb_processes_) as pool:
         pool.starmap(call_crawler, zip(batched_titles, batched_curids, batched_oldids, [args.output_dir]*len(batched_titles), [args.lang]*len(batched_titles)))
 
@@ -102,4 +100,4 @@ if __name__ == '__main__':
                 os.remove(f"{args.output_dir}/{page}")
         all_crawled_pages = list(os.listdir(args.output_dir))
 
-    move_pages_files(all_crawled_pages, args.output_dir)
+    move_all_pages_files(all_crawled_pages, args.output_dir)

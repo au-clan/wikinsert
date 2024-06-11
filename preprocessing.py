@@ -15,9 +15,6 @@ tqdm.pandas()
 import time
 from collections import Counter
 
-
-
-
 UNRELEVENT_SECTIONS = ["References", "Other Websites", "Related pages"]
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
@@ -190,10 +187,47 @@ def get_group_indexes(diff):
         group_indexes.extend({j: all_starts[j]} for j in range(last_added+1, len(diff)))
 
     return group_indexes
-    
 
-def process_version(input):
+def process_single_version(input):
+    sentences_path = os.path.join(
+        first_versions_html_dir, f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
     
+    if not os.path.exists(sentences_path):
+            print('No parsed HTML found')
+            print(sentences_path)
+            raise Exception('No parsed HTML found')
+    
+    sentences_1 = pd.read_json(sentences_path)
+    if sentences_1.shape[0] == 0:
+        print('No sentences found in 1')
+        print(f"{input['source_ID']}_{input['first_version']}_sentences.jsonl")
+        return []
+    
+    clean_sentences = clean_sentences(sentences_1)
+
+    original_lead = ' '.join([sentence['clean_sentence'] for sentence in clean_sentences if sentence['section1'] == 'Lead'])
+
+    section_sentences = {}
+    for sentence in clean_sentences:
+        if sentence['section1'] not in section_sentences:
+            section_sentences[sentence['section1']] = []
+        section_sentences[sentence['section1']].append(sentence)
+        
+    
+    all_contexts = create_all_contexts(
+        section_sentences, args.side_contexts_size)
+    
+    output = {
+        'title': input['source_title'],
+        'ID': input['source_ID'],
+        'lead': original_lead.strip(),
+        'version': input['first_version'],
+        'all_contexts': all_contexts
+    }
+
+    return [output]
+
+def process_two_versions(input):
     output = []
     d = difflib.Differ()
     sentences_1_path = os.path.join(
@@ -252,7 +286,6 @@ def process_version(input):
             print('No links found')
             print(f"{input['source_ID']}_{second_version}_links.jsonl")
             continue
-
 
         clean_sentences_2 = clean_sentences(sentences_2)
 
@@ -496,6 +529,17 @@ def process_version(input):
 
     return output
 
+def process_files(process_func, revisions, nb_processes, initializer=None):
+    outputs = []
+    if nb_processes > 1:
+        pool = Pool(nb_processes, initializer=initializer)
+        for result in tqdm(pool.imap(process_func, revisions), total=len(revisions)):
+            outputs.extend(result if isinstance(result, list) else [result])
+        pool.close()
+        pool.join()
+    else:
+        outputs = [output for revision in tqdm(revisions_clean, total=len(revisions_clean)) for output in process_func(revision)]
+    return outputs
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -504,20 +548,22 @@ if __name__ == '__main__':
     parser.add_argument('--parsed_html_dir', type=str, required=True,
                         help='Path to the directory containing all the parsed HTML files, both links and sentences')
     parser.add_argument('--first_versions_specific_parsed_html_dir', type=str, required=False, default=None)
-    parser.add_argument('--redirect_1', type=str, required=True,
-                        help='Path to the first redirect file')
-    parser.add_argument('--redirect_2', type=str, required=True,
-                        help='Path to the second redirect file')
-    parser.add_argument('--mention_map', type=str, required=True,
-                        help='Path to the mention map file')
+    parser.add_argument('--n_processes', type=int, required=False, default=1,
+                        help='Number of processes to use')
     parser.add_argument('--output_dir', type=str, required=True,
                         help='Path to the output directory')
     parser.add_argument('--side_contexts_size', type=int, required=True,
-                        help='Half size of the context')
-    parser.add_argument('--n_processes', type=int, default=1,
-                        help='Number of processes to use')
+                        help='Half size of the context') 
+    parser.add_argument('--first_version_only', type=bool, default=False,
+                        help='If True, only the first version of the article will be processed')
+    parser.add_argument('--redirect_1', type=str, required=False,
+                        help='Path to the first redirect file')
+    parser.add_argument('--redirect_2', type=str, required=False,
+                        help='Path to the second redirect file')
 
     args = parser.parse_args()
+
+    process_v2 = not args.first_version_only
 
     if args.first_versions_specific_parsed_html_dir is None:
         first_versions_html_dir = args.parsed_html_dir
@@ -532,76 +578,52 @@ if __name__ == '__main__':
         raise Exception(f'parsed HTML directory {args.parsed_html_dir} does not exist')
     if not os.path.exists(first_versions_html_dir):
         raise Exception(f'parsed HTML directory {first_versions_html_dir} does not exist')
-    if not os.path.exists(args.redirect_1):
-        raise Exception('Redirect file 1 does not exist')
-    if not os.path.exists(args.redirect_2):
-        raise Exception('Redirect file 2 does not exist')
-    if not os.path.exists(args.mention_map):
-        raise Exception('Mention map file does not exist')
-
+    
     # create the output directory if it does not exist
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-
+    
     # load the data
-    redirect_1 = pd.read_parquet(args.redirect_1)
-    redirect_2 = pd.read_parquet(args.redirect_2)
-
-    redirect_1 = redirect_1.to_dict()['redirect']
-    redirect_2 = redirect_2.to_dict()['redirect']
-
     revisions_clean = pd.read_parquet(args.revisions_path).to_dict(orient='records')
-
-    def initializer():
-        global redirect_1
-        global redirect_2
-        global mentions_map
+    
+    output = []
+    nb_processes = min(cpu_count(), args.n_processes)
+    print(f"Running on {nb_processes} processes")
+    
+    if process_v2:
+        if not os.path.exists(args.redirect_1):
+            raise Exception('Redirect file 1 does not exist')
+        if not os.path.exists(args.redirect_2):
+            raise Exception('Redirect file 2 does not exist')
 
         redirect_1 = pd.read_parquet(args.redirect_1)
         redirect_2 = pd.read_parquet(args.redirect_2)
+
         redirect_1 = redirect_1.to_dict()['redirect']
         redirect_2 = redirect_2.to_dict()['redirect']
 
-        mentions_map_pre = pd.read_parquet(args.mention_map)
-        mentions_map_pre = mentions_map_pre.to_dict(orient='records')
-        mentions_map = {}
-        for row in mentions_map_pre:
-            target_title = fix_target_titles(
-                row['target_title'], redirect_1, redirect_2)
-            if target_title not in mentions_map:
-                mentions_map[target_title] = [row['mention']]
-            else:
-                mentions_map[target_title].append(row['mention'])
-    
-    output = []
-    nb_processes_ = min(cpu_count(), args.n_processes)
-    
 
-    if nb_processes_ > 1:
-        print(f"Running on {nb_processes_} processes")
-        pool = Pool(nb_processes_, initializer=initializer)
-        print("Parallel multiprocess")
-        for result in tqdm(pool.imap(process_version, revisions_clean), total=len(revisions_clean)):
-            output.extend(result)
-        pool.close()
-        pool.join()
+        def initializer():
+            global redirect_1
+            global redirect_2
+
+            redirect_1 = pd.read_parquet(args.redirect_1)
+            redirect_2 = pd.read_parquet(args.redirect_2)
+            redirect_1 = redirect_1.to_dict()['redirect']
+            redirect_2 = redirect_2.to_dict()['redirect']
+    
+        output = process_files(process_two_versions, revisions_clean, nb_processes, initializer)
+
     else:
-        print(f"Running on {nb_processes_} processes")
-        output = [output for revision in tqdm(revisions_clean, total=len(revisions_clean)) for output in process_version(revision)]
+        output = process_files(process_two_versions, revisions_clean, nb_processes, output)
 
-    '''for i in range(0, len(output), 100_000):
-        df_output = pd.DataFrame(output[i:i+100_000])
-        df_output['context'] = df_output['context'].progress_apply(fix_text)
-        df_output['source_lead'] = df_output['source_lead'].progress_apply(
-            fix_text)
-        df_output.to_parquet(os.path.join(args.output_dir, f'test_data_{i}.parquet'))'''
-    
+
     print(f"The length of the output is {len(output)}")
 
     df_output = pd.DataFrame(output)
-    #print(df_output.head(5))
+
     df_output['source_lead'] = df_output['source_lead'].progress_apply(
         fix_text)
     
-
     df_output.to_parquet(os.path.join(args.output_dir, f'test_data.parquet'))
+

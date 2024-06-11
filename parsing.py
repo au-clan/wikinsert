@@ -6,7 +6,7 @@ import os
 from multiprocessing import Pool, cpu_count
 tqdm.pandas()
 import time
-from modular_preprocessing import *
+from preprocessing import *
 import subprocess
 
 
@@ -27,9 +27,12 @@ if __name__ == '__main__':
                         help='Path to the output directory')
     parser.add_argument('--first_versions_specific_output_dir', type=str, required=False, default=None,
                         help='Path to the output directory for the first versions')
+    parser.add_argument('--first_version_only', type=bool, default=False,
+                        help='If True, only the first version of the article will be processed')
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
 
+    process_v2 = not args.first_version_only
 
     args = parser.parse_args()
 
@@ -64,18 +67,15 @@ if __name__ == '__main__':
 
     all_paths_v1 = [f"{first_version_html_dir}/{row['source_ID']}_{row['first_version']}.html" for _, row in revisions_clean.iterrows()]
     outPaths_v1 = [f"{first_version_output_dir}/{row['source_ID']}_{row['first_version']}" for _ ,row in revisions_clean.iterrows()]
-    all_paths_v2 = [f"{args.html_dir}/{row['source_ID']}_{version}.html" for _, row in revisions_clean.iterrows() for version in row['versions']]
-    outPaths_v2 = [f"{args.output_dir}/{row['source_ID']}_{version}" for _ , row in revisions_clean.iterrows() for version in row['versions']]
-
+    
     nb_processes_ = min(cpu_count(), args.n_processes)
 
     batch_size_1 = math.ceil(len(all_paths_v1) / nb_processes_)
-    batch_size_2 = math.ceil(len(all_paths_v2) / nb_processes_)
+
 
     batched_paths_1 = [all_paths_v1[i:i + batch_size_1] for i in range(0, len(all_paths_v1), batch_size_1)]
     batched_outPaths_1 = [outPaths_v1[i:i + batch_size_1] for i in range(0, len(outPaths_v1), batch_size_1)]
-    batched_paths_2 = [all_paths_v2[i:i + batch_size_2] for i in range(0, len(all_paths_v2), batch_size_2)]
-    batched_outPaths_2 = [outPaths_v2[i:i + batch_size_2] for i in range(0, len(outPaths_v2), batch_size_2)]
+ 
 
     print(f"Running on {nb_processes_} processes")
     print("Parallel multiprocess")
@@ -86,13 +86,17 @@ if __name__ == '__main__':
 
     end_time1 = time.time()
     print(f"Time taken for v1: {end_time1 - start_time}")
-
-    print("Writing sentences and links v2")
-    with Pool(processes=nb_processes_) as pool:
-        pool.starmap(write_sentences_and_links, zip(batched_paths_2, batched_outPaths_2))
     
-    end_time2 = time.time()
-    print(f"Time taken for v2: {end_time2 - end_time1}")
+    if process_v2:
+        all_paths_v2 = [f"{args.html_dir}/{row['source_ID']}_{version}.html" for _, row in revisions_clean.iterrows() for version in row['versions']]
+        outPaths_v2 = [f"{args.output_dir}/{row['source_ID']}_{version}" for _ , row in revisions_clean.iterrows() for version in row['versions']]
+        batch_size_2 = math.ceil(len(all_paths_v2) / nb_processes_)
+        batched_paths_2 = [all_paths_v2[i:i + batch_size_2] for i in range(0, len(all_paths_v2), batch_size_2)]
+        batched_outPaths_2 = [outPaths_v2[i:i + batch_size_2] for i in range(0, len(outPaths_v2), batch_size_2)]
+        print("Writing sentences and links v2")
+        with Pool(processes=nb_processes_) as pool:
+            pool.starmap(write_sentences_and_links, zip(batched_paths_2, batched_outPaths_2))
+
     
 
 

@@ -5,7 +5,7 @@ from tqdm import tqdm
 import os
 from multiprocessing import Pool, cpu_count
 tqdm.pandas()
-from modular_preprocessing import *
+from preprocessing import *
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
