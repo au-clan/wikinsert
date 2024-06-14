@@ -615,7 +615,7 @@ if __name__ == '__main__':
         output = process_files(process_two_versions, revisions_clean, nb_processes, initializer)
 
     else:
-        output = process_files(process_two_versions, revisions_clean, nb_processes, output)
+        output = process_files(process_single_version, revisions_clean, nb_processes, output)
 
 
     print(f"The length of the output is {len(output)}")

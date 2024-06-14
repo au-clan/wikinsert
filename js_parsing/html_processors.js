@@ -161,10 +161,7 @@ async function findSections(document, dom) {
         sectionNodeId++;
     }
 
-    
-    let rangeMap = createRangeMap(sectionNodes2Offset);
-
-    return rangeMap;
+    return sectionNodes2Offset;
 }
 
 /**
@@ -173,7 +170,7 @@ async function findSections(document, dom) {
  * @param htmlText
  * @returns {Promise<*>}
  */
-async function extractSentences(htmlText, dom, document, sectionMap){ //extractSentences(dom, htmlText, outDir, article) {
+async function parsetext(dom, document){ //extractSentences(dom, htmlText, outDir, article) {
     // let dom = new JSDOM(htmlText, { includeNodeLocations: true });
     // htmlText = dom.serialize();
     
@@ -197,8 +194,6 @@ async function extractSentences(htmlText, dom, document, sectionMap){ //extractS
     )
     ]`; 
 
-
-    start_time = performance.now();
     let expression = document.createExpression(xpathAllText, null);
     const textNodes = expression.evaluate(document, wgxpath.XPathResultType.ANY_TYPE);
     //console.log(JSDOM.fragment(htmlText).textContent);
@@ -209,8 +204,6 @@ async function extractSentences(htmlText, dom, document, sectionMap){ //extractS
     let allText = "";
     let textNodeId = 0;
     let textNodes2Offset = [];
-
-    time_to_xpath = performance.now();
 
     while (textNode) {
         const textLocation = dom.nodeLocation(textNode);
@@ -227,11 +220,11 @@ async function extractSentences(htmlText, dom, document, sectionMap){ //extractS
         textNodeId++;
     }
 
-    time_to_find_nodes = performance.now();
+    return {allText, textNodes2Offset};
 
-    sentences = tokenizer.sentences(allText, {"newline_boundaries":true});
+}
 
-    time_to_tokenize = performance.now();
+function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
 
     numLines = 0;
     let sentenceStore = [];
@@ -368,20 +361,9 @@ async function extractSentences(htmlText, dom, document, sectionMap){ //extractS
         numLines++;
     }
 
-    time_to_find_sub_indexes = performance.now();
-
     //fdata.end();
     //fsentences.end();
     //process.stdout.write(JSON.stringify(sentenceStore));
-
-//console.log(reconst);
-
-//console.log('sentences');
-//console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
-//console.log(`Time to find nodes: ${time_to_find_nodes - time_to_xpath} ms`);
-//console.log(`Time to tokenize: ${time_to_tokenize - time_to_find_nodes} ms`);
-//console.log(`Time to find sub indexes: ${time_to_find_sub_indexes - time_to_tokenize} ms`);
-//console.log(`End of sentences`);
 
 return sentenceStore ;
 }
@@ -412,12 +394,12 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
     ${XPATH_CONDITIONS.NOT_STARTS_WITH_NON_NS_0}
     ]`;
 
-    start_time = performance.now();
+
 
     expression = document.createExpression(xpathAnchor, null);
     const anchorNodes = expression.evaluate(document, wgxpath.XPathResultType.ANY_TYPE);
 
-    time_to_xpath = performance.now();
+
 
     //const flink = fs.createWriteStream(path.resolve(outDir,article.id+'_link2sent.tsv'));
     let anchorNode = anchorNodes.iterateNext();
@@ -456,71 +438,66 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
         sentid_ = null;
     }
 
-    time_to_find_links = performance.now();
-
-    //flink.end();
-    //console.log('links')
-    //console.log(`Time to xpath: ${time_to_xpath - start_time} ms`);
-    //console.log(`Time to find links: ${time_to_find_links - time_to_xpath} ms`);
-    //console.log(`End of links`);
-
-
     return linkStore;
 }
 
 async function parse(filePath, outPath){
-
-    let start_time =  performance.now();
+    
     const htmlText = fs.readFileSync(filePath, 'utf-8');
 
-    let time_to_open  = performance.now();
-
-    let dom = new JSDOM(htmlText, { includeNodeLocations: true, url: "file:" });
+    let dom = new JSDOM(htmlText, {includeNodeLocations: true, url: "file:" });
     
-    let time_to_dom = performance.now();
-
     let document = dom.window.document;
 
-    let time_to_document = performance.now();
+    let raw_sectionNodes2Offset = await findSections(document, dom);
+    const sectionNodes2Offset = JSON.stringify(raw_sectionNodes2Offset);
 
-    let sectionMap = await findSections(document, dom);
-
-    let time_to_sections = performance.now();
-
-    const sentenceStore = await extractSentences(htmlText, dom, document, sectionMap);
-
-    let time_to_sentences = performance.now();
-
-    const linkStore = await extractLinks(dom, document, sectionMap, sentenceStore);
-
-    let time_to_links = performance.now();
-
-    const sentences = JSON.stringify(sentenceStore);
-
-    let time_to_sentences_json = performance.now();
-
-    const links = JSON.stringify(linkStore);
-
-    let time_to_links_json = performance.now();
-
+    const {rawParsedText, rawtextNodes2Offset} = await parsetext(dom, document);
+    const ParsedText = JSON.stringify(rawParsedText);
+    const textNodes2Offset = JSON.stringify(rawtextNodes2Offset);
+  
     //Write as a jsonl in outPath
-    const sentencesPath = outPath + '_sentences.jsonl';
-    const linksPath = outPath + '_links.jsonl';
-    fs.writeFileSync(sentencesPath, sentences)
-    fs.writeFileSync(linksPath, links)
+    const sectionsPath = outPath + '_sections.json';
+    const textPath = outPath + '_text.jsonl';
+    const textNodes2OffsetPath = outPath + '_textNodes2Offset.json';
 
-    let time_to_write = performance.now();
-
-    //console.log(`Time to open file: ${time_to_open - start_time} ms`);
-    //console.log(`Time to create dom: ${time_to_dom - time_to_open} ms`);
-    //console.log(`Time to create document: ${time_to_document - time_to_dom} ms`);
-    //console.log(`Time to find sections: ${time_to_sections - time_to_document} ms`);
-    //console.log(`Time to extract sentences: ${time_to_sentences - time_to_sections} ms`);
-    //console.log(`Time to extract links: ${time_to_links - time_to_sentences} ms`);
-    //console.log(`Time to write sentences json: ${time_to_sentences_json - time_to_links} ms`);
-    //console.log(`Time to write links json: ${time_to_links_json - time_to_sentences_json} ms`);
-    //console.log(`Time to write to files: ${time_to_write - time_to_links_json} ms`);
+    fs.writeFileSync(sectionsPath, sectionNodes2Offset)
+    fs.writeFileSync(textPath, ParsedText)
+    fs.writeFileSync(textNodes2OffsetPath, textNodes2Offset)
 
 }
 
+async function write_sentence_store(filePath, raw_sentences_path, outPath){
+    
+    const htmlText = fs.readFileSync(filePath, 'utf-8');
+    let dom = new JSDOM(htmlText, { includeNodeLocations: true, url: "file:" });
+    let document = dom.window.document;
+
+    const sectionNodes2Offset_path = outPath + '_sections.json';
+    const textNodes2Offset_path = outPath + '_textNodes2Offset.json';
+    const raw_sentences_path = outPath + '_raw_sentences.jsonl';
+
+    const raw_sentences = fs.readFileSync(raw_sentences_path, 'utf-8');
+    const raw_textNodes2Offset = fs.readFileSync(textNodes2Offset_path, 'utf-8');
+    const raw_sectionNodes2Offset = fs.readFileSync(sectionNodes2Offset_path, 'utf-8');
+
+    const list_sentences = JSON.parse(raw_sentences);
+    const textNodes2Offset = JSON.parse(raw_textNodes2Offset);
+    const sectionNodes2Offset = JSON.parse(raw_sectionNodes2Offset);
+
+    let sectionMap = createRangeMap(sectionNodes2Offset);
+
+    const sentenceStore = getSentenceStore(list_sentences, textNodes2Offset, sectionMap);
+    
+    const rawlinkStore = await extractLinks(dom, document, sectionMap, sentenceStore);
+    const linkStore = JSON.stringify(rawlinkStore);
+    const linksPath = outPath + '_links.jsonl';
+
+    const sentence_store_path = outPath + '_sentences.json';
+    
+    fs.writeFileSync(sentence_store_path, JSON.stringify(sentenceStore));
+    fs.writeFileSync(linksPath, linkStore)
+}
+
 module.exports.parse = parse;
+module.exports.write_sentence_store = write_sentence_store;

@@ -29,14 +29,14 @@ if __name__ == '__main__':
                         required=True, help='Path to data directory')
     parser.add_argument('--output_dir', type=str,
                         required=True, help='Path to data directory')
-    parser.add_argument('--lang', type=str, nargs='+', required=True,
+    parser.add_argument('--lang', type=str, required=True,
                         help='Languages to benchmark')
-    parser.add_argument('--side_context_size', type=str, nargs='+', required=True,
+    parser.add_argument('--side_contexts_size', type=str, required=True,
                         help='Size of side contexts to benchmark')
     parser.add_argument('--model_dir', type=str, required=True,
                         help='Directory containing model directories')
     parser.add_argument('--model_prefix', type=str,
-                        required=True, help='Prefix of all models (sufix is language)')
+                        required=True, help='Prefix of the model (sufix is language)')
     parser.add_argument('--use_section_title',
                         action='store_true', help='Use section title in input')
     parser.add_argument('--batch_size', type=int, help='Batch size', required=True)
@@ -57,56 +57,56 @@ if __name__ == '__main__':
     # check if data path exists
     if not os.path.exists(args.data_dir):
         raise ValueError('Data directory does not exist')
-    # check if models dir exists
-    if not os.path.exists(args.models_dir):
-        raise ValueError('Models directory does not exist')
+    # check if model dir exists
+    if not os.path.exists(args.model_dir):
+        raise ValueError('Model directory does not exist')
 
     output_dimension = 1
-    batch_size = args.batch_size
+    batch_size = int(args.batch_size)
 
     # process each language sequentially
 
     lang = args.lang
-    side_contexts_size = args.side_contexts_size
+    side_contexts_size = int(args.side_contexts_size)
             
     model = {} 
-    if not args.only_multilingual:
+    if not args.multilingual:
 
-        full_model_name = args.models_prefix + '_' + lang
+        full_model_name = args.model_prefix + '_' + lang
 
-        if not os.path.exists(os.path.join(args.models_dir, full_model_name)):
+        if not os.path.exists(os.path.join(args.model_dir, full_model_name)):
             raise ValueError(f'Model for {lang} does not exist')
         
         model['model'] = AutoModel.from_pretrained(
-            os.path.join(args.models_dir, full_model_name, 'model'))
+            os.path.join(args.model_dir, full_model_name, 'model'))
         model['model'].eval()
         model['classification_head'] = nn.Sequential(nn.Linear(model[lang]['model'].config.hidden_size, model[lang]['model'].config.hidden_size),
                                                             nn.ReLU(),
                                                             nn.Linear(model[lang]['model'].config.hidden_size, output_dimension))
         model['classification_head'].load_state_dict(torch.load(
-            os.path.join(args.models_dir, full_model_name, 'classification_head.pth'), map_location='cpu'))
+            os.path.join(args.model_dir, full_model_name, 'classification_head.pth'), map_location='cpu'))
         model['classification_head'].eval()
         model['tokenizer'] = AutoTokenizer.from_pretrained(
-            os.path.join(args.models_dir, full_model_name, 'tokenizer'))
+            os.path.join(args.model_dir, full_model_name, 'tokenizer'))
     else : 
-        full_model_name = args.models_prefix + '_' + args.multilingual_name
+        full_model_name = args.model_prefix + '_' + args.multilingual_name
 
-        if not os.path.exists(os.path.join(args.models_dir, full_model_name)):
+        if not os.path.exists(os.path.join(args.model_dir, full_model_name)):
             raise ValueError(f'Multilingual model {args.multilingual_name} does not exist')
 
         model['model'] = AutoModel.from_pretrained(
-            os.path.join(args.models_dir, full_model_name, 'model'))
+            os.path.join(args.model_dir, full_model_name, 'model'))
         model['model'].eval()
-        model['classification_head'] = nn.Sequential(nn.Linear(model[args.multilingual_name]['model'].config.hidden_size, model[args.multilingual_name]['model'].config.hidden_size),
+        model['classification_head'] = nn.Sequential(nn.Linear(model['model'].config.hidden_size, model['model'].config.hidden_size),
                                                                         nn.ReLU(),
-                                                                        nn.Linear(model[args.multilingual_name]['model'].config.hidden_size, output_dimension))
+                                                                        nn.Linear(model['model'].config.hidden_size, output_dimension))
         model['classification_head'].load_state_dict(torch.load(
-            os.path.join(args.models_dir, full_model_name, 'classification_head.pth'), map_location='cpu'))
+            os.path.join(args.model_dir, full_model_name, 'classification_head.pth'), map_location='cpu'))
 
         
         model['classification_head'].eval()
         model['tokenizer'] = AutoTokenizer.from_pretrained(
-            os.path.join(args.models_dir, full_model_name, 'tokenizer'))
+            os.path.join(args.model_dir, full_model_name, 'tokenizer'))
     
     if  os.path.exists(os.path.join(args.output_dir, f'{lang}_{side_contexts_size}_{full_model_name}_scored.parquet')):
         raise ValueError(f'{lang} already done for context_size {side_contexts_size} and model {full_model_name}, passing')

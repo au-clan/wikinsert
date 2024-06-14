@@ -32,9 +32,9 @@ if __name__ == '__main__':
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
 
-    process_v2 = not args.first_version_only
-
     args = parser.parse_args()
+
+    process_v2 = not args.first_version_only
 
     if args.first_versions_specific_html_dir is None:
         first_version_html_dir = args.html_dir
