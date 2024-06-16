@@ -1,11 +1,13 @@
 #!/usr/bin/env node
-const { parse } = require('./html_processors');
-
+const { parse, write_sentences_store } = require('./html_processors');
+const { spawn } = require('child_process');
+const path = require('path');
 const args = process.argv.slice(2); // remove first two arguments (node executable path and script file path)
 let filePaths = [];
 let outputPaths = [];
-
+let lang;
 let reader = "";
+const pythonScript = 'sbd.py';
 
 for (let i = 0; i < args.length; i++) {
     if (args[i] === '-i') {
@@ -14,6 +16,8 @@ for (let i = 0; i < args.length; i++) {
     } else if (args[i] === '-o') {
         // Next arguments are output paths
         reader = "out";
+    } else if (args[i] === '-l') {
+        reader = "lang"
     }
     else {
         if (reader === "in") {
@@ -22,39 +26,56 @@ for (let i = 0; i < args.length; i++) {
         else if (reader === "out") {
             outputPaths.push(args[i]);
         }
+        else if (reader === "lang") {
+            lang = args[i];
+        }
 }}
 
 //console.log('filePaths:', filePaths);
 //console.log('outputPaths:', outputPaths);
 
-async function processFiles(filePaths, outputPaths) {
-    const results = [];
-    let startTime;
-    let endTime;
-    for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
-        startTime = performance.now();
-        try {
-            const result = await parse(filePaths[i], outputPaths[i]); // Use parse function from html_processors.js
-            results.push(result);
-            endTime = performance.now();
-            if ((i % 20 === 0) && (i > 0)) {
-            //console.log(`Time taken to process ${i} files: ${endTime - startTime} ms \n`);
+async function runPythonSentencizeScript(pythonScript, commonDir, lang) {
+    return new Promise((resolve, reject) => {
+        const process = spawn('python', [
+            pythonScript,
+            '--full_texts_dir', commonDir,
+            '--lang', lang,
+            '--output_dir', commonDir
+        ]);
+
+        let stderrOutput = ''; // To capture stderr output
+
+        // Capture stderr output
+        process.stderr.on('data', (data) => {
+            stderrOutput += data.toString();
+        });
+
+        // Resolve or reject based on process close
+        process.on('close', (code) => {
+            if (code === 0) {
+                resolve();
+            } else {
+                console.log(`Python process exited with code ${code}`);
+                console.log(`Error output:\n${stderrOutput}`);
             }
-            else {
-                //console.log(`Time taken to process ${i} files: ${endTime - startTime} ms \n`);
-            }
-        } catch (error) {
-            //console.error(`Error parsing ${filePaths[i]}: ${error}`);
-        }
-        
-    }
-    return results;
+        });
+    });
 }
 
+async function processFiles(filePaths, outputPaths) {
+    const commonDir = path.dirname(outputPaths[0]);
+    for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
+        await parse(filePaths[i], outputPaths[i]); // Use parse function from html_processors.js
+        }
+        
+    await runPythonSentencizeScript(pythonScript, commonDir, lang);
+
+    
+    for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
+        await write_sentences_store(filePaths[i], outputPaths[i]);
+    }            
+}
+
+
 processFiles(filePaths, outputPaths)
-    .then(results => {
-        //console.log('All files processed successfully.');
-    })
-    .catch(error => {
-        //console.error('Error processing files:', error);
-    });
+   

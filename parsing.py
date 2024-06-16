@@ -9,10 +9,11 @@ import time
 from preprocessing import *
 import subprocess
 
+d
 
-def write_sentences_and_links(inpaths, oupaths):
+def write_sentences_and_links(lang, inpaths, oupaths):
     #run js_parsing/parse.js using command, it can take all the paths at once
-    command = ['node', 'js_parsing/parse.js'] + ['-i'] + inpaths + ['-o'] + oupaths
+    command = ['node', 'js_parsing/write_sentences.js'] + ['-i'] + inpaths + ['-o'] + oupaths + ['-l'] + [lang]
 
     subprocess.run(command, check=True)    
 
@@ -29,11 +30,14 @@ if __name__ == '__main__':
                         help='Path to the output directory for the first versions')
     parser.add_argument('--first_version_only', type=bool, default=False,
                         help='If True, only the first version of the article will be processed')
+    parser.add_argument('--lang', type=str, required=True,
+                        help='Language code') 
     parser.add_argument('--n_processes', type=int, default=1,
                         help='Number of processes to use')
 
     args = parser.parse_args()
-
+    
+    lang = args.lang
     process_v2 = not args.first_version_only
 
     if args.first_versions_specific_html_dir is None:
@@ -82,7 +86,7 @@ if __name__ == '__main__':
     start_time = time.time()
     print("Writing sentences and links v1")
     with Pool(processes=nb_processes_) as pool:
-        pool.starmap(write_sentences_and_links, zip(batched_paths_1, batched_outPaths_1))
+        pool.starmap(write_sentences_and_links, zip([lang] * nb_processes_, batched_paths_1, batched_outPaths_1))
 
     end_time1 = time.time()
     print(f"Time taken for v1: {end_time1 - start_time}")
@@ -95,7 +99,7 @@ if __name__ == '__main__':
         batched_outPaths_2 = [outPaths_v2[i:i + batch_size_2] for i in range(0, len(outPaths_v2), batch_size_2)]
         print("Writing sentences and links v2")
         with Pool(processes=nb_processes_) as pool:
-            pool.starmap(write_sentences_and_links, zip(batched_paths_2, batched_outPaths_2))
+            pool.starmap(write_sentences_and_links, zip([lang] * nb_processes_, batched_paths_2, batched_outPaths_2))
 
     
 

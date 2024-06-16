@@ -1,6 +1,5 @@
 const wgxpath = require('wgxpath');
 const fs = require('fs');
-const tokenizer = require('sbd');
 const md5 = require('md5');
 const { JSDOM } = require('jsdom');
 
@@ -220,7 +219,7 @@ async function parsetext(dom, document){ //extractSentences(dom, htmlText, outDi
         textNodeId++;
     }
 
-    return {allText, textNodes2Offset};
+    return [allText, textNodes2Offset ];
 
 }
 
@@ -441,8 +440,7 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
     return linkStore;
 }
 
-async function parse(filePath, outPath){
-    
+async function parse(filePath, outPath){    
     const htmlText = fs.readFileSync(filePath, 'utf-8');
 
     let dom = new JSDOM(htmlText, {includeNodeLocations: true, url: "file:" });
@@ -452,14 +450,15 @@ async function parse(filePath, outPath){
     let raw_sectionNodes2Offset = await findSections(document, dom);
     const sectionNodes2Offset = JSON.stringify(raw_sectionNodes2Offset);
 
-    const {rawParsedText, rawtextNodes2Offset} = await parsetext(dom, document);
+    const [rawParsedText, rawtextNodes2Offset] = await parsetext(dom, document);
+    
     const ParsedText = JSON.stringify(rawParsedText);
     const textNodes2Offset = JSON.stringify(rawtextNodes2Offset);
-  
+
     //Write as a jsonl in outPath
-    const sectionsPath = outPath + '_sections.json';
+    const sectionsPath = outPath + '_sections.jsonl';
     const textPath = outPath + '_text.jsonl';
-    const textNodes2OffsetPath = outPath + '_textNodes2Offset.json';
+    const textNodes2OffsetPath = outPath + '_textNodes2Offset.jsonl';
 
     fs.writeFileSync(sectionsPath, sectionNodes2Offset)
     fs.writeFileSync(textPath, ParsedText)
@@ -467,21 +466,23 @@ async function parse(filePath, outPath){
 
 }
 
-async function write_sentence_store(filePath, raw_sentences_path, outPath){
+async function write_sentences_store(filePath, outPath){
     
     const htmlText = fs.readFileSync(filePath, 'utf-8');
     let dom = new JSDOM(htmlText, { includeNodeLocations: true, url: "file:" });
     let document = dom.window.document;
 
-    const sectionNodes2Offset_path = outPath + '_sections.json';
-    const textNodes2Offset_path = outPath + '_textNodes2Offset.json';
+    const sectionNodes2Offset_path = outPath + '_sections.jsonl';
+    const textNodes2Offset_path = outPath + '_textNodes2Offset.jsonl';
     const raw_sentences_path = outPath + '_raw_sentences.jsonl';
 
     const raw_sentences = fs.readFileSync(raw_sentences_path, 'utf-8');
     const raw_textNodes2Offset = fs.readFileSync(textNodes2Offset_path, 'utf-8');
     const raw_sectionNodes2Offset = fs.readFileSync(sectionNodes2Offset_path, 'utf-8');
+    console.log(raw_sentences);
 
     const list_sentences = JSON.parse(raw_sentences);
+    console.log(list_sentences);
     const textNodes2Offset = JSON.parse(raw_textNodes2Offset);
     const sectionNodes2Offset = JSON.parse(raw_sectionNodes2Offset);
 
@@ -500,4 +501,4 @@ async function write_sentence_store(filePath, raw_sentences_path, outPath){
 }
 
 module.exports.parse = parse;
-module.exports.write_sentence_store = write_sentence_store;
+module.exports.write_sentences_store = write_sentences_store;
