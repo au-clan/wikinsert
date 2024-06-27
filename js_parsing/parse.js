@@ -22,8 +22,12 @@ for (let i = 0; i < args.length; i++) {
         }
 }}
 
-for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
-    await parse(filePaths[i], outputPaths[i]); // Use parse function from html_processors.js
-    }
+async function ParsingProcessFiles(filePaths, outputPaths) {
+    for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
+        await parse(filePaths[i], outputPaths[i]); // Use parse function from html_processors.js
+        }
+}
+
+ParsingProcessFiles(filePaths, outputPaths)
 
    

@@ -2,6 +2,7 @@ const wgxpath = require('wgxpath');
 const fs = require('fs');
 const md5 = require('md5');
 const { JSDOM } = require('jsdom');
+const { Console } = require('console');
 
 const HTML_CHAR_ENTITIES = {
     '38': '&amp;',
@@ -174,24 +175,43 @@ async function parsetext(dom, document){ //extractSentences(dom, htmlText, outDi
     // htmlText = dom.serialize();
     
     const xpathAllText = `//div[@id='mw-content-text']//text()[
-        not(ancestor-or-self::noscript) and
-        not(ancestor-or-self::*/@class='mw-headline') and
-        not(ancestor-or-self::style) and 
-        not(ancestor-or-self::cite) and
-        not(ancestor-or-self::script) and
-        not(ancestor-or-self::table) and
-        not(ancestor::div[
-            contains(@class, "thumb") or 
-            contains(@role, "navigation") or 
-            contains(@class, "navbox") or 
-            contains(@class, "toc") or 
-            contains(@class, "reflist") or
-            contains(@class, "printfooter") or
-            contains(@class, "soslink") or
-            contains(@style, "float:")
-        ]
-    )
-    ]`; 
+    not(ancestor-or-self::noscript) and
+    not(ancestor-or-self::h2) and 
+    not(ancestor-or-self::*/@class='mw-headline') and
+    not(ancestor-or-self::*/@class='mw-headline mw-heading2') and
+    not(ancestor-or-self::style) and 
+    not(ancestor-or-self::cite) and
+    not(ancestor-or-self::script) and
+    not(ancestor-or-self::table) and
+    not(ancestor-or-self::img) and
+    not(ancestor-or-self::figure) and
+    not(ancestor-or-self::sup) and
+    not(ancestor-or-self::*/@class='mw-editsection') and
+    not(ancestor-or-self::*/@class='mw-bandeau') and
+    not(ancestor-or-self::*/@class='reflist') and
+    not(ancestor-or-self::*/@class='map') and
+    not(ancestor::div[
+        contains(@class, "js-interprojects") or
+        contains(@class, "galleryext") or
+        contains(@class, "mw-headline") or
+        contains(@class, "thumb") or 
+        contains(@role, "navigation") or 
+        contains(@class, "navbox") or 
+        contains(@class, "toc") or 
+        contains(@class, "reflist") or
+        contains(@class, "printfooter") or
+        contains(@class, "soslink") or
+        contains(@style, "float:") or
+        contains(@class, "bandeau") or
+        contains(@class, "infobox") or
+        contains(@class, "references") or
+        contains(@class, "side-box") or
+        contains(@class, "plainlinks") or
+        contains(@class, "sisterbox") or
+        contains(@class, "references")
+    ])
+]
+`; 
 
     let expression = document.createExpression(xpathAllText, null);
     const textNodes = expression.evaluate(document, wgxpath.XPathResultType.ANY_TYPE);
@@ -223,7 +243,7 @@ async function parsetext(dom, document){ //extractSentences(dom, htmlText, outDi
 
 }
 
-function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
+async function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
 
     numLines = 0;
     let sentenceStore = [];
@@ -238,16 +258,21 @@ function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
     let numLeadingSpacesFirst = 0;
 
     for(sentence of sentences){
+
         // if(numLines>5){
         //     break;
         // }
         //console.log(`Annotated sentence: ${sentence}`);
         firstControl = sentence.match(/<<[O|C]\d+>>/); //first occurence of <<0 textNodeId>> or <<C textNodeId>>
-        lastControl = sentence.match(/<<[O|C]\d+>>(?!.*<<[O|C]\d+>>)/); //last occurence of <<0 textNodeId>> or <<C textNodeId>>
+        lastControl = sentence.match(/<<[O|C]\d+>>(?![\s\S]*<<[O|C]\d+>>)/); //last occurence of <<0 textNodeId>> or <<C textNodeId>>
         //console.log(`Controls: ${firstControl[0]}, ${lastControl[0]}`);
 
+        //console.log("first")
+        //if(firstControl){console.log(firstControl[0])}
+        //console.log("last")
+        //if(lastControl){console.log(lastControl[0])}
 
-        if(firstControl && firstControl[0].includes('<<O')){ //case sentence contains a control and it's first is the control of start of node
+        if(firstControl && firstControl[0].includes('<<O')){ //case sentence contains a control and it is the control of start of node
             //console.log("First node is O");
             startNode = firstControl[0].match(/<<O(\d+)>>/)[1]; //First node Id of the sentence
             relPos2Start = 0; 
@@ -258,48 +283,57 @@ function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
         }
         if(lastControl){ //case sentence contains a control
             if(lastControl[0].includes('<<C')){ //case last control is the control of end of node
-                //console.log("Last node is C");
                 endNode = (lastControl[0].match(/<<C(\d+)>>/)[1])+"+";
                 relPos2End = 0;
             } else { // case last control is the control of start of node
-                //console.log("Last node is O")//, relPos2Start);
                 currentNode = lastControl[0].match(/<<O(\d+)>>/)[1];
                 endNode = currentNode+"-";
                 relPos2End = sentence.length - (lastControl.index + lastControl[0].length);
             }
         } else { // case sentence does not contain a control character, i.e start witihn a node and end within the same node
             //console.log("Last node is null", relPos2Start);
-            relPos2End += sentence.length + 1; //+ because substring(start,end) is exclusive at end 
+            relPos2End += sentence.length //+ 1; //+ because substring(start,end) is exclusive at end 
         }
+        //console.log('sentence')
+        //console.log(sentence)
         const origSentence = sentence.replace(/<<[C|O]\d+>>/g,'');
-        if(origSentence === ''){
-            //console.log("Empty sentence");
+        //console.log('orig sentence')
+        //console.log(origSentence)
+        if (origSentence.trim() === '') {
+            //console.log("Empty sentence or only whitespace");
             continue;
         }
         //console.log(`Original Sentence: ${origSentence}`);
         //console.log(`${startNode} ${relPos2Start} ${endNode} ${relPos2End}`);
         //startIdx = textNodes2Offset[parseInt(startNode)].start + parseInt(relPos2Start) + numLeadingSpaces;
+
+
         startIdx = textNodes2Offset[parseInt(startNode)].start + parseInt(relPos2Start);
         if(endNode.includes('-')){
-            //endIdx = textNodes2Offset[parseInt(endNode)].start + parseInt(relPos2End) + numLeadingSpaces;
             endIdx = textNodes2Offset[parseInt(endNode)].start + parseInt(relPos2End);
         }
         else{
-            //endIdx = textNodes2Offset[parseInt(endNode)].end + parseInt(relPos2End) + numLeadingSpaces;
             endIdx = textNodes2Offset[parseInt(endNode)].end + parseInt(relPos2End);
         }
         //console.log(startIdx, endIdx);
+        while (endIdx < htmlText.length && htmlText[endIdx].trim() === '') {
+            endIdx++;
+            relPos2End++;
+            //console.log("Incrementing endIdx");
+        }
+
         htmlSentence = htmlText.substring(startIdx, endIdx);
         numLeadingSpaces = htmlSentence.search(/\S|$/);
-        //console.log(numLeadingSpaces);
-        //console.log(`HTML of sentence: ${htmlText.substring(startIdx+numLeadingSpaces, endIdx+numLeadingSpaces)}`);
+        
         let locList = [];
         const startNodeNum = parseInt(startNode), endNodeNum = parseInt(endNode);
         if(startNodeNum === endNodeNum){ //case no inner node 
             if(endNode.includes('-')){
-                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].start + parseInt(relPos2End)});
+                locList.push({  start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start),
+                                end: textNodes2Offset[startNodeNum].start + parseInt(relPos2End)});
             } else{
-                locList.push({start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start), end: textNodes2Offset[startNodeNum].end + parseInt(relPos2End)});
+                locList.push({  start: textNodes2Offset[startNodeNum].start + parseInt(relPos2Start),
+                                end: textNodes2Offset[startNodeNum].end + parseInt(relPos2End)});
             }
 
         } else{
@@ -346,10 +380,30 @@ function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
             id: numLines,
             text: origSentence,
             startIdx: startIdx+numLeadingSpaces,
-            endIdx: endIdx+numLeadingSpaces,
+            endIdx: endIdx,
             section: getSection(sectionMap, endIdx),
             locList: locList
         };
+
+        let present = false;
+        //for (const loc of sentObj.locList){
+        //    sub_sentence = htmlText.substring(loc.start, loc.end);
+            //check if '<' is in the substring
+        //    if (sub_sentence.includes('<') | sub_sentence.includes('>')){
+        //        present = true;
+        //        break;
+        //    }
+        //}
+        
+        if(present){
+            console.log(`Raw sentence: ${sentence}`);
+            console.log(`Clean sentence: ${origSentence}`);
+            console.log(`Html sentence: ${htmlSentence}`);
+            console.log("Substrings");
+            for (const loc of sentObj.locList){
+                sub_sentence = htmlText.substring(loc.start, loc.end);
+                console.log(`[s]${sub_sentence}[e]`);
+            }}
 
         sentenceStore.push(sentObj);
                 
@@ -367,13 +421,10 @@ function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMap){
 return sentenceStore ;
 }
 
-async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, outDir, article, sentenceStore){
-    // let dom = new JSDOM(htmlText, { includeNodeLocations: true });
-    // htmlText = dom.serialize();
-    // dom = new JSDOM(htmlText, { includeNodeLocations: true });
+async function extractLinks(dom, document, sectionMap, sentenceStore, htmlText){
     
     const xpathAnchor = `//div[@id='mw-content-text']//a[
-    not(img) and
+     not(ancestor-or-self::img) and
     not(ancestor-or-self::noscript) and
     not(ancestor-or-self::*/@class='mw-headline') and
     not(ancestor-or-self::style) and 
@@ -381,7 +432,15 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
     not(ancestor-or-self::script) and
     not(ancestor-or-self::table) and
     contains(@href, '/wiki/') and
+    not(ancestor-or-self::figure) and
+    not(ancestor-or-self::sup) and
+    not(ancestor-or-self::*/@class='mw-editsection') and
+    not(ancestor-or-self::*/@class='reflist') and
+    not(ancestor-or-self::*/@class='map') and
     not(ancestor::div[
+        contains(@class, "js-interprojects") or
+        contains(@class, "galleryext") or
+        contains(@class, "mw-headline") or
         contains(@class, "thumb") or 
         contains(@role, "navigation") or 
         contains(@class, "navbox") or 
@@ -389,7 +448,14 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
         contains(@class, "reflist") or
         contains(@class, "printfooter") or
         contains(@class, "soslink") or
-        contains(@style, "float:")]) and
+        contains(@style, "float:") or
+        contains(@class, "bandeau") or
+        contains(@class, "infobox") or
+        contains(@class, "references") or
+        contains(@class, "side-box") or
+        contains(@class, "plainlinks") or
+        contains(@class, "sisterbox") or
+        contains(@class, "references")]) and
     ${XPATH_CONDITIONS.NOT_STARTS_WITH_NON_NS_0}
     ]`;
 
@@ -411,16 +477,29 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
         //console.log(anchorNode.href);
         anchorStart = dom.nodeLocation(anchorNode).startOffset;
         anchorEnd = dom.nodeLocation(anchorNode).endOffset;
-       link = anchorNode.href;
-       text = anchorNode.textContent;
+        link = anchorNode.href;
+        text = anchorNode.textContent;
  
         //console.log("Anchor node from html: ",htmlText.substring(dom.nodeLocation(anchorNode).startOffset,dom.nodeLocation(anchorNode).endOffset));
         for(const sentObj of sentenceStore){
             if(anchorEnd >= sentObj.startIdx && anchorEnd <= sentObj.endIdx){
                 sentid_ = sentObj.id;
             }
-        }  
-        
+        }
+        //if sentid_ is null, then print:
+        if(sentid_ === null){
+            console.log("Sentid is null for link: ", text);
+            console.log(anchorEnd)
+            console.log("Anchor node from html: ",htmlText.substring((anchorStart -20), (anchorEnd + 20)));
+           //print all sentences 
+            //for(const sentObj of sentenceStore){
+            //    console.log(sentObj.text);
+            //    console.log(sentObj.startIdx);
+            //    console.log(sentObj.endIdx);
+            //    console.log("Anchor node from html: ",htmlText.substring(sentObj.startIdx, sentObj.endIdx));
+            //}
+        }
+        else{
         const linkObj = {
             // link: anchorNode.href,
             link: link,
@@ -429,10 +508,10 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
             endIdx: anchorEnd,
             section: getSection(sectionMap, anchorEnd),
             sentid : sentid_
-        };
+        }; 
 
 
-        linkStore.push(linkObj);
+        linkStore.push(linkObj);}
         anchorNode = anchorNodes.iterateNext();
         sentid_ = null;
     }
@@ -442,17 +521,14 @@ async function extractLinks(dom, document, sectionMap, sentenceStore){//(dom, ou
 
 async function parse(filePath, outPath){    
     const htmlText = fs.readFileSync(filePath, 'utf-8');
-
     let dom = new JSDOM(htmlText, {includeNodeLocations: true, url: "file:" });
-    
     let document = dom.window.document;
 
     let raw_sectionNodes2Offset = await findSections(document, dom);
     const sectionNodes2Offset = JSON.stringify(raw_sectionNodes2Offset);
 
-    const [rawParsedText, rawtextNodes2Offset] = await parsetext(dom, document);
+    const [ParsedText, rawtextNodes2Offset] = await parsetext(dom, document);
     
-    const ParsedText = JSON.stringify(rawParsedText);
     const textNodes2Offset = JSON.stringify(rawtextNodes2Offset);
 
     //Write as a jsonl in outPath
@@ -460,16 +536,15 @@ async function parse(filePath, outPath){
     const textPath = outPath + '_text.jsonl';
     const textNodes2OffsetPath = outPath + '_textNodes2Offset.jsonl';
 
-    fs.writeFileSync(sectionsPath, sectionNodes2Offset)
-    fs.writeFileSync(textPath, ParsedText)
-    fs.writeFileSync(textNodes2OffsetPath, textNodes2Offset)
+    fs.writeFileSync(sectionsPath, sectionNodes2Offset, 'utf-8')
+    fs.writeFileSync(textPath, ParsedText, 'utf-8')
+    fs.writeFileSync(textNodes2OffsetPath, textNodes2Offset, 'utf-8')
 
 }
 
 async function write_sentences_store(filePath, outPath){
-    
     const htmlText = fs.readFileSync(filePath, 'utf-8');
-    let dom = new JSDOM(htmlText, { includeNodeLocations: true, url: "file:" });
+    let dom = new JSDOM(htmlText, {includeNodeLocations: true, url: "file:" });
     let document = dom.window.document;
 
     const sectionNodes2Offset_path = outPath + '_sections.jsonl';
@@ -479,25 +554,23 @@ async function write_sentences_store(filePath, outPath){
     const raw_sentences = fs.readFileSync(raw_sentences_path, 'utf-8');
     const raw_textNodes2Offset = fs.readFileSync(textNodes2Offset_path, 'utf-8');
     const raw_sectionNodes2Offset = fs.readFileSync(sectionNodes2Offset_path, 'utf-8');
-    console.log(raw_sentences);
-
+    
     const list_sentences = JSON.parse(raw_sentences);
-    console.log(list_sentences);
     const textNodes2Offset = JSON.parse(raw_textNodes2Offset);
     const sectionNodes2Offset = JSON.parse(raw_sectionNodes2Offset);
 
     let sectionMap = createRangeMap(sectionNodes2Offset);
 
-    const sentenceStore = getSentenceStore(list_sentences, textNodes2Offset, sectionMap);
+    const sentenceStore = await getSentenceStore(htmlText, list_sentences, textNodes2Offset, sectionMap);
     
-    const rawlinkStore = await extractLinks(dom, document, sectionMap, sentenceStore);
+    const rawlinkStore = await extractLinks(dom, document, sectionMap, sentenceStore, htmlText);
     const linkStore = JSON.stringify(rawlinkStore);
     const linksPath = outPath + '_links.jsonl';
 
-    const sentence_store_path = outPath + '_sentences.json';
+    const sentence_store_path = outPath + '_sentences.jsonl';
     
-    fs.writeFileSync(sentence_store_path, JSON.stringify(sentenceStore));
-    fs.writeFileSync(linksPath, linkStore)
+    fs.writeFileSync(sentence_store_path, JSON.stringify(sentenceStore), 'utf-8');
+    fs.writeFileSync(linksPath, linkStore, 'utf-8')
 }
 
 module.exports.parse = parse;

@@ -84,20 +84,23 @@ if __name__ == '__main__':
     batched_titles = [titles[i:i + batch_size_1] for i in range(0, len(titles), batch_size_1)]
 
     print(f"Running crawling on {nb_processes_} processes")
+    start_time = time.time()
     with Pool(processes=nb_processes_) as pool:
         pool.starmap(call_crawler, zip(batched_titles, batched_curids, batched_oldids, [args.output_dir]*len(batched_titles), [args.lang]*len(batched_titles)))
 
-    print("Crawling finished, post processing...")
+    end_time = time.time()
+    duration_in_minutes = (end_time - start_time) / 60
+    print(f"Crawling finished in {duration_in_minutes} minutes, post processing...")
 
     # move the files to the correct location
 
     all_crawled_pages = list(os.listdir(args.output_dir))
 
-    if any([".html" in page for page in all_crawled_pages]):
+    """if any([".html" in page for page in all_crawled_pages]):
         print("Warning: Some pages have already been crawled and moved here, please remove the output directory and rerun the script. Right they we be automatically removed")
         for page in all_crawled_pages:
             if page.endswith(".html"):
                 os.remove(f"{args.output_dir}/{page}")
-        all_crawled_pages = list(os.listdir(args.output_dir))
+        all_crawled_pages = list(os.listdir(args.output_dir))"""
 
     move_all_pages_files(all_crawled_pages, args.output_dir)

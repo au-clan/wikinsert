@@ -13,13 +13,33 @@ import subprocess
 import json
 
 def preprocess(text):
+    processed_text = text
     processed_text = re.sub(r'\.\[', '. [', text)
+    processed_text = re.sub(r'\.\<', '. <', processed_text)
+    processed_text = re.sub(r'\.\n', '. \n', processed_text)
+    
     return processed_text
 
 def parse(inpaths, outpaths):
     #run js_parsing/write_sentences.js using command, it can take all the paths at once
     command = ['node', 'js_parsing/parse.js'] + ['-i'] + inpaths + ['-o'] + outpaths
     subprocess.run(command, check=True)
+
+def sentence_tokenize(outpaths, tokenizer):
+    for path in tqdm(outpaths, desc='Sentence tokenization'):
+        path_filename = path + "_text.jsonl" 
+        with open(os.path.join(first_version_html_dir, path_filename), 'r', encoding='utf-8') as f:
+            text = f.read()
+        
+        processed_text = preprocess(text)
+        
+        raw_sentences = list(tokenizer.sentence_tokenize(processed_text, use_abbreviation=True))
+        raw_sentences = [s.strip() for s in raw_sentences]
+        out_filename = path + "_raw_sentences.jsonl"
+        
+        with open(out_filename, 'w', encoding='utf-8') as f:
+            json.dump(raw_sentences, f)
+
 
 def write_sentences_and_links(inpaths, outpaths):
     #run js_parsing/write_sentences.js using command, it can take all the paths at once
@@ -98,19 +118,7 @@ if __name__ == '__main__':
     with Pool(processes=nb_processes_) as pool:
         pool.starmap(parse, zip(batched_paths_1, batched_outPaths_1))
 
-    for path in tqdm(outPaths_v1, desc='Sentence tokenization'):
-        path_filename = path + "_text.jsonl" 
-        with open(os.path.join(first_version_html_dir, path_filename), 'r') as f:
-            text = f.read()
-        
-        processed_text = preprocess(text)
-        
-        raw_sentences = list(tokenizer.sentence_tokenize(processed_text, use_abbreviation=True))
-        
-        out_filename = path + "_raw_sentences.jsonl"
-        
-        with open(out_filename, 'w') as f:
-            f.writelines(json.dumps(item) + '\n' for item in raw_sentences)
+    sentence_tokenize(outPaths_v1, tokenizer)
 
     with Pool(processes=nb_processes_) as pool:
         pool.starmap(write_sentences_and_links, zip(batched_paths_1, batched_outPaths_1))
@@ -127,21 +135,9 @@ if __name__ == '__main__':
         print("Writing sentences and links v2")
 
         with Pool(processes=nb_processes_) as pool:
-            pool.starmap(parse, zip(batched_paths_1, batched_outPaths_1))
+            pool.starmap(parse, zip(batched_paths_2, batched_outPaths_2))
 
-        for path in tqdm(outPaths_v2, desc='Sentence tokenization'):
-            path_filename = path + "_text.jsonl" 
-            with open(os.path.join(first_version_html_dir, path_filename), 'r') as f:
-                text = f.read()
-            
-            processed_text = preprocess(text)
-            
-            raw_sentences = list(tokenizer.sentence_tokenize(processed_text, use_abbreviation=True))
-            
-            out_filename = path + "_raw_sentences.jsonl"
-            
-            with open(out_filename, 'w') as f:
-                f.writelines(json.dumps(item) + '\n' for item in raw_sentences)
+        sentence_tokenize(outPaths_v2, tokenizer)
 
         with Pool(processes=nb_processes_) as pool:
             pool.starmap(write_sentences_and_links, zip(batched_paths_2, batched_outPaths_2))

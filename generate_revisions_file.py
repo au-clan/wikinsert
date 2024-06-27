@@ -19,8 +19,6 @@ if __name__ == '__main__':
                         help='Path to the second redirect file')
     parser.add_argument('--mention_map', type=str, required=True,
                         help='Path to the mention map file')
-    parser.add_argument('--max_samples', type=int, default=None,
-                        help='Maximum number of samples to use')
     parser.add_argument('--save_path', type=str, required=True,
                         help='Path to the output directory')
 
@@ -104,9 +102,6 @@ if __name__ == '__main__':
     
     # Save the revisions dictionary
     revisions_df = pd.DataFrame(revisions_clean)
-
-    if args.max_samples is not None:
-        revisions_df = revisions_df.sample(min(args.max_samples, revisions_df.shape[0]), random_state=42)
 
     revisions_df['len_vers'] = revisions_df['versions'].apply(len)
     revisions_df = revisions_df.sort_values(by='len_vers', ascending=False).reset_index(drop=True)

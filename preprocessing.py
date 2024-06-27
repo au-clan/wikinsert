@@ -15,8 +15,6 @@ tqdm.pandas()
 import time
 from collections import Counter
 
-UNRELEVENT_SECTIONS = ["References", "Other Websites", "Related pages"]
-
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 
 def fix_target_titles(title, redirect_map_1, redirect_map_2):
@@ -36,8 +34,8 @@ def fix_target_titles(title, redirect_map_1, redirect_map_2):
     return title
 
 def clean_condition(txt):
-    # don't allow sentences with less than 10 characters adn non sentence like
-    return len(txt) > 70 or (len(txt) > 10 and txt[-1] in ['.', '!', '?', ']', ':', ';']) 
+    # don't allow sentences with less than 15 characters adn non sentence like
+    return len(txt) > 15 
 
 def merge_sentences(row1, row2):
     row = {}
@@ -64,14 +62,13 @@ def compute_sentence_similarity(sentence1, sentence2):
     return score
 
 def clean_sentences(sentences_df):
+
     new_sentences = []
     current_unclean = None 
     sentences_df['id'] = sentences_df['id'].apply(lambda x: [x])
     sentences_df['text'] = sentences_df['text'].apply(lambda x: x.strip())
 
     for _, row in sentences_df.iterrows():
-        if row['section'] in UNRELEVENT_SECTIONS:
-            continue
         if row['text'] == '':
             continue
 
@@ -104,8 +101,7 @@ def clean_sentences(sentences_df):
     
     if current_unclean is not None:
         new_sentences.append(current_unclean)
-        
-
+    
     return pd.DataFrame(new_sentences).reset_index()
 
 def fix_text(text):
@@ -253,6 +249,8 @@ def process_two_versions(input):
         return []
     
     all_links_1 = pd.read_json(links_1_path)
+    all_links_1.dropna(inplace=True)
+
 
     clean_sentences_1 = clean_sentences(sentences_1)
 
@@ -280,7 +278,8 @@ def process_two_versions(input):
             print(f"{input['source_ID']}_{second_version}_sentences.jsonl")
             continue
 
-        all_links_2 = pd.read_json(links_2_path)        
+        all_links_2 = pd.read_json(links_2_path)
+        all_links_2.dropna(inplace=True)
 
         if all_links_2.shape[0] == 0:
             print('No links found')
@@ -288,7 +287,7 @@ def process_two_versions(input):
             continue
 
         clean_sentences_2 = clean_sentences(sentences_2)
-
+        
         original_lead = ''
         all_sentences = []
         diff = list(d.compare(list(clean_sentences_1['text']), list(clean_sentences_2['text'])))
@@ -430,23 +429,20 @@ def process_two_versions(input):
         all_links_1['text'] = all_links_1['text'].apply(lambda x: str(x))
         all_links_2['text'] = all_links_2['text'].apply(lambda x: str(x))
 
-        all_links = all_links_1.merge(all_links_2, on=['text'], how='outer', suffixes=('_1', '_2'))
+        all_links = all_links_1.merge(all_links_2, on=['link'], how='outer', suffixes=('_1', '_2'))
 
 
         added_links = all_links[all_links['sentid_1'].isnull()].copy()
 
-        added_links.drop(columns=['link_1'], inplace=True)
-        added_links.rename(columns={'link_2': 'link'}, inplace=True)
+        added_links.drop(columns=['text_1'], inplace=True)
+        added_links.rename(columns={'text_2': 'text'}, inplace=True)
 
         all_sentences2 = list(filter(lambda x: x['status'] not in ['removed', 'moved_to', 'moved_to_with_modifications', 'to_ignore'], all_sentences))
 
         for _, link in added_links.iterrows():
-            
-            if link['section_2'] in UNRELEVENT_SECTIONS:
-                continue
-            
+                        
             sentences = list(filter(lambda x: int(link['sentid_2']) in x['ids2'], all_sentences2))
-
+            
             sentence = list(sentences)[0]
 
             # get target title

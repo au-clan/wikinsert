@@ -214,7 +214,8 @@ const clonePages = async (preparedUrls, directory, numThreads) => {
             }
             const matchRes = superParentResource.url.match(/\?[^#]*[&?]curid=(\d+)/);
             const pageId = matchRes[1];
-            console.log("Error occurred for pid: ", pageId, error);
+            //console.log("Error occurred for pid: ", pageId);
+            console.log("The eror is: ", error);
         });
     }
   }
@@ -222,7 +223,7 @@ const clonePages = async (preparedUrls, directory, numThreads) => {
   const options = {
     urls: preparedUrls,
     directory: `${directory}`,
-    sources: [
+    /*sources: [
         {selector: 'img', attr: 'src'},
         {selector: 'img', attr: 'srcset'},
         {selector: 'link[rel="stylesheet"]', attr: 'href'},
@@ -237,8 +238,8 @@ const clonePages = async (preparedUrls, directory, numThreads) => {
         {selector: '.vector-header-container', attr: 'innerHTML' },
         {selector: 'input#p-lang-btn-checkbox', attr: 'id' },
         {selector: 'label#p-lang-btn-label', attr: 'innerText' },
-        {selector: '.interlanguage-link', attr: 'innerHTML' }
-      ],
+        {selector: '.interlanguage-link', attr: 'innerHTML' },
+        ],*/
     request: {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:79.0) Gecko/20100101 Firefox/79.0',
