@@ -322,7 +322,7 @@ if __name__ == '__main__':
     parser.add_argument('--sorted_links_output_dir', type=str,
                         required=True, help='Path to output directory')
     parser.add_argument('--soft_links_dir', type=str,
-                        required=True, help='Path to output directory')
+                        required=False, help='Path to output directory')
     parser.add_argument('--langs', type=str, required=True,
                         help='Languages to benchmark')
     parser.add_argument('--side_contexts_sizes', type=str, required=True,
@@ -339,8 +339,9 @@ if __name__ == '__main__':
     if not os.path.exists(args.sorted_links_output_dir):
         os.makedirs(args.sorted_links_output_dir, exist_ok=True)
     
-    if not os.path.exists(args.soft_links_dir):
-        os.makedirs(args.soft_links_dir, exist_ok=True)
+    if args.soft_links_dir:
+        if not os.path.exists(args.soft_links_dir):
+            os.makedirs(args.soft_links_dir, exist_ok=True)
 
     if args.extra_crawled_files_dir:
         if not os.path.exists(args.extra_crawled_files_dir):
@@ -358,9 +359,14 @@ if __name__ == '__main__':
             if not os.path.exists(f"{args.scored_data_dir}/{lang}_{size}_{args.full_model_name}_scored.parquet"):
                 raise ValueError(f"{args.scored_data_dir}/{lang}_{size}_{args.full_model_name}_scored.parquet does not exist")
 
-    common_pref = os.path.commonprefix([args.soft_links_dir, args.sorted_links_output_dir])
-    common_pref = os.path.dirname(common_pref)
-    rel_save_folder = os.path.relpath(args.soft_links_dir, common_pref)
+    if args.soft_links_dir:
+        common_pref = os.path.commonprefix([args.soft_links_dir, args.sorted_links_output_dir])
+        common_pref = os.path.dirname(common_pref)
+        rel_save_folder = os.path.relpath(args.soft_links_dir, common_pref)
+    else:
+        common_pref = os.path.commonprefix([colored_htmls_save_dir, args.sorted_links_output_dir])
+        common_pref = os.path.dirname(common_pref)
+        rel_save_folder = os.path.relpath(colored_htmls_save_dir, common_pref)
 
     for lang in langs:
         for size in side_contexts_sizes:
@@ -379,9 +385,12 @@ if __name__ == '__main__':
                     os.makedirs(colored_page_folder, exist_ok=True)
                     
             for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
-                soft_link_rel_colored_page_folder = f"{rel_save_folder}/{lang}/{source_ID}_{first_version}"
-                paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{soft_link_rel_colored_page_folder}/'{size}_{compute_md5(link_text)}_index(symlink).html'"})
-            
+                rel_colored_page_folder = f"../{rel_save_folder}/{lang}/{source_ID}_{first_version}"
+                if args.soft_links_dir:
+                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/'{size}_{compute_md5(link_text)}_index(symlink).html'"})
+                else: 
+                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index.html"})
+               
             first_row = scored_data.iloc[0]
             potential_raw_html_file_path = f"{args.html_dir}/{lang}/{first_row['source_ID']}_{first_row['first_version']}.html"
 
@@ -399,15 +408,16 @@ if __name__ == '__main__':
 
             html_path_dict = dict_to_html_list(paths_dict)
             
-            for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
-                soft_link_rel_colored_page_folder = f"{args.soft_links_dir}/{lang}/{source_ID}_{first_version}"
-                soft_link_src_pg = f"{links_page_path}/{source_ID}_{first_version}/{size}_{compute_md5(link_text)}_index.html"
-                soft_link_tgt = f"{soft_link_rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index(symlink).html"
-                #print(f"Creating softlink for {soft_link_src_pg} in {soft_link_tgt}")
-                os.makedirs(soft_link_rel_colored_page_folder, exist_ok=True)
-                if os.path.exists(soft_link_tgt):
-                    os.remove(soft_link_tgt)
-                os.symlink(soft_link_src_pg, soft_link_tgt)
+            if args.soft_links_dir:
+                for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
+                    soft_link_rel_colored_page_folder = f"{args.soft_links_dir}/{lang}/{source_ID}_{first_version}"
+                    soft_link_src_pg = f"{links_page_path}/{source_ID}_{first_version}/{size}_{compute_md5(link_text)}_index.html"
+                    soft_link_tgt = f"{soft_link_rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index(symlink).html"
+                    #print(f"Creating softlink for {soft_link_src_pg} in {soft_link_tgt}")
+                    os.makedirs(soft_link_rel_colored_page_folder, exist_ok=True)
+                    if os.path.exists(soft_link_tgt):
+                        os.remove(soft_link_tgt)
+                    os.symlink(soft_link_src_pg, soft_link_tgt)
             
 
             #save the html
