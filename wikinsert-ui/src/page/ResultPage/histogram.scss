@@ -1,0 +1,33 @@
+.wrapper {
+  margin-top: 16px;
+}
+
+.histogram {
+  &.tooltip {
+    position: absolute;
+    text-align: center;
+    width: max-content;
+    height: max-content;
+    padding: 4px;
+    font: 12px sans-serif;
+    background: #f7f5f0;
+    border: 1px #d9d9d9 solid;
+    border-radius: 8px;
+    pointer-events: none;
+  }
+}
+
+.note {
+  font-size: 10pt;
+  font-style: italic;
+  color: #777;
+  margin-top: 4px;
+}
+
+.svg_container {
+  width: 100%;
+}
+
+.svg_container svg {
+  width: 100%;
+}

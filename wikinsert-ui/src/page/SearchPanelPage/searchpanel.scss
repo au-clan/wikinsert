@@ -1,0 +1,82 @@
+.title {
+  color: #333;
+  font-family: "Libre Baskerville", serif;
+  font-weight: bold;
+  font-size: 27pt;
+  text-align: center;
+  user-select: none;
+  margin-top: 100px;
+
+  & .dot {
+    color: #41d9a4;
+    line-height: 0px;
+    font-size: 30pt;
+  }
+}
+
+.help {
+  cursor: pointer;
+  height: 0;
+  display: inline-block;
+}
+
+.alignUp {
+  margin-top: -8em !important;
+}
+
+@import '~bootstrap/scss/functions';
+@import '~bootstrap/scss/variables';
+@import '~bootstrap/scss/mixins/_breakpoints';
+
+@include media-breakpoint-up(md) {
+  .title {
+    font-size: 48pt;
+
+    & .dot {
+      font-size: 40pt;
+    }
+  }
+}
+
+.feedback {
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  margin: 0;
+  text-align: center;
+  z-index: -1;
+}
+
+.textBtn {
+  text-align: left;
+  text-decoration: underline;
+  margin-top: 2px;
+  cursor: pointer;
+  color: #333;
+  width: max-content;
+  font-size: 10pt;
+  user-select: none;
+
+  &.disabled {
+    color: #999;
+    cursor: not-allowed;
+  }
+}
+
+.footer {
+  margin-top: 2em;
+  margin-bottom: 5em;
+  text-align: center;
+}
+
+.fadeOut {
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 0s ease 300ms, opacity 400ms;
+}
+
+.fadeIn {
+  opacity: 1;
+  transition: opacity 0s linear 300ms, opacity 400ms;
+}

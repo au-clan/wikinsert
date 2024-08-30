@@ -9,6 +9,7 @@ function overlayHeatMap(coloreStore, file_path, outpath){
     let color, start, end, special, type ;
     let last_end = -1;
     let sent_span;
+    let firstAnchorAdded = false;
 
     for (const loc of coloreStore){
         type = loc.missing_category;
@@ -18,12 +19,17 @@ function overlayHeatMap(coloreStore, file_path, outpath){
         else {
         
         color = loc.color;
-        start = loc.start;
+        start = loc.start
         end = loc.end;
         
         special = loc.special;
-
+        //console.log(`[s]${htmlText.substring(start, end)}[e]`);
         
+        if (loc.most_red && !firstAnchorAdded) {
+            coloredhtmlText += `<a id="start-point"></a>`;
+            firstAnchorAdded = true;
+        }
+
         if (special & (type == "missing_mention" || type == "missing_mention_in_moved_sentence")) {
             sent_span = `<span style="border-top: 1px solid red; padding: 1px; border-bottom: 1px solid red; padding: 2px; background-color: rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]});">${htmlText.substring(start, end)}</span>`;
             if (loc.last) {

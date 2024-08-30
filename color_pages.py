@@ -49,46 +49,48 @@ def compute_md5(input_string):
     return md5_hash.hexdigest()
 
 
-def normalize_scores(scores, smoothing_param):
+def normalize_scores(contexts, smoothing_param):
+    scores = [context['score'] for context in contexts]
     min_ = np.min(scores)
     nm_scores = scores - min_
     max_ = np.max(nm_scores)
     if max_ == 0:
-        return [1.0 for _ in nm_scores]
-    nm_scores = nm_scores / np.max(nm_scores)
+        nm_scores =  [1.0 for _ in nm_scores]
+    else:
+        nm_scores = nm_scores / np.max(nm_scores)
+        nm_scores = nm_scores ** (1/smoothing_param)
 
-    return nm_scores ** (1/smoothing_param)
+    for context, score in zip(contexts, nm_scores):
+        context['normalized_score'] = score
 
-def black_to_red(scores, smoothing_param):
-    scores = normalize_scores(scores, smoothing_param)
-    #sns.color_palette("coolwarm", as_cmap=True)
-    colors = [(0.0,1.0,score) for score in scores]
+    return contexts
+
+def black_to_red(normalized_scores):
+    colors = [(0.0,1.0,score) for score in normalized_scores]
     colors = [mcolors.hsv_to_rgb(color)*255 for color in colors]
     colors = [(color[0], color[1], color[2], 255) for color in colors]
     return colors
 
-def blue_to_red(scores, smoothing_param):
-    scores = normalize_scores(scores, smoothing_param) #scores between 0 and 1
+def blue_to_red(normalized_scores):
     palette = sns.color_palette("coolwarm", as_cmap=True)
-    colors = palette(scores)
+    colors = palette(normalized_scores)
     colors = [(color[0]*255, color[1]*255, color[2]*255, 255) for color in colors]
     return colors
 
-def grey_to_red(scores, smoothing_param):
-    scores = normalize_scores(scores, smoothing_param)
+def grey_to_red(normalized_scores):
     palette = sns.color_palette(palette='blend:gray,r', as_cmap=True)
-    colors = palette(scores)
-    colors = [(color[0]*255, color[1]*255, color[2]*255, (score+ 0.3)/4) for score,color in zip(scores,colors)]
+    colors = palette(normalized_scores)
+    colors = [(color[0]*255, color[1]*255, color[2]*255, (score+ 0.3)/4) for score,color in zip(normalized_scores,colors)]
     return colors
 
-def color_contexts(contexts, coloring_func, smoothing_param):
+def color_contexts(contexts, coloring_func):
     '''Color contexts
     input:
         contexts: list of dictionaries with key 'normalized_score' (and others)
         coloring_func: function that takes a list of scores and returns a list of colors in fromat [(int,int,int)]
     output:
         contexts: list of dictionaries with key and 'score' and 'normalized_score' and 'color' (and others)'''
-    colors = coloring_func([context['score'] for context in contexts], smoothing_param) 
+    colors = coloring_func([context['normalized_score'] for context in contexts]) 
     for context,color in zip(contexts,colors):
         try:
             context['color'] = int(color[0]), int(color[1]), int(color[2]), color[3]
@@ -125,7 +127,8 @@ def colouring_pipeline(df, save_folder, html_folder_path, context_size, styles_c
         print(f'Coloring with {coloring_func.__name__}')
         for smoothing_param in smoothing_params:
             print(f'Smoothing param: {smoothing_param}')
-            df['all_contexts'] = df['all_contexts'].progress_apply(lambda x: color_contexts(x, coloring_func, smoothing_param))
+            df['all_contexts'] = df['all_contexts'].progress_apply(lambda x: normalize_scores(x, smoothing_param))
+            df['all_contexts'] = df['all_contexts'].progress_apply(lambda x: color_contexts(x, coloring_func))
             print(f'Style: {style}')
 
             df.progress_apply(lambda x: overlaying_func(x['all_contexts'],
@@ -151,18 +154,21 @@ def get_html_paths(data_path, scored_df):
 def get_color_store(contexts, missing_category, insert_index, moved_insertion_marker, link_sentence, link_text):
     color_store = []
     one_special = False
-
+    
     if all([i == j for i, j in zip([-1], insert_index)]):
         if missing_category not in ['missing_sentence', 'missing_span']:
             raise ValueError('Insert index not found')
         
         first_llist = contexts[0]['middle_sentence']['locList1'] 
         first_color = contexts[0]['color']
+        first_score = contexts[0]['score']
+        most_red = bool(first_score == 1)
         color_store.append({
                 'start': first_llist[0]['start'],
                 'end': first_llist[0]['start'],
                 'color': first_color,
                 'special': True,
+                'most_red': most_red,
                 'sentence_end': 0,
                 'missing_category': missing_category,
                 'link_sentence_parts': link_sentence.split(link_text,1),
@@ -173,6 +179,8 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
 
 
     for context in contexts:
+        score = context['normalized_score']
+        most_red = bool(score == 1)
         middle_sentence = context['middle_sentence']
         indexes = middle_sentence['ids1']
         llist = middle_sentence['locList1']
@@ -185,6 +193,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'end': lindexes['end'],
                     'color': context['color'],
                     'special': False,
+                    'most_red': most_red,
                     'sentence_end': sent_end,
                     'missing_category': missing_category
                 }
@@ -198,6 +207,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         'end': lindexes['end'],
                         'color': context['color'],
                         'special': False,
+                        'most_red': most_red,
                         'sentence_end': sent_end,
                         'missing_category': missing_category
                     }
@@ -208,6 +218,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
+                    'most_red': most_red,
                     'sentence_end': sent_end,
                     'missing_category': missing_category,
                     'link_sentence_parts': link_sentence.split(link_text,1),
@@ -222,6 +233,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         'end': lindexes['end'],
                         'color': context['color'],
                         'special': True,
+                        'most_red': most_red,
                         'sentence_end': sent_end,
                         'missing_category': missing_category,
                         'last': False
@@ -233,6 +245,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
+                    'most_red': most_red,
                     'sentence_end': sent_end,
                     'missing_category': missing_category,
                     'last': True,
@@ -248,6 +261,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                             'end': lindexes['end'],
                             'color': context['color'],
                             'special': True,
+                            'most_red': most_red,
                             'sentence_end': sent_end,
                             'missing_category': "missing_mention",
                             'last': False
@@ -259,6 +273,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'end': llist[-1]['end'],
                     'color': context['color'],
                     'special': True,
+                    'most_red': most_red,
                     'sentence_end': sent_end,
                     'missing_category': "missing_mention",
                     'last': True,
@@ -272,6 +287,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                             'end': lindexes['end'],
                             'color': context['color'],
                             'special': False,
+                            'most_red': most_red,
                             'sentence_end': sent_end,
                             'missing_category': missing_category,
                             'last': False
@@ -286,6 +302,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                         'end': llist[-1]['end'],
                         'color': context['color'],
                         'special': True,
+                        'most_red': most_red,
                         'sentence_end': sent_end,
                         'missing_category': missing_category,
                         'last': True,
@@ -301,6 +318,7 @@ def get_color_store(contexts, missing_category, insert_index, moved_insertion_ma
                     'start': llist[-1]['start'],
                     'end': llist[-1]['start'],
                     'color': context['color'],
+                    'most_red': most_red,
                     'sentence_end': sent_end,
                     'special': True,
                     'missing_category': 'marker'
@@ -387,9 +405,9 @@ if __name__ == '__main__':
             for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
                 rel_colored_page_folder = f"../{rel_save_folder}/{lang}/{source_ID}_{first_version}"
                 if args.soft_links_dir:
-                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/'{size}_{compute_md5(link_text)}_index(symlink).html'"})
+                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/symlink_{size}_{compute_md5(link_text)}"})
                 else: 
-                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index.html"})
+                    paths_dict[missing_catgory].append({f"{source_title} --> {target_title}" : f"{rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index.html#start-point"})
                
             first_row = scored_data.iloc[0]
             potential_raw_html_file_path = f"{args.html_dir}/{lang}/{first_row['source_ID']}_{first_row['first_version']}.html"
@@ -409,11 +427,12 @@ if __name__ == '__main__':
             html_path_dict = dict_to_html_list(paths_dict)
             
             if args.soft_links_dir:
+
                 for missing_catgory, source_ID, first_version, link_text, source_title, target_title in zip(scored_data['missing_category'], scored_data['source_ID'], scored_data['first_version'], scored_data['link_text'], scored_data['source_title'], scored_data['target_title']):
                     soft_link_rel_colored_page_folder = f"{args.soft_links_dir}/{lang}/{source_ID}_{first_version}"
-                    soft_link_src_pg = f"{links_page_path}/{source_ID}_{first_version}/{size}_{compute_md5(link_text)}_index.html"
-                    soft_link_tgt = f"{soft_link_rel_colored_page_folder}/{size}_{compute_md5(link_text)}_index(symlink).html"
-                    #print(f"Creating softlink for {soft_link_src_pg} in {soft_link_tgt}")
+                    soft_link_src_pg = f"{links_page_path}/{source_ID}_{first_version}/{size}_{compute_md5(link_text)}_index.html#start-point"
+                    soft_link_tgt = f"{soft_link_rel_colored_page_folder}/symlink_{size}_{compute_md5(link_text)}"
+                    print(f"Creating softlink of {soft_link_src_pg} in {soft_link_tgt}")
                     os.makedirs(soft_link_rel_colored_page_folder, exist_ok=True)
                     if os.path.exists(soft_link_tgt):
                         os.remove(soft_link_tgt)

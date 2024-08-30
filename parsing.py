@@ -32,8 +32,20 @@ def sentence_tokenize(outpaths, tokenizer):
             text = f.read()
         
         processed_text = preprocess(text)
-        
-        raw_sentences = list(tokenizer.sentence_tokenize(processed_text, use_abbreviation=True))
+
+        #first splitting when there are 2 or more \n in a row
+        pattern = r'(\n<<C\d{2}>><<O\d{2}>>\n)'
+        splits = re.split(pattern, processed_text)
+        processed_texts = [splits[i] + splits[i+1] for i in range(0, len(splits) -1, 2)]
+
+        if len(splits) % 2 != 0:
+            processed_texts.append(splits[-1])
+        else:
+            processed_texts.append(splits[-2] + splits[-1])
+
+
+        raw_sentences_lists = [list(tokenizer.sentence_tokenize(processed_text_part, use_abbreviation=True)) for processed_text_part in processed_texts]
+        raw_sentences = [sentence for sentence_list in raw_sentences_lists for sentence in sentence_list]
         raw_sentences = [s.strip() for s in raw_sentences]
         out_filename = path + "_raw_sentences.jsonl"
         

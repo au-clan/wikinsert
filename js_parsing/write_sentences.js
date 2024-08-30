@@ -26,6 +26,7 @@ async function ParsingWriteSenFiles(filePaths, outputPaths) {
     for (let i = 0; i < Math.min(filePaths.length, outputPaths.length); i++) {
         await write_sentences_store(filePaths[i], outputPaths[i]);
     }
+    
 }
 
 ParsingWriteSenFiles(filePaths, outputPaths)

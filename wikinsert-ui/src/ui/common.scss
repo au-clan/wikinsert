@@ -1,0 +1,53 @@
+html, body {
+  height: 100% !important;
+  font-size: 13px !important;
+}
+
+body {
+  margin: 0;
+  font-family: Verdana, Geneva, sans-serif !important;
+  background-color: #f9f9f9 !important;
+  width: 100vw;
+  overflow-x: hidden;
+}
+
+input {
+  box-sizing: border-box;
+  padding: 4px;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+hr {
+  display: block;
+  height: 1px;
+  border: 0;
+  border-top: 1px solid #ccc;
+  margin: 1em 0;
+  padding: 0;
+}
+
+a {
+  outline: none;
+  text-decoration: none !important;
+  word-break: break-all;
+  color: #333;
+
+  &.underline {
+    text-decoration: underline;
+  }
+}
+
+a:link {
+  color: unset;
+}
+
+a:visited {
+  color: unset;
+}
+
+a:hover, a:focus {
+  color: rgb(88, 88, 88) !important;
+}

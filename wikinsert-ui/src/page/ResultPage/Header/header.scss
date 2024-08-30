@@ -1,0 +1,41 @@
+.header {
+  background-color: #262626;
+  padding: 14px;
+
+  & .title {
+    color: #ffffff;
+    cursor: pointer;
+    font-family: "Libre Baskerville", serif;
+    font-weight: bold;
+    user-select: none;
+    font-size: 20pt;
+
+    & a:visited {
+      color: unset;
+    }
+
+    & .dot {
+      color: #41d9a4;
+      line-height: 0px;
+      font-size: 28pt;
+    }
+  }
+
+  & .searchBar {
+    flex-grow: 1;
+    //max-width: 400px;
+    padding-left: 20px;
+    margin-bottom: 3px;
+    margin-left: auto;
+  }
+
+  & .headerWrapper {
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+  }
+}
+
+.header .dropdown {
+  width: 100% !important;
+}

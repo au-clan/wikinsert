@@ -176,7 +176,8 @@ async function parsetext(dom, document){ //extractSentences(dom, htmlText, outDi
     
     const xpathAllText = `//div[@id='mw-content-text']//text()[
     not(ancestor-or-self::noscript) and
-    not(ancestor-or-self::h2) and 
+    not(ancestor-or-self::h2) and
+    not(ancestor-or-self::h3) and
     not(ancestor-or-self::*/@class='mw-headline') and
     not(ancestor-or-self::*/@class='mw-headline mw-heading2') and
     not(ancestor-or-self::style) and 
@@ -381,7 +382,7 @@ async function getSentenceStore(htmlText, sentences, textNodes2Offset, sectionMa
             text: origSentence,
             startIdx: startIdx+numLeadingSpaces,
             endIdx: endIdx,
-            section: getSection(sectionMap, endIdx),
+            section: getSection(sectionMap, startIdx),
             locList: locList
         };
 
@@ -424,17 +425,20 @@ return sentenceStore ;
 async function extractLinks(dom, document, sectionMap, sentenceStore, htmlText){
     
     const xpathAnchor = `//div[@id='mw-content-text']//a[
-     not(ancestor-or-self::img) and
     not(ancestor-or-self::noscript) and
+    not(ancestor-or-self::h2) and
     not(ancestor-or-self::*/@class='mw-headline') and
+    not(ancestor-or-self::*/@class='mw-headline mw-heading2') and
     not(ancestor-or-self::style) and 
     not(ancestor-or-self::cite) and
     not(ancestor-or-self::script) and
     not(ancestor-or-self::table) and
+    not(ancestor-or-self::img) and
     contains(@href, '/wiki/') and
     not(ancestor-or-self::figure) and
     not(ancestor-or-self::sup) and
     not(ancestor-or-self::*/@class='mw-editsection') and
+    not(ancestor-or-self::*/@class='mw-bandeau') and
     not(ancestor-or-self::*/@class='reflist') and
     not(ancestor-or-self::*/@class='map') and
     not(ancestor::div[
@@ -486,32 +490,21 @@ async function extractLinks(dom, document, sectionMap, sentenceStore, htmlText){
                 sentid_ = sentObj.id;
             }
         }
-        //if sentid_ is null, then print:
-        if(sentid_ === null){
-            console.log("Sentid is null for link: ", text);
-            console.log(anchorEnd)
-            console.log("Anchor node from html: ",htmlText.substring((anchorStart -20), (anchorEnd + 20)));
-           //print all sentences 
-            //for(const sentObj of sentenceStore){
-            //    console.log(sentObj.text);
-            //    console.log(sentObj.startIdx);
-            //    console.log(sentObj.endIdx);
-            //    console.log("Anchor node from html: ",htmlText.substring(sentObj.startIdx, sentObj.endIdx));
-            //}
-        }
-        else{
-        const linkObj = {
-            // link: anchorNode.href,
-            link: link,
-            startIdx: anchorStart,
-            text: text,
-            endIdx: anchorEnd,
-            section: getSection(sectionMap, anchorEnd),
-            sentid : sentid_
-        }; 
+        
+            if (sentid_ != null & text != '') {
+            const linkObj = {
+                // link: anchorNode.href,
+                link: link,
+                startIdx: anchorStart,
+                text: text,
+                endIdx: anchorEnd,
+                section: getSection(sectionMap, anchorEnd),
+                sentid : sentid_
+            }; 
 
 
-        linkStore.push(linkObj);}
+            linkStore.push(linkObj);}
+
         anchorNode = anchorNodes.iterateNext();
         sentid_ = null;
     }

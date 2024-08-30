@@ -1,0 +1,134 @@
+.tooltip {
+  //display: flex;
+  margin-left: 4px;
+  cursor: pointer;
+}
+
+.targetToggle {
+  display: flex;
+  justify-content: center;
+}
+
+.targetButton {
+  border: #d9d9d9 2px solid;
+  min-width: 5em;
+  padding: 1em;
+  text-align: center;
+  background-color: #ffffff;
+  user-select: none;
+  cursor: pointer;
+
+  &:first-child {
+    border-radius: 8px 0 0 8px;
+  }
+
+  &:not(:first-child) {
+    border-left-width: 0;
+  }
+
+  &:last-child {
+    border-radius: 0 8px 8px 0;
+  }
+
+  &.selected {
+    background-color: #f2e8cb;
+
+    &.disabled {
+      background-color: #fcf7e6;
+    }
+  }
+
+  &.disabled {
+    color: #999;
+    cursor: not-allowed;
+  }
+}
+
+.fieldWrapper {
+  margin: 1em 0;
+  &.compact {
+    margin: 8px 0;
+  }
+}
+
+.field {
+  //width: 100%;
+ // display: flex;
+}
+
+.fieldError {
+  font-size: 10pt;
+  color: #ee0011;
+  margin-top: 2px;
+}
+
+.label {
+  width: 15em;
+  margin-right: 1em;
+  display: flex;
+  align-items: center;
+}
+
+.fieldValue {
+  //width: 20em;
+  width: 100%;
+  & > * {
+    width: inherit;
+  }
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 2;
+}
+
+.dropdownOption {
+  background-color: #eeeeee;
+  border: darkgray 1px solid;
+  padding: 4px;
+  user-select: none;
+
+  &:not(:first-child) {
+    border-top-width: 0;
+  }
+
+  &.matchOption {
+    font-weight: bold;
+  }
+
+  &.clickable {
+    cursor: pointer;
+  }
+
+  & > .description {
+    font-style: italic;
+    color: #999;
+    font-size: small;
+  }
+
+  &.selected {
+    background-color: #ccc;
+  }
+}
+
+.dateLabel {
+  margin-right: 1em;
+  display: flex;
+  align-items: center;
+}
+
+.dateError {
+  position: absolute;
+}
+
+.react-datepicker-wrapper,
+.react-datepicker__input-container,
+.react-datepicker__input-container input {
+    display: block;
+    width: 100%;
+}
+
+.datePicker {
+  width: 100% !important;
+  display: block !important;
+}

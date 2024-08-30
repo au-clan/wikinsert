@@ -1,0 +1,27 @@
+.inputWrapper {
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+}
+
+.input {
+  & > :not(:last-child) {
+    margin-right: 8px;
+  }
+
+  & > input {
+    font-size: 16pt;
+  }
+}
+
+.textButtons {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.loadingAnimationBox {
+  margin-top: 15px;
+  display: flex;
+  justify-content: center;
+}

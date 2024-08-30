@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Vollkorn:ital@1&display=swap');
+
+.animate {
+  opacity: 0;
+  animation-name: fadeInOut;
+}
+
+.loadingAnimation {
+  font-family: 'Vollkorn', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+}
+
+
+.hidden {
+  display: none;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(50%); }
+  20% { opacity: 0.8; }
+  50% { opacity: 1; transform: translateY(0); }
+  80% { opacity: 0.8; }
+  100% { opacity: 0; }
+}

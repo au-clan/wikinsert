@@ -1,0 +1,19 @@
+.button {
+  padding: 0.5em;
+  border-radius: 2px;
+  border: black 2px solid;
+  cursor: pointer;
+
+  text-align: center;
+  user-select: none;
+
+  &.disabled {
+    border: #999 2px solid;
+    color: #999;
+    cursor: not-allowed;
+  }
+}
+
+.wrapper > button {
+  all: unset;
+}

@@ -1,0 +1,156 @@
+.container {
+  display: flex;
+  opacity: 80%;
+  transition: linear 0.08s;
+  align-items: center;
+
+  &.focused {
+    opacity: 100%;
+  }
+}
+
+.searchBarWrapper {
+  width: 100%;
+  position: relative;
+}
+
+.searchBar {
+  background-color: white;
+  border: 1px solid darkgray;
+  border-radius: 4px;
+  box-shadow: 1px 1px 1px 0 lightgray inset;
+  font-size: 12pt;
+  line-height: 1.6;
+  padding: 4px;
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  //margin-right: 8px;
+  padding: 1px 4px;
+  width: calc(100% - 8px);
+
+  &.disabled {
+    background-color: #eee;
+  }
+}
+
+.submit {
+  background-color: #eee;
+  color: #333;
+  border: 1px #ccc solid;
+
+  &.disabled {
+    border: #999 1px solid;
+  }
+}
+
+.menuButton {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+
+  &.disabled {
+    cursor: not-allowed;
+  }
+}
+
+.menuButtonHidden {
+  visibility: hidden;
+}
+
+.inputWrapper {
+  width: calc(100% - 32px);
+  overflow: hidden;
+  color: #333;
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  &.disabled {
+    color: #777;
+    user-select: none;
+  }
+
+  & .placeholder {
+    color: #999;
+    position: absolute;
+    white-space: nowrap;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  & .input {
+    position: relative;
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    width: 100%;
+    font-size: 12pt;
+  }
+
+  & :focus {
+    color: #333;
+    outline: 0;
+  }
+}
+
+.dropdown {
+  position: absolute;
+  z-index: 2;
+  background: #eee;
+  border: 1px solid #ccc;
+  box-shadow: 1px 0 1px 0 lightgray inset;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.centerDropdown {
+  width: calc(100% - 8px);
+}
+
+.sideDropdown {
+  width: calc(100% - 8px);
+}
+
+@import '~bootstrap/scss/functions';
+@import '~bootstrap/scss/variables';
+@import '~bootstrap/scss/mixins/_breakpoints';
+
+@include media-breakpoint-up(md) {
+  .centerDropdown {
+    width: 150%;
+  }
+}
+
+.dummyButton {
+  display: none;
+}
+
+.error {
+  padding: 4px;
+  width: calc(100% - 16px);
+  background-color: #fff;
+  color: red;
+  font-size: 10pt;
+  font-weight: bold;
+  text-align: center;
+  position: absolute;
+  border-radius: 4px;
+  margin-top: 2px;
+  border: 1px solid #ccc;
+  user-select: none;
+  opacity: 1;
+  transition: opacity 0s;
+  z-index: 5;
+
+  &.hidden {
+    opacity: 0;
+    transition: opacity 1s;
+  }
+  &.hiddenZ {
+    z-index: -1;
+  }
+}
