@@ -10,5 +10,5 @@ app.get("*", (_, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Quotebank UI server listening to port ${port}`);
+  console.log(`Wikinsert UI server listening to port ${port}`);
 });
