@@ -49,11 +49,11 @@ def call_crawler(titles: List[str], curids: List[str], oldids: List[str], outfol
     Raises:
         subprocess.CalledProcessError: If the command to run the crawler fails.
     """
-    # Run crawler/crawl_full_pages.js for each title, current ID, and old ID
+    # Run js_crawler/crawl_full_pages.js for each title, current ID, and old ID
     for title, curid, oldid in zip(titles, curids, oldids):
         command = [
             'node', 
-            'crawler/crawl_full_pages.js', 
+            'js_crawler/crawl_full_pages.js', 
             '-l', lang, 
             '-p', outfolder, 
             '-t', title, 
