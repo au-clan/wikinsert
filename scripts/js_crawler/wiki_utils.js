@@ -43,7 +43,6 @@ const getArticleId = (htmlText) => {
  * @param timestamp
  * @returns {Promise<*>}
  */
-//export const getOldIdFromTimestamp = async (pageId, timestamp = '2020-01-31T23:59:59Z') => {
 const getOldIdFromTimestamp = async (pageId, timestamp = '2020-01-31T23:59:59Z') => {    
     const url = new URL('https://en.wikipedia.org/w/api.php');
     url.searchParams.append('action', 'query');
