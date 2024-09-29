@@ -1,3 +1,28 @@
+"""
+Crawl web pages using a revisions file with options for parallel processing and 
+second versions.
+
+Features:
+- Validates input files and creates the output directory.
+- Extracts IDs and titles from the revisions file.
+- Runs crawlers in parallel.
+- Moves crawled files to the correct locations.
+
+Usage:
+    python script_name.py --revisions_path path/to/revisions.parquet 
+                           --output_dir path/to/output 
+                           --n_processes 4 
+                           --lang en 
+                           --crawl_second_versions True
+
+Arguments:
+    --revisions_path (str): Path to the revisions file (required).
+    --output_dir (str): Path for output files (required).
+    --n_processes (int): Number of processes (default: 1).
+    --lang (str): Language of the pages (required).
+    --crawl_second_versions (bool): Crawl second versions (default: False).
+"""
+
 import pandas as pd
 import argparse
 import math
