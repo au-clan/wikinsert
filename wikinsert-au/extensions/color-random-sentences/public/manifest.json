@@ -1,0 +1,19 @@
+{
+  "name": "Hello Extensions of the world!",
+  "description": "Base Level Extension",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+      "activeTab",
+      "scripting"
+   ],
+   "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "matches": ["https://*.wikipedia.org/*"]
+    }
+  ]
+}
