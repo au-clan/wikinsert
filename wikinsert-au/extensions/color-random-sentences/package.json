@@ -19,6 +19,7 @@
     "webpack-cli": "^6.0.1"
   },
   "dependencies": {
-    "glob": "^11.0.1"
+    "glob": "^11.0.1",
+    "sentence-splitter": "^5.0.0"
   }
 }
