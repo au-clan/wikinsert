@@ -8,7 +8,9 @@ import io.ktor.server.routing.*
 fun Application.configureRouting() {
     routing {
         get("/heatmap") {
-            call.respondText("Hello, World!")
+            // Just return a random score between 0.5 and 1.0
+            val randomScore = Math.random().toString()
+            call.respondText(randomScore)
         }
     }
 }

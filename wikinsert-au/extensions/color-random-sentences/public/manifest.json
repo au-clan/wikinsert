@@ -16,5 +16,8 @@
       "js": ["content.js"],
       "matches": ["https://*.wikipedia.org/*"]
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

@@ -1,6 +1,6 @@
 # Object file
 *.o
-
+.idea
 # Ada Library Information
 *.ali
 
@@ -11,3 +11,4 @@ __pycache__/*
 __.DS_Store
 
 colored_html/
+/.idea/

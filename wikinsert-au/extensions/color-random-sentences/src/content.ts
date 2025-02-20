@@ -1,4 +1,4 @@
-import { split } from "sentence-splitter";
+import {split} from "sentence-splitter";
 
 // A WeakMap for storing each paragraph's original HTML
 const originalHTMLMap = new WeakMap<HTMLElement, string>();
@@ -51,7 +51,16 @@ function wrapRangeInContainer(container: HTMLElement, start: number, end: number
   span.id = "sentence-" + numberOfSentences++;
 
   sentenceData[span.id] = { text: range.toString(), score: Math.random() };
-
+  chrome.runtime.sendMessage(
+      {action: "getScore"},
+      (response: { score: number }) => {
+        if (response && typeof response.score === "number") {
+          sentenceData[span.id].score = response.score;
+        } else {
+          console.warn("No score returned for sentence:", span.id);
+        }
+      }
+  );
   const extracted = range.extractContents();
   span.appendChild(extracted);
   range.insertNode(span);
