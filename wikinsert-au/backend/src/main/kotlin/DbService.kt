@@ -1,20 +1,24 @@
 package com.example
 
-class DbService() {
-    val db = mutableListOf(
-        Sentence("1", "Hello, World!", 0), Sentence("2", "Goodbye, World!", 0)
+interface DbService {
+    fun getScoresForSentenceHashes(sentenceHashes: List<String>): List<SentenceScorePair>
+}
+
+class DbServiceMock : DbService {
+    private val hardcodedScores = listOf(
+        SentenceScorePair("hash1", 925),
+        SentenceScorePair("hash2", 8123),
+        SentenceScorePair("hash3", 2321),
     )
-
-    fun getSentence(id: String): Sentence? {
-        return db.find { it.id == id }
+    override fun getScoresForSentenceHashes(sentenceHashes: List<String>): List<SentenceScorePair> {
+        return hardcodedScores
     }
+}
 
-    fun addSentence(sentence: Sentence) {
-        db += sentence
-    }}
-data class Sentence(
-    val id: String,
-    val content: String,
+data class SentenceScorePair(
+    val hash: String,
     val score: Int
 )
+
+
 
