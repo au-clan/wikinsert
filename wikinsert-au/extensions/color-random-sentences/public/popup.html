@@ -1,16 +1,17 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
-    <meta charset="utf-8" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Toggle Color</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
-  <body>
-    <h2>Toggle to Color Sentences</h2>
-
-    <label class="switch">
-      <input type="checkbox" id="toggleColor">
-      <span class="slider round"></span>
+  <body class="p-4">
+    <h2 class="text-2xl font-bold mb-4">Toggle to Color Sentences</h2>
+    
+    <label class="flex items-center space-x-3 cursor-pointer">
+      <span class="text-lg">Color Sentences</span>
+      <input type="checkbox" id="toggleColor" class="toggle toggle-primary" />
     </label>
 
     <script src="popup.js"></script>
