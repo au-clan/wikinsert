@@ -5,7 +5,8 @@
   "manifest_version": 3,
   "permissions": [
       "activeTab",
-      "scripting"
+      "scripting",
+      "storage"
    ],
    "action": {
     "default_popup": "popup.html"
@@ -15,5 +16,8 @@
       "js": ["content.js"],
       "matches": ["https://*.wikipedia.org/*"]
     }
-  ]
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
 }

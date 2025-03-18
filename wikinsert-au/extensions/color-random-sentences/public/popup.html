@@ -1,18 +1,52 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Toggle Color</title>
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <h2>Toggle to Color Sentences</h2>
+<html lang="en">
 
-    <label class="switch">
-      <input type="checkbox" id="toggleColor">
-      <span class="slider round"></span>
-    </label>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Toggle Color</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
 
+<div>
+
+  <body class="flex h-[500px] w-[300px] justify-center bg-base-200">
+    <div class="p-6">
+      <h2 class="text-2xl font-bold mb-4 text-center self-start">Search for a Wikipedia article to insert</h2>
+
+      <!-- Hidden toggle (for reference) -->
+      <div class="form-control mb-4 hidden">
+        <label class="cursor-pointer label">
+          <span class="label-text text-sm">Color Sentences</span>
+          <input type="checkbox" id="toggleColor" class="toggle toggle-primary" />
+        </label>
+      </div>
+
+      <!-- Search form -->
+      <form id="searchForm" class="input-group">
+        <div class="form-control">
+          <label class="flex flex-col label">
+            <div class="relative">
+              <input type="text" name="entity" id="searchInput" placeholder="Search Wikipedia..." autocomplete="off"
+                class="input input-bordered w-full pr-10" />
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                class="h-4 w-4 opacity-70 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <path fill-rule="evenodd"
+                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+                  clip-rule="evenodd" />
+              </svg>
+            </div>
+          </label>
+        </div>
+      </form>
+
+      <!-- Dropdown for search results -->
+      <div id="searchDropdown"
+        class="absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
+      </div>
+    </div>
     <script src="popup.js"></script>
   </body>
+</div>
+
 </html>
