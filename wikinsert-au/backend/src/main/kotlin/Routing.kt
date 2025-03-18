@@ -12,15 +12,25 @@ import org.koin.ktor.ext.inject
 
 
 fun Application.configureRouting() {
-    val dbService: DbService by inject<DbServiceMock>()
 
+    val dbService by inject<DbService>()
     routing {
-        post("/heatmap/") {
-            val body = call.receiveText()
-            val bodyJson = Json.parseToJsonElement(body)
-            val sentenceHashes = bodyJson.jsonObject["sentenceHashes"]?.jsonArray?.map{it.toString()} ?: emptyList()
-            val sentenceScorePairs = dbService.getScoresForSentenceHashes(sentenceHashes)
-            call.respondText(Json.encodeToString(sentenceScorePairs))
+        post("/heatmap") {
+            val srcRevisionId = call.parameters["src_rev_id"] ?: error("rev_id not found")
+            val srcTitle = call.parameters["src_title"] ?: error("title not found")
+            val targetRevisionId = call.parameters["target_rev_id"] ?: error("rev_id not found")
+            val targetTitle = call.parameters["target_title"] ?: error("title not found")
+
+            val lang  = call.parameters["lang"] ?: ""
+
+            val srcSentenceData = dbService.getSourceTargetPairs(srcRevisionId, targetRevisionId, srcTitle, targetTitle, lang)
+            val jsonEncode = Json.encodeToString(srcSentenceData)
+            println(jsonEncode)
+            call.respondText(jsonEncode)
+
+        }
+        get("/heatmap"){
+            call.respondText("Hello, world!")
         }
     }
 }

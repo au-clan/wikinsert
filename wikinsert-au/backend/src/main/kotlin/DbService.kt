@@ -1,23 +1,30 @@
 package com.example
 
+import kotlinx.serialization.Serializable
+
 interface DbService {
-    fun getScoresForSentenceHashes(sentenceHashes: List<String>): List<SentenceScorePair>
+    fun getSourceTargetPairs(srcRevisionId: String, targetRevisionId:String, srcTitle: String, targetTitle:String, lang: String): List<SentenceData>
 }
 
 class DbServiceMock : DbService {
-    private val hardcodedScores = listOf(
-        SentenceScorePair("hash1", 925),
-        SentenceScorePair("hash2", 8123),
-        SentenceScorePair("hash3", 2321),
-    )
-    override fun getScoresForSentenceHashes(sentenceHashes: List<String>): List<SentenceScorePair> {
-        return hardcodedScores
+
+
+    override fun getSourceTargetPairs(srcRevisionId: String, targetRevisionId:String, srcTitle: String, targetTitle:String, lang: String): List<SentenceData> {
+        return listOf(
+            SentenceData( 1,0, 10, 0.85),
+            SentenceData( 2,11, 20, 0.92),
+            SentenceData( 3,21, 30, 0.78)
+        )
     }
 }
 
-data class SentenceScorePair(
-    val hash: String,
-    val score: Int
+
+@Serializable
+data class SentenceData(
+    val id : Int,
+    val startOffset: Int,
+    val endOffset: Int,
+    val score: Double,
 )
 
 

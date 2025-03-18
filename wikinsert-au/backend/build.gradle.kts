@@ -22,6 +22,8 @@ repositories {
 dependencies {
     implementation(libs.koin.ktor)
     implementation(libs.koin.logger.slf4j)
+    implementation(project.dependencies.platform(libs.koin.bom))
+    implementation(libs.koin.core)
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.serialization.kotlinx.json)

@@ -2,10 +2,11 @@
 [versions]
 exposed-version = "0.59.0"
 h2-version = "2.3.232"
-kotlin-version = "2.1.10"
-ktor-version = "3.0.3"
+kotlin-version = "2.0.0"
+ktor-version = "2.3.12"
 logback-version = "1.4.14"
 koin-version = "4.0.2"
+koin-bom = "4.0.2"
 
 [libraries]
 ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor-version" }
@@ -21,6 +22,8 @@ ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.
 ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref = "ktor-version" }
 kotlin-test-junit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin-version" }
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin-version" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin-version" }
+koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-logger-slf4j = {module = "io.insert-koin:koin-logger-slf4j", version.ref = "koin-version" }
 
 [plugins]
