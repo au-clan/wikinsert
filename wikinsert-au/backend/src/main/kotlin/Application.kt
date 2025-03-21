@@ -24,8 +24,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    configureRouting()
     configureCors()
+    configureRouting()
     install(Koin) {
         slf4jLogger()
         modules(listOf(koinModule))
@@ -42,6 +42,7 @@ fun Application.configureCors() {
     install(CORS) {
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
+        allowHeader(HttpHeaders.ContentType)
         anyHost()
     }
 }
