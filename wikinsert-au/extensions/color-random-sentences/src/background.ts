@@ -1,4 +1,4 @@
-const baseApiUrl = "http://0.0.0.0:8080";
+const baseApiUrl = "http://localhost:8080";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getHeatMap") {

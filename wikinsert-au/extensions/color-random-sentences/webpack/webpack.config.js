@@ -3,11 +3,16 @@ const glob = require('glob');
 const CopyPlugin = require('copy-webpack-plugin');
 
 // Create an entry object with all .ts files in the src directory
-const tsFiles = glob.sync(path.resolve(__dirname, "..", "src", "*.ts"));
+// Using path.join instead of path.resolve with multiple arguments for better cross-platform compatibility
+const srcDir = path.join(__dirname, "..", "src");
+// Use path.join for pattern construction to ensure proper path separators
+const pattern = path.join(srcDir, "*.ts").replace(/\\/g, '/');
+const tsFiles = glob.sync(pattern);
+
 const entries = {};
 tsFiles.forEach((file) => {
-  const name = path.basename(file, '.ts');
-  entries[name] = file;
+   const name = path.basename(file, '.ts');
+   entries[name] = file;
 });
 
 module.exports = {
@@ -31,7 +36,11 @@ module.exports = {
    },
    plugins: [
       new CopyPlugin({
-         patterns: [{ from: ".", to: ".", context: "public" }]
+         patterns: [{
+            from: ".",
+            to: ".",
+            context: path.resolve(__dirname, "../public")
+         }]
       }),
    ],
 };

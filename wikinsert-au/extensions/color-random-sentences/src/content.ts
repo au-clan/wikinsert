@@ -4,9 +4,8 @@ let originalHTMLMap = new WeakMap<HTMLElement, string>();
 // Type definition for Sentence
 type HTMLSentenceMapping = {
   id: number;
-  pTagId: number;
-  relStartOffset: number;
-  relEndOffset: number;
+  startOffset: number;
+  endOffset: number;
   score: number;
 };
 
@@ -16,27 +15,15 @@ type TextNode = {
   end: number;
 };
 
+type PTagInfo = {
+  pTag: HTMLParagraphElement | null;
+  startOffset: number;
+  endOffset: number;
+}
+
 let currentHeatMap: HTMLSentenceMapping[] = [];
 const currentPageKey = location.href;
-chrome.storage.local.set({ [currentPageKey]: false });
-
-// give a unique id to each p tag in the content
-function giveIdsToPTags() {
-  const contentContainer = document.getElementById("mw-content-text");
-  if (!contentContainer) {
-    console.error("Content container not found");
-    return;
-  }
-
-  const pTags = contentContainer.querySelectorAll("p");
-  pTags.forEach((pTag, index) => {
-    pTag.id = `p-${index}`;
-  });
-}
-giveIdsToPTags();
-
-
-
+chrome.storage.local.set({[currentPageKey]: false});
 
 // Listen for messages from the extension popup
 chrome.runtime.onMessage.addListener(
@@ -63,12 +50,12 @@ chrome.runtime.onMessage.addListener(
         }
       );
 
-      chrome.storage.local.set({ [currentPageKey]: true });
+      chrome.storage.local.set({[currentPageKey]: true});
       console.log("Highlighting applied in", performance.now() - start, "ms");
     } else if (message.action === "remove") {
       console.log("Removing highlighting");
       removeHighlighting();
-      chrome.storage.local.set({ [currentPageKey]: false });
+      chrome.storage.local.set({[currentPageKey]: false});
     }
   }
 );
@@ -84,15 +71,33 @@ function highlightSentences(sentences: HTMLSentenceMapping[]): void {
   }
 
   sentences.forEach((sentence) => {
-    const pTag = document.getElementById(`p-${sentence.pTagId}`);
-    if (!pTag) {
-      console.warn(`Could not find paragraph with ID: p-${sentence.pTagId}`);
-      return;
-    }
+    const pTag = getPTagForSentence(sentence, contentContainer);
 
     const textNodes = getTextNodesIn(pTag);
     wrapRangeInContainer(sentence, textNodes);
   });
+}
+
+/**
+ * Returns the paragraph element that contains the given offset.
+ */
+function getPTagForSentence(sentence: HTMLSentenceMapping, container: HTMLElement): PTagInfo {
+  const pTags = Array.from(container.getElementsByTagName("p"));
+  let currentOffset = 0;
+
+  for (let pTag of pTags) {
+    const pTagStartOffset: number = currentOffset;
+    console.log("pTagStartOffset", pTagStartOffset);
+    const pTagEndOffset: number = currentOffset + (pTag.textContent?.length || 0) + 1;
+    console.log("pTagEndOffset", pTagEndOffset);
+
+    if (sentence.startOffset >= pTagStartOffset && sentence.endOffset <= pTagEndOffset) {
+      return {pTag, startOffset: pTagStartOffset, endOffset: pTagEndOffset};
+    }
+    currentOffset = pTagEndOffset;
+  }
+  console.warn("Could not find paragraph for sentence", sentence);
+  return {pTag: null, startOffset: 0, endOffset: 0};
 }
 
 /**
@@ -109,27 +114,25 @@ function wrapRangeInContainer(
 
   for (const node of textNodes) {
     // If this node contains the start point
-    if (startNodeInfo === null && 
-        sentence.relStartOffset >= node.start && 
-        sentence.relStartOffset < node.end) {
+    if (startNodeInfo === null &&
+      sentence.startOffset >= node.start) {
       startNodeInfo = {
         node: node.node,
-        offset: sentence.relStartOffset - node.start
+        offset: sentence.startOffset - node.start
       };
       console.log("start ", startNodeInfo);
     }
-    
+
     // If this node contains the end point
-    if (endNodeInfo === null && 
-        sentence.relEndOffset > node.start && 
-        sentence.relEndOffset <= node.end) {
+    if (endNodeInfo === null &&
+      sentence.endOffset <= node.end) {
       endNodeInfo = {
         node: node.node,
-        offset: sentence.relEndOffset - node.start
+        offset: sentence.endOffset - node.start
       };
       console.log("end ", endNodeInfo);
     }
-    
+
     // Break early if we found both nodes
     if (startNodeInfo && endNodeInfo) {
       break;
@@ -144,13 +147,13 @@ function wrapRangeInContainer(
   const range = document.createRange();
   range.setStart(startNodeInfo.node, startNodeInfo.offset);
   range.setEnd(endNodeInfo.node, endNodeInfo.offset);
-  
+
   // Create the span that will wrap the sentence
   const span = document.createElement("span");
   span.className = "sentence-span";
   span.id = `sentence-${sentence.id}`;
   span.style.backgroundColor = getHeatColor(sentence.score);
-  
+
   // Store the original HTML of the parent element
   const parentElement = startNodeInfo.node.parentElement;
   if (parentElement && !originalHTMLMap.has(parentElement)) {
@@ -192,20 +195,23 @@ function removeHighlighting(): void {
 /**
  * Returns an array of text nodes with their global offsets.
  */
-function getTextNodesIn(element: HTMLElement): TextNode[] {
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+function getTextNodesIn(pTagInfo: PTagInfo): TextNode[] {
+  const pTag = pTagInfo.pTag;
   const nodes: TextNode[] = [];
-  let globalOffset = 0;
+  if (!pTag) {
+    console.error("No paragraph found containing sentence");
+    return nodes;
+  }
+  const walker = document.createTreeWalker(pTag, NodeFilter.SHOW_TEXT, null);
+  let globalOffset = pTagInfo.startOffset;
   let currentNode: Text | null;
 
   while ((currentNode = walker.nextNode() as Text | null)) {
     const text = currentNode.textContent || "";
-    const trimmedText = text.trim();
-    if (trimmedText.length === 0) continue;
 
     const start = globalOffset;
     const end = globalOffset + text.length;
-    nodes.push({ node: currentNode, start, end });
+    nodes.push({node: currentNode, start, end});
     globalOffset = end;
   }
   return nodes;
