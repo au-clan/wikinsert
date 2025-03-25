@@ -88,7 +88,7 @@ function getPTagForSentence(sentence: HTMLSentenceMapping, container: HTMLElemen
   for (let pTag of pTags) {
     const pTagStartOffset: number = currentOffset;
     console.log("pTagStartOffset", pTagStartOffset);
-    const pTagEndOffset: number = currentOffset + (pTag.textContent?.length || 0) + 1;
+    const pTagEndOffset: number = currentOffset + (pTag.textContent?.length || 0);
     console.log("pTagEndOffset", pTagEndOffset);
 
     if (sentence.startOffset >= pTagStartOffset && sentence.endOffset <= pTagEndOffset) {
@@ -115,7 +115,8 @@ function wrapRangeInContainer(
   for (const node of textNodes) {
     // If this node contains the start point
     if (startNodeInfo === null &&
-      sentence.startOffset >= node.start) {
+      sentence.startOffset >= node.start &&
+      sentence.startOffset < node.end) {
       startNodeInfo = {
         node: node.node,
         offset: sentence.startOffset - node.start
@@ -125,6 +126,7 @@ function wrapRangeInContainer(
 
     // If this node contains the end point
     if (endNodeInfo === null &&
+      sentence.endOffset > node.start &&
       sentence.endOffset <= node.end) {
       endNodeInfo = {
         node: node.node,
@@ -208,6 +210,9 @@ function getTextNodesIn(pTagInfo: PTagInfo): TextNode[] {
 
   while ((currentNode = walker.nextNode() as Text | null)) {
     const text = currentNode.textContent || "";
+    if (text.length === 0) {
+      continue;
+    }
 
     const start = globalOffset;
     const end = globalOffset + text.length;
