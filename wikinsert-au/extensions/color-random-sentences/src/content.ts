@@ -15,11 +15,47 @@ type TextNode = {
   end: number;
 };
 
-type PTagInfo = {
-  pTag: HTMLParagraphElement | null;
-  startOffset: number;
-  endOffset: number;
-}
+const xpathText = `//div[@id='mw-content-text']//text()[
+  not(ancestor-or-self::noscript) and
+  not(ancestor-or-self::h2) and
+  not(ancestor-or-self::h3) and
+  not(ancestor-or-self::*/@class='mw-headline') and
+  not(ancestor-or-self::*/@class='mw-headline mw-heading2') and
+  not(ancestor-or-self::style) and 
+  not(ancestor-or-self::cite) and
+  not(ancestor-or-self::script) and
+  not(ancestor-or-self::table) and
+  not(ancestor-or-self::img) and
+  not(ancestor-or-self::figure) and
+  not(ancestor-or-self::sup) and
+  not(ancestor-or-self::*/@class='mw-editsection') and
+  not(ancestor-or-self::*/@class='mw-bandeau') and
+  not(ancestor-or-self::*/@class='reflist') and
+  not(ancestor-or-self::*/@class='map') and
+  not(ancestor::div[
+      contains(@class, "js-interprojects") or
+      contains(@class, "galleryext") or
+      contains(@class, "mw-headline") or
+      contains(@class, "thumb") or 
+      contains(@role, "navigation") or 
+      contains(@role, "note") or
+      contains(@class, "navbox") or 
+      contains(@class, "toc") or 
+      contains(@class, "reflist") or
+      contains(@class, "printfooter") or
+      contains(@class, "soslink") or
+      contains(@style, "float:") or
+      contains(@style, "display:none") or
+      contains(@class, "bandeau") or
+      contains(@class, "infobox") or
+      contains(@class, "references") or
+      contains(@class, "side-box") or
+      contains(@class, "plainlinks") or
+      contains(@class, "sisterbox") or
+      contains(@class, "references")
+  ])
+]
+`; 
 
 let currentHeatMap: HTMLSentenceMapping[] = [];
 const currentPageKey = location.href;
@@ -69,35 +105,9 @@ function highlightSentences(sentences: HTMLSentenceMapping[]): void {
     console.error("Content container not found");
     return;
   }
-
   sentences.forEach((sentence) => {
-    const pTag = getPTagForSentence(sentence, contentContainer);
-
-    const textNodes = getTextNodesIn(pTag);
-    wrapRangeInContainer(sentence, textNodes);
+    wrapRangeInContainer(sentence);
   });
-}
-
-/**
- * Returns the paragraph element that contains the given offset.
- */
-function getPTagForSentence(sentence: HTMLSentenceMapping, container: HTMLElement): PTagInfo {
-  const pTags = Array.from(container.getElementsByTagName("p"));
-  let currentOffset = 0;
-
-  for (let pTag of pTags) {
-    const pTagStartOffset: number = currentOffset;
-    console.log("pTagStartOffset", pTagStartOffset);
-    const pTagEndOffset: number = currentOffset + (pTag.textContent?.length || 0);
-    console.log("pTagEndOffset", pTagEndOffset);
-
-    if (sentence.startOffset >= pTagStartOffset && sentence.endOffset <= pTagEndOffset) {
-      return {pTag, startOffset: pTagStartOffset, endOffset: pTagEndOffset};
-    }
-    currentOffset = pTagEndOffset;
-  }
-  console.warn("Could not find paragraph for sentence", sentence);
-  return {pTag: null, startOffset: 0, endOffset: 0};
 }
 
 /**
@@ -105,67 +115,97 @@ function getPTagForSentence(sentence: HTMLSentenceMapping, container: HTMLElemen
  */
 function wrapRangeInContainer(
   sentence: HTMLSentenceMapping,
-  textNodes: TextNode[]
 ): void {
+  const textNodes = getTextNodesIn();
+  const { startOffset, endOffset, score, id } = sentence;
+
   let startNodeInfo = null;
   let endNodeInfo = null;
+  console.log("Wrapping range for sentence:", sentence.id);
   console.log(sentence);
-  console.log(textNodes);
 
   for (const node of textNodes) {
-    // If this node contains the start point
-    if (startNodeInfo === null &&
-      sentence.startOffset >= node.start &&
-      sentence.startOffset < node.end) {
-      startNodeInfo = {
-        node: node.node,
-        offset: sentence.startOffset - node.start
-      };
-      console.log("start ", startNodeInfo);
+    if (node.node.length === 0) {
+      continue;
     }
 
-    // If this node contains the end point
-    if (endNodeInfo === null &&
-      sentence.endOffset > node.start &&
-      sentence.endOffset <= node.end) {
-      endNodeInfo = {
-        node: node.node,
-        offset: sentence.endOffset - node.start
-      };
-      console.log("end ", endNodeInfo);
+    if (node.end <= startOffset) {
+      continue;
     }
-
-    // Break early if we found both nodes
-    if (startNodeInfo && endNodeInfo) {
+    if (node.start >= endOffset) {
       break;
     }
+
+    const localStart = Math.max(startOffset, node.start);
+    const localEnd = Math.min(endOffset, node.end);
+
+    const startInNode = localStart - node.start;
+    const endInNode = localEnd - node.start;
+    
+    // if (startNodeInfo === null &&
+    //   sentence.startOffset >= node.start &&
+    //   sentence.startOffset < node.end) {
+    //   startNodeInfo = {
+    //     node: node.node,
+    //     offset: sentence.startOffset - node.start
+    //   };
+    //   console.log("start ", startNodeInfo);
+    //   console.log("node ", node.node.textContent);
+    // }
+
+    // // If this node contains the end point
+    // if (endNodeInfo === null &&
+    //   sentence.endOffset > node.start &&
+    //   sentence.endOffset <= node.end) {
+    //   endNodeInfo = {
+    //     node: node.node,
+    //     offset: sentence.endOffset - node.start
+    //   };
+    //   console.log("end ", endNodeInfo);
+    //   console.log("node ", node.node.textContent);
+    // }
+
+    // // Break early if we found both nodes
+    // if (startNodeInfo && endNodeInfo) {
+    //   break;
+    // }
+    if (startInNode < endInNode) {
+      const range = document.createRange();
+      range.setStart(node.node, startInNode);
+      range.setEnd(node.node, endInNode);
+
+      const span = document.createElement("span");
+      span.className = "sentence-span";
+      span.id = `sentence-${id}`;
+      span.style.backgroundColor = getHeatColor(score);
+
+      // Extract the matching text and wrap it in a span
+      const extracted = range.extractContents();
+      span.appendChild(extracted);
+      range.insertNode(span);
+    }
   }
 
-  if (!startNodeInfo || !endNodeInfo) {
-    console.warn(`Could not find text nodes for sentence ${sentence.id}`);
-    return;
-  }
+  // if (!startNodeInfo || !endNodeInfo) {
+  //   console.warn(`Could not find text nodes for sentence ${sentence.id}`);
+  //   return;
+  // }
 
-  const range = document.createRange();
-  range.setStart(startNodeInfo.node, startNodeInfo.offset);
-  range.setEnd(endNodeInfo.node, endNodeInfo.offset);
+  // const range = document.createRange();
+  // range.setStart(startNodeInfo.node, startNodeInfo.offset);
+  // range.setEnd(endNodeInfo.node, endNodeInfo.offset);
 
-  // Create the span that will wrap the sentence
-  const span = document.createElement("span");
-  span.className = "sentence-span";
-  span.id = `sentence-${sentence.id}`;
-  span.style.backgroundColor = getHeatColor(sentence.score);
+  // // Create the span that will wrap the sentence
+  // const span = document.createElement("span");
+  // span.className = "sentence-span";
+  // span.id = `sentence-${sentence.id}`;
+  // span.style.backgroundColor = getHeatColor(sentence.score);
 
-  // Store the original HTML of the parent element
-  const parentElement = startNodeInfo.node.parentElement;
-  if (parentElement && !originalHTMLMap.has(parentElement)) {
-    originalHTMLMap.set(parentElement, parentElement.innerHTML);
-  }
 
-  // Wrap the sentence in the span
-  const extracted = range.extractContents();
-  span.appendChild(extracted);
-  range.insertNode(span);
+  // // Wrap the sentence in the span
+  // const extracted = range.extractContents();
+  // span.appendChild(extracted);
+  // range.insertNode(span);
 }
 
 
@@ -197,20 +237,17 @@ function removeHighlighting(): void {
 /**
  * Returns an array of text nodes with their global offsets.
  */
-function getTextNodesIn(pTagInfo: PTagInfo): TextNode[] {
-  const pTag = pTagInfo.pTag;
+function getTextNodesIn(): TextNode[] {
   const nodes: TextNode[] = [];
-  if (!pTag) {
-    console.error("No paragraph found containing sentence");
-    return nodes;
-  }
-  const walker = document.createTreeWalker(pTag, NodeFilter.SHOW_TEXT, null);
-  let globalOffset = pTagInfo.startOffset;
-  let currentNode: Text | null;
+  let expression = document.createExpression(xpathText, null);
+  const textNodes = expression.evaluate(document, XPathResult.ORDERED_NODE_ITERATOR_TYPE);
+  let globalOffset = 0
+  let currentNode = textNodes.iterateNext() as Text | null;
 
-  while ((currentNode = walker.nextNode() as Text | null)) {
+  while (currentNode) {
     const text = currentNode.textContent || "";
-    if (text.length === 0) {
+    if (text.trim() === "") {
+      currentNode = textNodes.iterateNext() as Text | null;
       continue;
     }
 
@@ -218,7 +255,11 @@ function getTextNodesIn(pTagInfo: PTagInfo): TextNode[] {
     const end = globalOffset + text.length;
     nodes.push({node: currentNode, start, end});
     globalOffset = end;
+    currentNode = textNodes.iterateNext() as Text | null;
   }
+  nodes.forEach((node) => {
+    console.log(node.node.textContent, node.start, node.end);
+  });
   return nodes;
 }
 
