@@ -61,6 +61,17 @@ let currentHeatMap: HTMLSentenceMapping[] = [];
 const currentPageKey = location.href;
 chrome.storage.local.set({[currentPageKey]: false});
 
+const srcTitle = document.getElementsByClassName("mw-page-title-main")[0]?.textContent || "hello";
+const srcLang = location.hostname.split(".")[0];
+// scrRevId is the oldid query parameter in the url
+const srcRevId = new URLSearchParams(location.search).get("oldid") || "0";
+
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "getPageInfo") {
+    sendResponse({title: srcTitle, lang: srcLang});
+  }
+});
+
 // Listen for messages from the extension popup
 chrome.runtime.onMessage.addListener(
   (message: { action: string }, sender, sendResponse): void => {
@@ -69,10 +80,11 @@ chrome.runtime.onMessage.addListener(
       chrome.runtime.sendMessage(
         {
           action: "getHeatMap",
-          srcRevId: 1,
-          srcTitle: "a",
-          targetRevId: 2,
-          targetTitle: "b",
+          srcRevId: srcRevId,
+          srcTitle: srcTitle,
+          //TODO Hardcoded for now, will be changed later
+          targetRevId: "1264244422",
+          targetTitle: "salmon",
           lang: "en",
         },
         (response: HTMLSentenceMapping[]) => {
@@ -118,11 +130,6 @@ function wrapRangeInContainer(
 ): void {
   const textNodes = getTextNodesIn();
   const { startOffset, endOffset, score, id } = sentence;
-
-  let startNodeInfo = null;
-  let endNodeInfo = null;
-  console.log("Wrapping range for sentence:", sentence.id);
-  console.log(sentence);
 
   for (const node of textNodes) {
     if (node.node.length === 0) {

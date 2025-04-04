@@ -1,10 +1,20 @@
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.getElementById("toggleColor") as HTMLInputElement | null;
-  let wikiLangCode = "en";
+    let wikiLangCode = "";
+    let srcTitle = "";
+
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    if (tabs[0]?.url) {
-      const url = new URL(tabs[0].url);
-      wikiLangCode = url.hostname.split(".")[0];
+      if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(
+              tabs[0].id,
+              {action: "getPageInfo"},
+              (response) => {
+                  const {title, lang} = response;
+                  console.log("Received page info:", response);
+                  wikiLangCode = lang;
+                  srcTitle = title;
+              }
+          );
     }
   });
 
@@ -49,113 +59,150 @@ document.addEventListener("DOMContentLoaded", () => {
     } as T;
   }
 
-  async function performSearch(query: string): Promise<void> {
+    const debouncedSearch = debounce((event: Event) => {
+        const query = (event.target as HTMLInputElement).value;
+        performSearch(query, srcTitle, wikiLangCode);
+    }, 300);
+    searchInput.addEventListener("input", debouncedSearch);
+
+    // Also perform search on pressing Enter (optional since live search is enabled)
+    searchInput.addEventListener("keypress", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            performSearch(searchInput.value, srcTitle, wikiLangCode);
+        }
+    });
+
+    if (searchForm) {
+        searchForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            const formData = new FormData(searchForm);
+            const searchValue = formData.get("entity") as string;
+            console.log("User search input:", searchValue);
+            // Future logic to send the search value to your script can be added here
+        });
+    } else {
+        console.error("Search form element not found");
+    }
+});
+
+// Add this interface at the top of your file
+interface FilteredArticle {
+    title: string;
+    lang: string;
+    revid: string;
+    description?: string;
+    thumbnailUrl?: string;
+}
+
+async function performSearch(query: string, srcTitle: string, lang: string): Promise<void> {
     const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
     const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
     const searchDropdown = document.getElementById("searchDropdown") as HTMLDivElement;
     if (!searchForm || !searchInput || !searchDropdown) {
-      console.error("Search form, input, or dropdown element not found");
-      return;
+        console.error("Search form, input, or dropdown element not found");
+        return;
     }
     if (!query.trim()) {
-      searchDropdown.innerHTML = "";
-      searchDropdown.classList.add("hidden");
-      return;
+        searchDropdown.innerHTML = "";
+        searchDropdown.classList.add("hidden");
+        return;
     }
 
-    const endpoint = `https://${encodeURIComponent(wikiLangCode)}.wikipedia.org/w/rest.php/v1/search/page?q=${encodeURIComponent(query)}`;
-
-    try {
-      const response = await fetch(endpoint);
-      const data = await response.json();
-      const results = data.pages || [];
-
-      searchDropdown.innerHTML = "";
-
-
-      if (results.length === 0) {
-        searchDropdown.innerHTML = `<div class="p-2 text-sm opacity-70">No results found.</div>`;
-      } else {
-        results.forEach((result: any) => {
-          const title = result.title;
-          const description = result.description || "";
-          const articleUrl = `https://${encodeURIComponent(wikiLangCode)}.wikipedia.org/wiki/${encodeURIComponent(title)}`;
-          
-          let imageUrl = "";
-          if (result.thumbnail && result.thumbnail.url) {imageUrl = result.thumbnail.url.startsWith("http")? result.thumbnail.url: "https:" + result.thumbnail.url;}
-
-          const resultItem = document.createElement("div");
-          resultItem.className =
-          "block p-2 border-b last:border-b-0 bg-primary text-primary-content hover:bg-neutral hover:text-neutral-content cursor-pointer flex justify-between items-center";
-
-          const textPart = `
-            <div class="flex items-center space-x-3">
-              ${
-                imageUrl
-                  ? `<img src="${imageUrl}" alt="${title}" class="bg-white w-12 h-12 object-cover rounded" />`
-                  : ""
-              }
-              <div>
-                <div class="font-bold text-lg">${title}</div>
-                <div class="text-sm">${description}</div>
-              </div>
-            </div>
-          `;
-
-          const buttonPart = `
-            <button type="button" class="btn btn-xs ml-2 openTabBtn">Open</button>
-          `;
-
-          resultItem.innerHTML = textPart + buttonPart;
-          resultItem.addEventListener("click", (e) => {
-            if ((e.target as HTMLElement).classList.contains("openTabBtn")) {
-              e.stopPropagation(); // Prevent also selecting the item
-              window.open(articleUrl, "_blank");
-            } else {
-              searchInput.value = title;
-              console.log("Selected item:", title);
-
-              searchDropdown.classList.add("hidden");
-
-              searchForm.requestSubmit();
+    chrome.runtime.sendMessage(
+        {
+            action: "performFilteredSearch",
+            sourceTitle: srcTitle, // the page we are on
+            query: query,
+            lang: lang,
+        },
+        (response) => {
+            if (!response?.success) {
+                // Handle error
+                return;
             }
-          });
-          
-          searchDropdown.appendChild(resultItem);
+
+            try {
+                const articles = response.results as FilteredArticle[]; // This is our array of FilteredArticle
+                renderArticles(articles, searchDropdown, searchInput, searchForm);
+                searchDropdown.classList.remove("hidden");
+            } catch (error) {
+                console.error("Error fetching Wikipedia data:", error);
+                searchDropdown.innerHTML = `<div class="p-2 text-sm text-red-500">Error fetching results.</div>`;
+                searchDropdown.classList.remove("hidden");
+            }
+        }
+    );
+}
+
+/**
+ * Renders a list of articles in the dropdown container
+ * @param articles The array of articles to render
+ * @param container The DOM element to render the articles into
+ * @param searchInput The search input element for updating selected values
+ * @param searchForm The search form for submitting when an article is selected
+ */
+function renderArticles(
+    articles: FilteredArticle[],
+    container: HTMLElement,
+    searchInput: HTMLInputElement,
+    searchForm: HTMLFormElement
+): void {
+    container.innerHTML = "";
+
+    if (articles.length === 0) {
+        container.innerHTML = `<div class="p-2 text-sm opacity-70">No results found.</div>`;
+        return;
+    }
+
+    articles.forEach((article) => {
+        const title = article.title;
+        const description = article.description || "";
+        // the article URL might be changed to local file or with revision id
+        const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}&oldid=${article.revid}`;
+
+        let imageUrl = "";
+        if (article.thumbnailUrl) {
+            imageUrl = article.thumbnailUrl.startsWith("http")
+                ? article.thumbnailUrl
+                : "https:" + article.thumbnailUrl;
+        }
+
+        const resultItem = document.createElement("div");
+        resultItem.className =
+            "block p-2 border-b last:border-b-0 bg-primary text-primary-content hover:bg-neutral hover:text-neutral-content cursor-pointer flex justify-between items-center";
+
+        const textPart = `
+      <div class="flex items-center space-x-3">
+        ${
+            imageUrl
+                ? `<img src="${imageUrl}" alt="${title}" class="bg-white w-12 h-12 object-cover rounded" />`
+                : ""
+        }
+        <div>
+          <div class="font-bold text-lg">${title}</div>
+          <div class="text-sm">${description}</div>
+        </div>
+      </div>
+    `;
+
+        const buttonPart = `
+      <button type="button" class="btn btn-xs ml-2 openTabBtn">Open</button>
+    `;
+
+        resultItem.innerHTML = textPart + buttonPart;
+        resultItem.addEventListener("click", (e) => {
+            if ((e.target as HTMLElement).classList.contains("openTabBtn")) {
+                e.stopPropagation(); // Prevent also selecting the item
+                window.open(articleUrl, "_blank");
+            } else {
+                searchInput.value = title;
+                console.log("Selected item:", title);
+                container.classList.add("hidden");
+                searchForm.requestSubmit();
+            }
         });
-        
-      }
-      searchDropdown.classList.remove("hidden");
-    } catch (error) {
-      console.error("Error fetching Wikipedia data:", error);
-      searchDropdown.innerHTML = `<div class="p-2 text-sm text-red-500">Error fetching results.</div>`;
-      searchDropdown.classList.remove("hidden");
-    }
-  }
 
-  const debouncedSearch = debounce((event: Event) => {
-    const query = (event.target as HTMLInputElement).value;
-    performSearch(query);
-  }, 300);
-  searchInput.addEventListener("input", debouncedSearch);
-
-  // Also perform search on pressing Enter (optional since live search is enabled)
-  searchInput.addEventListener("keypress", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      performSearch(searchInput.value);
-    }
-  });
-
-  if (searchForm) {
-    searchForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const formData = new FormData(searchForm);
-      const searchValue = formData.get("entity") as string;
-      console.log("User search input:", searchValue);
-      // Future logic to send the search value to your script can be added here
+        container.appendChild(resultItem);
     });
-  } else {
-    console.error("Search form element not found");
-  }
-});
+}

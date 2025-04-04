@@ -34,3 +34,36 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
+
+// background.ts
+chrome.runtime.onMessage.addListener(
+    (message: any, sender, sendResponse) => {
+        if (message.action === "performFilteredSearch") {
+            const {sourceTitle, query, lang = "en"} = message;
+
+            const url = `${baseApiUrl}/search?` +
+                `source_title=${encodeURIComponent(sourceTitle)}` +
+                `&q=${encodeURIComponent(query)}` +
+                `&lang=${encodeURIComponent(lang)}`;
+
+            fetch(url)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
+                .then(data => {
+                    // data is now your FilteredArticle[] from the Ktor server
+                    sendResponse({success: true, results: data});
+                })
+                .catch(err => {
+                    console.error("Error in searching for articles:", err);
+                    sendResponse({success: false, error: String(err)});
+                });
+
+            // Indicate that we'll respond asynchronously
+            return true;
+        }
+    }
+);
