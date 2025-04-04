@@ -7,6 +7,7 @@ ktor-version = "2.3.12"
 logback-version = "1.4.14"
 koin-version = "4.0.2"
 koin-bom = "4.0.2"
+mongodb-version = "4.10.1"
 
 [libraries]
 ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor-version" }
@@ -25,6 +26,9 @@ koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin-version" 
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin-version" }
 koin-bom = { module = "io.insert-koin:koin-bom", version.ref = "koin-bom" }
 koin-logger-slf4j = {module = "io.insert-koin:koin-logger-slf4j", version.ref = "koin-version" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor-version" }
+
+mongodb-driver = { module = "org.mongodb:mongodb-driver-kotlin-coroutine", version.ref = "mongodb-version" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin-version" }

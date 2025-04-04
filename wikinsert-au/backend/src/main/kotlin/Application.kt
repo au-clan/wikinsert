@@ -4,14 +4,12 @@
 
 package com.example
 
+import com.mongodb.kotlin.client.coroutine.MongoClient
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.cors.routing.*
-import org.jetbrains.exposed.sql.Database
-import org.koin.core.module.dsl.singleOf
-import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.ktor.plugin.Koin
 import org.koin.logger.slf4jLogger
@@ -34,7 +32,19 @@ fun Application.module() {
 }
 
 val koinModule = module {
-    single<DbService> { DbServiceMock() }
+    // MongoDB client and database
+    single { MongoClient.create("mongodb://localhost:27017/") }
+    single { get<MongoClient>().getDatabase("wikinsert") }
+
+    // Repositories
+    single<ArticleRepository> { MongoArticleRepository(get()) }
+    single<ArticleContentRepository> { MongoArticleContentRepository(get()) }
+    single<ArticleScoreRepository> { MongoArticleScoreRepository(get()) }
+
+    // DbService - use MongoDbService for production, DbServiceMock for testing
+    single<DbService> { MongoDbService(get(), get(), get()) }
+    // Uncomment the line below and comment the line above to use the mock implementation
+    // single<DbService> { DbServiceMock() }
 }
 
 
@@ -46,4 +56,3 @@ fun Application.configureCors() {
         anyHost()
     }
 }
-

@@ -1,13 +1,11 @@
 package com.example
 
+import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import org.koin.ktor.ext.inject
 
 
@@ -21,14 +19,30 @@ fun Application.configureRouting() {
             val targetRevisionId = call.parameters["target_rev_id"] ?: error("rev_id not found")
             val targetTitle = call.parameters["target_title"] ?: error("title not found")
 
-            val lang  = call.parameters["lang"] ?: ""
+            val lang = call.parameters["lang"] ?: error("lang not found")
 
-            val srcSentenceData = dbService.getSourceTargetPairs(srcRevisionId, targetRevisionId, srcTitle, targetTitle, lang)
+            val srcSentenceData = dbService.getScores(srcRevisionId, targetRevisionId, srcTitle, targetTitle, lang)
             val jsonEncode = Json.encodeToString(srcSentenceData)
-            println(jsonEncode)
+            println("Heatmap: $jsonEncode")
             call.respondText(jsonEncode)
 
         }
+
+        get("/search") {
+            val query = call.request.queryParameters["q"] ?: ""
+            val sourceTitle = call.request.queryParameters["source_title"] ?: return@get call.respond(
+                HttpStatusCode.BadRequest,
+                "Missing or malformed source_title"
+            )
+            val langCode = call.request.queryParameters["lang"] ?: "en"
+            println("Query: $query")
+
+            val finalArticles = dbService.filterArticlesBySearch(sourceTitle, langCode, query)
+            println("Final articles: $finalArticles")
+            val jsonEncode = Json.encodeToString(finalArticles)
+            call.respond(jsonEncode)
+        }
+
         get("/heatmap"){
             call.respondText("Hello, world!")
         }
