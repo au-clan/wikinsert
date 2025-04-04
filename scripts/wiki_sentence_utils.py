@@ -1,12 +1,5 @@
-#!/usr/bin/env python3
-"""
-Utility functions for extracting and processing sentences from Wikipedia articles.
-
-This module provides common functions used by both the sentence extraction and
-sentence scoring scripts, reducing code duplication.
-"""
-
 import logging
+from typing import List
 
 import pandas as pd
 import requests
@@ -83,15 +76,8 @@ logging.basicConfig(
 )
 
 
+
 def normalize_html_text(text):
-    """
-    Normalize text according to HTML rendering rules:
-    1. Remove spaces/tabs before and after line breaks
-    2. Convert tabs to spaces
-    3. Convert line breaks to spaces
-    4. Remove duplicate spaces
-    5. Trim leading and trailing spaces
-    """
     # Remove spaces and tabs before and after line breaks
     text = text.replace('\r\n', '\n')  # Normalize line breaks
     lines = text.split('\n')
@@ -110,19 +96,6 @@ def normalize_html_text(text):
 
 
 def build_sections(text_nodes, xpath_section):
-    """
-    For each text node, find the closest preceding <h2> in the DOM.
-    Use its text content as the section title, or 'lead' if none.
-    Accumulate text into sections with 'title', 'text', 'start', 'end'.
-    Apply HTML-style text normalization.
-
-    Args:
-        text_nodes: List of text nodes from the HTML document
-        xpath_section: XPath expression to find the section heading
-
-    Returns:
-        A pandas DataFrame with columns: title, text, start, end
-    """
     sections_data = []
     offset = 0
 
@@ -164,30 +137,22 @@ def build_sections(text_nodes, xpath_section):
 
 
 def get_sentences(sections_df):
-    """
-    Tokenize sentences from a DataFrame of sections with proper tracking of section, offset, and sentence metadata.
-
-    Args:
-        sections_df: DataFrame containing sections with 'title' and 'text' columns
-
-    Returns:
-        A pandas DataFrame with columns: sen-id, section, start, end, sentence
-    """
     tokenizer = Tokenizer(language_code='en')
     sections = []
     current_offset = 0
-
+    sen_idx = 0
     for _, section in sections_df.iterrows():
         section_data = {'title': section['title']}
         section_sentences = []
-        for sen_id, sentence in enumerate(tokenizer.sentence_tokenize(section['text'], use_abbreviation=True)):
+        for sentence in tokenizer.sentence_tokenize(section['text'], use_abbreviation=True):
             sentence_data = {
-                'sen-id': sen_id,
+                'idx': sen_idx,
                 'start': current_offset,
                 'end': current_offset + len(sentence),
                 'sentence': sentence
             }
             section_sentences.append(sentence_data)
+            sen_idx += 1
             current_offset += len(sentence)
         section_data['sentences'] = section_sentences
         sections.append(section_data)
@@ -195,21 +160,35 @@ def get_sentences(sections_df):
     return sections
 
 
-def parse_article(url):
-    """
-    Extract sentences from a Wikipedia article.
+def build_wiki_url(lang, title, revid):
+    base_url = f"https://{lang}.wikipedia.org/w/index.php?"
+    if title is not None and revid is not None:
+        return f"{base_url}title={title}&oldid={revid}"
+    elif title is not None:
+        return f"{base_url}title={title}"
+    elif revid is not None:
+        return f"{base_url}oldid={revid}"
+    else:
+        raise ValueError('Title or Oldid is required')
 
-    Args:
-        url: URL of the Wikipedia article
 
-    Returns:
-        A pandas DataFrame containing the extracted sentences
-    """
-    # `https://${lang}.wikipedia.org/w/index.php?title=${title}&curid=${curid}&oldid=${oldid}`
+def build_meta_data_endpoint(lang, title):
+    return f"https://{lang}.wikipedia.org/w/api.php?action=query&format=json&formatversion=2&list=&piprop=thumbnail&prop=pageimages%7Cdescription&titles={title}"
+
+
+def parse_article(lang='en', title=None, revid=None):
+    url = build_wiki_url(lang, title, revid)
+
     logging.info(f"Extracting sentences from {url}")
 
     # Fetch the Wikipedia article
     html_content = requests.get(url).text
+
+    # Fetch the thumbnail and description
+    meta_data_url = build_meta_data_endpoint(lang, title)
+    meta_data = requests.get(meta_data_url).json()
+    logging.info(f"Extracting metadata from {meta_data}")
+
 
     # Parse the HTML
     tree = html.fromstring(html_content)
@@ -225,45 +204,35 @@ def parse_article(url):
     # print the type of sections
 
     article = {
-        'title': url.split('/')[-1].replace('_', ' '),
-        'rev_id': None,
+        'title': title,
+        'revid': revid,
         'sections': sections
     }
+
+    thumbnail = {}
+    description = ''
+    if 'query' in meta_data and 'pages' in meta_data['query']:
+        pages = meta_data['query']['pages']
+        if len(pages) > 0:
+            page = pages[0]
+            thumbnail = page.get('thumbnail', {})
+            description = page.get('description', '')
+            logging.info(thumbnail)
+            logging.info(description)
+    else:
+        logging.info("No pages found for this article")
+
+    article['thumbnail'] = thumbnail
+    article['description'] = description
+    logging.info(article)
 
     return article
 
 
-def extract_lead_section(url):
-    """
-    Extract the lead section from a Wikipedia article.
-
-    Args:
-        url: URL of the Wikipedia article
-
-    Returns:
-        A tuple containing (title, lead_text)
-    """
-    logging.info(f"Extracting lead section from {url}")
-
-    # Extract the title from the URL
-    title = url.split('/')[-1].replace('_', ' ')
-
-    # Fetch the Wikipedia article
-    html_content = requests.get(url).text
-
-    # Parse the HTML
-    tree = html.fromstring(html_content)
-    # Extract text nodes
-    text_nodes = tree.xpath(xpath_condition)
-
-    # Build sections
-    sections_df = build_sections(text_nodes, xpath_section)
-
-    # Get the lead section
-    lead_section = sections_df[sections_df['title'] == 'lead']
-
-    if len(lead_section) == 0:
-        logging.warning(f"No lead section found in {url}")
-        return title, ""
-
-    return title, lead_section.iloc[0]['text']
+def extract_lead_section(sections: List[dict]) -> str:
+    for section in sections:
+        if section.get('title') == 'lead':
+            sentences = section.get('sentences', [])
+            lead_text = ' '.join([sentence['sentence'] for sentence in sentences])
+            return lead_text
+    return ''
