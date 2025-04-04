@@ -12,7 +12,6 @@ __.DS_Store
 
 colored_html/
 /.idea/
-.junie
 
 # Python cache
 __pycache__/
