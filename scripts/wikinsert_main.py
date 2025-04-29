@@ -10,7 +10,7 @@ from scripts.wiki_sentence_utils import fetch_article_metadata
 # Paths to input parquet files; change these as needed
 SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
 SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
-# Path to model directory; change as needed
+MENTION_MAP_PATH = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
 MODEL_DIR = os.environ.get("MODEL_DIR", "/path/to/model_dir")
 
 from sentence_score import get_sentence_scores

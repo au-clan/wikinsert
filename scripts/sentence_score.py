@@ -122,6 +122,27 @@ def get_sentence_scores(
         batch_size: int = 8
 ):
     logging.info(f"Scoring {article_title} with context size {context_size}")
+
+    # Load mention map for adding mention contexts
+    mention_map_path = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
+    try:
+        mention_df = pd.read_parquet(mention_map_path)
+        mention_map = {}
+        for _, row in mention_df.iterrows():
+            title = row.get('target_title')
+            mention_map.setdefault(title, []).append(row.get('mention', '').lower())
+        for title, mentions in mention_map.items():
+            mentions = list(set(mentions))
+            if len(mentions) > 10:
+                mentions.sort(key=len)
+                while len(mentions) > 10 and len(mentions[0]) < 3:
+                    mentions.pop(0)
+                mentions = mentions[:10]
+                random.shuffle(mentions)
+            mention_map[title] = ' '.join(mentions)
+    except Exception:
+        mention_map = {}
+
     model = {}
     if model_dir:
         model = load_model(model_dir)
@@ -145,10 +166,18 @@ def get_sentence_scores(
             if model_dir:
                 logging.info(f"Batch copied, now getting context for sentences")
 
-                input0 = [
-                    f"{target_title}{model['tokenizer'].sep_token}{target_lead}"
-                    for _ in range(len(batch_df))
-                ]
+                # Prepend mentions into the target context if available
+                mention_str = mention_map.get(target_title, "")
+                if mention_str:
+                    input0 = [
+                        f"{target_title} {mention_str}{model['tokenizer'].sep_token}{target_lead}"
+                        for _ in range(len(batch_df))
+                    ]
+                else:
+                    input0 = [
+                        f"{target_title}{model['tokenizer'].sep_token}{target_lead}"
+                        for _ in range(len(batch_df))
+                    ]
 
                 input1 = batch_df['context'].tolist()
 
