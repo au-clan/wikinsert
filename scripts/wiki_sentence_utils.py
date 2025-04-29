@@ -1,5 +1,4 @@
 import logging
-from typing import List
 
 import pandas as pd
 import requests
@@ -75,7 +74,11 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+import os
 
+# Paths to input parquet files; change these as needed
+SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
+SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
 
 def normalize_html_text(text):
     # Remove spaces and tabs before and after line breaks
@@ -184,11 +187,6 @@ def parse_article(lang='en', title=None, revid=None):
     # Fetch the Wikipedia article
     html_content = requests.get(url).text
 
-    # Fetch the thumbnail and description
-    meta_data_url = build_meta_data_endpoint(lang, title)
-    meta_data = requests.get(meta_data_url).json()
-    logging.info(f"Extracting metadata from {meta_data}")
-
 
     # Parse the HTML
     tree = html.fromstring(html_content)
@@ -209,30 +207,25 @@ def parse_article(lang='en', title=None, revid=None):
         'sections': sections
     }
 
-    thumbnail = {}
-    description = ''
-    if 'query' in meta_data and 'pages' in meta_data['query']:
-        pages = meta_data['query']['pages']
-        if len(pages) > 0:
-            page = pages[0]
-            thumbnail = page.get('thumbnail', {})
-            description = page.get('description', '')
-            logging.info(thumbnail)
-            logging.info(description)
-    else:
-        logging.info("No pages found for this article")
-
-    article['thumbnail'] = thumbnail
-    article['description'] = description
+    metadata = fetch_article_metadata(lang, title)
+    article['thumbnail'] = metadata['thumbnail']
+    article['description'] = metadata['description']
     logging.info(article)
 
     return article
 
 
-def extract_lead_section(sections: List[dict]) -> str:
-    for section in sections:
-        if section.get('title') == 'lead':
-            sentences = section.get('sentences', [])
-            lead_text = ' '.join([sentence['sentence'] for sentence in sentences])
-            return lead_text
-    return ''
+def fetch_article_metadata(lang: str, title: str) -> dict:
+    # Construct metadata endpoint
+    meta_data_url = build_meta_data_endpoint(lang, title)
+    meta_data = requests.get(meta_data_url).json()
+    logging.info(f"Extracting metadata from {meta_data}")
+    thumbnail = {}
+    description = ''
+    if 'query' in meta_data and 'pages' in meta_data['query']:
+        pages = meta_data['query']['pages']
+        if pages:
+            page = pages[0]
+            thumbnail = page.get('thumbnail', {})
+            description = page.get('description', '')
+    return {"thumbnail": thumbnail, "description": description}

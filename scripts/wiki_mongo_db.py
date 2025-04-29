@@ -27,6 +27,7 @@ class WikiMongoDB:
         self.articles_collection = self.db["articles"]
         self.contents_collection = self.db["article_contents"]
         self.scores_collection = self.db["article_scores"]
+        self.targets_collection = self.db["targets"]
 
     def add_article_meta_data(self, lang: str, title: str, revid: str, thumbnail: Dict[str, any],
                               description: str) -> str:
@@ -51,10 +52,15 @@ class WikiMongoDB:
         result = self.contents_collection.insert_one(contents)
         return str(result.inserted_id)
 
-    def add_scores(self, source_id: str, target_id: str, scores: List[Dict[str, Any]]) -> str:
-        hashed_id = _md5.md5(f"{source_id}{target_id}".encode()).hexdigest()
+    def add_scores(self, source_id: str, target_title: str, scores: List[Dict[str, Any]]) -> str:
+        article_meta = self.get_article_meta_data(source_id)
+        lang = article_meta["lang"]
+        source_rev_id = article_meta["revid"]
+        hashed_id = _md5.md5(f"{lang}{target_title}{source_rev_id}".encode()).hexdigest()
         contents = {
             "_id": hashed_id,
+            "source_id": source_id,
+            "target_title": target_title,
             "scores": scores
         }
         result = self.scores_collection.insert_one(contents)
@@ -85,3 +91,26 @@ class WikiMongoDB:
 
     def list_articles(self) -> List[Dict[str, Any]]:
         return list(self.articles_collection.find())
+
+    def add_target_meta(self, target_title: str, lang: str, lead: str,
+                        thumbnail: Dict[str, Any], description: str) -> str:
+        """
+        Store metadata for a target article for search and display.
+        """
+        # Use lang+title for a unique ID
+        target_id = _md5.md5(f"{lang}{target_title}".encode()).hexdigest()
+        contents = {
+            "_id": target_id,
+            "title": target_title,
+            "lang": lang,
+            "lead": lead,
+            "thumbnail": thumbnail,
+            "description": description,
+        }
+        # Upsert to avoid duplicates
+        self.targets_collection.update_one(
+            {"_id": target_id},
+            {"$set": contents},
+            upsert=True
+        )
+        return target_id
