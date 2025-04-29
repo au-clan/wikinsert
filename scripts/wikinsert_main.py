@@ -9,7 +9,10 @@ from wiki_sentence_utils import extract_lead_section, parse_article
 
 
 class WikiPipeline:
-    def __init__(self, mongo_uri="mongodb://localhost:27017/", db_name="wikinsert"):
+    def __init__(self, mongo_uri=None, db_name=None):
+        import os
+        mongo_uri = mongo_uri or os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+        db_name = db_name or os.environ.get("DB_NAME", "wikinsert")
         self.db = WikiMongoDB(mongo_uri, db_name)
 
     def extract_article(self, lang, title, revid):

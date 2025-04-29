@@ -17,7 +17,11 @@ class WikiMongoDB:
     Class to handle MongoDB operations for Wikipedia article extraction and scoring.
     """
 
-    def __init__(self, mongo_uri: str = "mongodb://localhost:27017/", db_name: str = "wikinsert"):
+    def __init__(self, mongo_uri: str = None, db_name: str = None):
+        import os
+        mongo_uri = mongo_uri or os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
+        db_name = db_name or os.environ.get("DB_NAME", "wikinsert")
+
         self.client = MongoClient(mongo_uri)
         self.db = self.client[db_name]
         self.articles_collection = self.db["articles"]

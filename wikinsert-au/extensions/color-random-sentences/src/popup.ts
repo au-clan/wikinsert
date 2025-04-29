@@ -146,7 +146,7 @@ function renderArticles(
     articles: FilteredArticle[],
     container: HTMLElement,
     searchInput: HTMLInputElement,
-    searchForm: HTMLFormElement
+    searchForm: HTMLFormElement,
 ): void {
     container.innerHTML = "";
 

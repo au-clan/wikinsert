@@ -33,8 +33,14 @@ fun Application.module() {
 
 val koinModule = module {
     // MongoDB client and database
-    single { MongoClient.create("mongodb://localhost:27017/") }
-    single { get<MongoClient>().getDatabase("wikinsert") }
+    single {
+        val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://localhost:27017/"
+        MongoClient.create(mongoUri)
+    }
+    single {
+        val dbName = System.getenv("MONGODB_DATABASE") ?: "wikinsert"
+        get<MongoClient>().getDatabase(dbName)
+    }
 
     // Repositories
     single<ArticleRepository> { MongoArticleRepository(get()) }
