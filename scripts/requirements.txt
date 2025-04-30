@@ -9,3 +9,4 @@ torch==2.2.0
 transformers==4.38.2
 nltk==3.8.1
 mwtokenizer==0.1.0
+dotenv==1.1.0

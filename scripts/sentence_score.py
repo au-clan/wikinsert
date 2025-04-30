@@ -1,8 +1,8 @@
-import json
+import logging
 import logging
 import os
 import random
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 
 import pandas as pd
 import torch
@@ -11,7 +11,6 @@ from tqdm import tqdm
 from transformers import AutoModel, AutoTokenizer
 
 # Import utility functions from the common module
-from wiki_sentence_utils import parse_article
 
 # Configure logging
 logging.basicConfig(
@@ -21,33 +20,6 @@ logging.basicConfig(
         logging.StreamHandler()
     ]
 )
-
-
-def load_article_from_json(json_path: str):
-    logging.info(f"Loading article from {json_path}")
-    try:
-        article = json.load(open(json_path))
-        logging.info(f"Loaded {len(article['sections'])} sections")
-        return article
-    except Exception as e:
-        logging.error(f"Error loading sentences from {json_path}: {e}")
-        return None
-
-
-def get_article(article_url: str, json_path: Optional[str] = None):
-    if json_path and os.path.exists(json_path):
-        article = load_article_from_json(json_path)
-        if article is not None:
-            return article
-
-    logging.info(f"Extracting sentences from {article_url}")
-    article = parse_article()
-
-    if json_path:
-        article = json.dump(article, open(json_path, 'w'), indent=2)
-        logging.info(f"Saved sentences to {json_path}")
-
-    return article
 
 
 def get_context_for_sentence(sentences, sentence, context_size=5):

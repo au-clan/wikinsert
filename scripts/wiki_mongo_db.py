@@ -52,15 +52,14 @@ class WikiMongoDB:
         result = self.contents_collection.insert_one(contents)
         return str(result.inserted_id)
 
-    def add_scores(self, source_id: str, target_title: str, scores: List[Dict[str, Any]]) -> str:
+    def add_scores(self, source_id: str, target_id: str, scores: List[Dict[str, Any]]) -> str:
         article_meta = self.get_article_meta_data(source_id)
         lang = article_meta["lang"]
-        source_rev_id = article_meta["revid"]
-        hashed_id = _md5.md5(f"{lang}{target_title}{source_rev_id}".encode()).hexdigest()
+        hashed_id = _md5.md5(f"{lang}{target_id}{source_id}".encode()).hexdigest()
         contents = {
             "_id": hashed_id,
             "source_id": source_id,
-            "target_title": target_title,
+            "target_id": target_id,
             "scores": scores
         }
         result = self.scores_collection.insert_one(contents)
