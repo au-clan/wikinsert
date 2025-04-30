@@ -26,6 +26,9 @@ services:
     container_name: python-populator
     volumes:
       - pip-cache:/pip-cache
+      - ./.env:/app/.env:ro
+      - /home/aarora/multilingual_entity_insertion/boulenge/wikidumps_data:/data:ro
+      - /home/aarora/multilingual_entity_insertion/models/roberta_full_multilingual-all:/models:ro
     depends_on:
       mongodb:
         condition: service_healthy
@@ -34,6 +37,10 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
       - DB_NAME=wikinsert
+      - SOURCE_ARTICLES_PATH=/data/report_examples/revisions_files/revisions_en.parquet
+      - SCORED_DATA_PATH=/data/report_examples/score_data.parquet
+      - MENTION_MAP_PATH=/data/report_examples/mention_map.parquet
+      - MODEL_DIR=/models
 
   # Ktor API container
   ktor-api:
