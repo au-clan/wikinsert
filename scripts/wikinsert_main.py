@@ -4,7 +4,7 @@ import os
 
 import _md5
 import pandas as pd
-from dotenv import load_dotenv
+from python_dotenv import load_dotenv
 
 from scripts.wiki_sentence_utils import fetch_article_metadata
 
