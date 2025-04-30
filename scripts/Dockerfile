@@ -3,8 +3,12 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install dependencies
+ENV PIP_CACHE_DIR=/pip-cache
+
+# Install dependencies
 COPY scripts/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=cache,target=/pip-cache \
+    pip install --no-cache-dir -r requirements.txt \
 
 # Copy scripts
 COPY scripts/ /app/

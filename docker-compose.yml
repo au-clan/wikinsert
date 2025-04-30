@@ -26,6 +26,8 @@ services:
       context: .
       dockerfile: scripts/Dockerfile
     container_name: python-populator
+    volumes:
+      - pip-cache:/pip-cache
     depends_on:
       mongodb:
         condition: service_healthy
@@ -60,3 +62,4 @@ networks:
 
 volumes:
   mongodb_data:
+  pip-cache:

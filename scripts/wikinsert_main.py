@@ -6,7 +6,7 @@ import _md5
 import pandas as pd
 from dotenv import load_dotenv
 
-from scripts.wiki_sentence_utils import fetch_article_metadata
+from wiki_sentence_utils import fetch_article_metadata
 
 # Load environment variables from .env file
 load_dotenv()
