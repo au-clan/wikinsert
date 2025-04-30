@@ -38,8 +38,8 @@ services:
       - MONGO_URI=mongodb://mongodb:27017/
       - DB_NAME=wikinsert
       - SOURCE_ARTICLES_PATH=/data/report_examples/revisions_files/revisions_en.parquet
-      - SCORED_DATA_PATH=/data/report_examples/score_data.parquet
-      - MENTION_MAP_PATH=/data/report_examples/mention_map.parquet
+      - SCORED_DATA_PATH=/data/report_examples/scored_data/en_5_scored.parquet
+      - MENTION_MAP_PATH=/data/report_examples/ready_to_score_data/mention_map_en.parquet
       - MODEL_DIR=/models
 
   # Ktor API container
