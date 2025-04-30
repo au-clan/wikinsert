@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import _md5
 from pymongo import MongoClient
@@ -79,7 +79,7 @@ class WikiMongoDB:
         section = self.contents_collection.find_one({"_id": article_id})
         return section.get("sections", [])
 
-    def get_article_meta_data(self, article_id: str = None) -> dict[str, Any] | None:
+    def get_article_meta_data(self, article_id: str = None) -> Optional[Dict[str, Any]]:
         article = self.articles_collection.find_one({"_id": article_id})
         # article is Mapping so convert to dict
         return dict(article) if article else None

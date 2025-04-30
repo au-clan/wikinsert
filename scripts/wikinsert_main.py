@@ -114,7 +114,7 @@ class WikiPipeline:
         for (source_id, target_id) in pairs_to_score:
             self.score_and_store(source_id, target_id, )
 
-    def full_pipeline(self):
+    def full_pipeline(self, testing=False):
         """
          Pipeline run:
         - Extract source articles from SOURCE_ARTICLES_PATH
@@ -124,6 +124,9 @@ class WikiPipeline:
         lang = os.path.basename(SOURCE_ARTICLES_PATH).split('.')[0].split('_')[-1]
         # Load source articles
         df_sources = pd.read_parquet(SOURCE_ARTICLES_PATH)
+        # take only the first 20 for testing
+        if testing:
+            df_sources = df_sources.head(20)
         id_map = {}
         for _, row in df_sources.iterrows():
             title = row['source_title'].lower()
@@ -154,7 +157,10 @@ def main():
     # pipeline.full_pipeline_example()
 
     # Uncomment the line below to run the full pipeline with parquet files
-    pipeline.full_pipeline()
+    pipeline.full_pipeline(testing=True)
+    logging.info("Finished testing")
+    # withouth testing
+    pipeline.full_pipeline(testing=False)
 
 
 if __name__ == "__main__":
