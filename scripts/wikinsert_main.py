@@ -20,8 +20,8 @@ class WikiPipeline:
         # Load environment variables from .env file
         load_dotenv()
         # Paths to input parquet files; change these as needed
-        SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
-        SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
+        self.source_path = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
+        self.scored_path = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
         MENTION_MAP_PATH = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
         MODEL_DIR = os.environ.get("MODEL_DIR", "/path/to/model_dir")
         self.db = WikiMongoDB(mongo_uri, db_name)
@@ -113,16 +113,16 @@ class WikiPipeline:
         for (source_id, target_id) in pairs_to_score:
             self.score_and_store(source_id, target_id, )
 
-    def full_pipeline(self, testing=False):
+    def full_pipeline(self, testing):
         """
          Pipeline run:
         - Extract source articles from SOURCE_ARTICLES_PATH
         - Score pairs from SCORED_DATA_PATH
         """
         # Determine language from source file name
-        lang = os.path.basename(SOURCE_ARTICLES_PATH).split('.')[0].split('_')[-1]
+        lang = os.path.basename(self.source_path).split('.')[0].split('_')[-1]
         # Load source articles
-        df_sources = pd.read_parquet(SOURCE_ARTICLES_PATH)
+        df_sources = pd.read_parquet(self.source_path)
         # take only the first 20 for testing
         if testing:
             df_sources = df_sources.head(20)
@@ -133,7 +133,7 @@ class WikiPipeline:
             src_id = self.extract_article(lang, title, revid)
             id_map[(title, revid)] = src_id
         # Load scoring data
-        df_scores = pd.read_parquet(SCORED_DATA_PATH)
+        df_scores = pd.read_parquet(self.scored_path)
         # Process each unique source-target pair
         for _, row in df_scores[
             ['source_title', 'first_version', 'target_title', 'target_lead']].drop_duplicates().iterrows():
