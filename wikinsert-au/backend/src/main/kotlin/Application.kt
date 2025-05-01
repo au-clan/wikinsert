@@ -46,6 +46,7 @@ val koinModule = module {
     single<ArticleRepository> { MongoArticleRepository(get()) }
     single<ArticleContentRepository> { MongoArticleContentRepository(get()) }
     single<ArticleScoreRepository> { MongoArticleScoreRepository(get()) }
+    single<TargetRepository> { MongoTargetRepository(get()) }
 
     // DbService - use MongoDbService for production, DbServiceMock for testing
     single<DbService> { MongoDbService(get(), get(), get()) }

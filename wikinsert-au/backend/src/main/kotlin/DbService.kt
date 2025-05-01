@@ -8,7 +8,6 @@ import java.util.*
 interface DbService {
     suspend fun getScores(
         srcRevisionId: String,
-        targetRevisionId: String,
         srcTitle: String,
         targetTitle: String,
         lang: String
@@ -44,7 +43,7 @@ SentenceData(5, 910, 1030, 0.95),
  */
 class MongoDbService(
     private val articleRepository: ArticleRepository,
-    private val articleContentRepository: ArticleContentRepository,
+    private val targetRepository: TargetRepository,
     private val articleScoreRepository: ArticleScoreRepository
 ) : DbService {
 
@@ -63,26 +62,25 @@ class MongoDbService(
             Filters.`in`("_id", targetIds),
             Filters.or(
                 Filters.regex("title", pattern, regexOptions),
-                Filters.regex("description", pattern, regexOptions)
+                Filters.regex("description", pattern, regexOptions),
+                Filters.regex("lead", pattern, regexOptions),
             )
         )
 
-        val filteredArticles = articleRepository.applyBsonFilter(dbQuery)
+        val filteredArticles = targetRepository.applyBsonFilter(dbQuery)
         println("Filtered articles: $filteredArticles")
         return filteredArticles.map { article ->
             FilteredArticleResponseData(
                 title = article.title,
                 lang = article.lang,
-                revid = article.revid,
                 description = article.description,
-                thumbnailUrl = article.thumbnail?.source
+                thumbnailUrl = article.thumbnail.source
             )
         }
     }
 
     override suspend fun getScores(
         srcRevisionId: String,
-        targetRevisionId: String,
         srcTitle: String,
         targetTitle: String,
         lang: String
@@ -90,7 +88,7 @@ class MongoDbService(
         val lowerCaseSrc = srcTitle.lowercase(Locale.getDefault())
         val lowerCaseTarget = targetTitle.lowercase(Locale.getDefault())
         val sourceId = generateArticleId(lang, lowerCaseSrc, srcRevisionId)
-        val targetId = generateArticleId(lang, lowerCaseTarget, targetRevisionId)
+        val targetId = generateTargetId(lang, lowerCaseTarget)
 
         val pairId = generatePairId(sourceId, targetId)
 
@@ -117,6 +115,11 @@ class MongoDbService(
         return md5(input)
     }
 
+    private fun generateTargetId(lang: String, title: String): String {
+        val input = "$lang$title"
+        return md5(input)
+    }
+
     private fun md5(input: String): String {
         val md = MessageDigest.getInstance("MD5")
         val digest = md.digest(input.toByteArray())
@@ -128,7 +131,6 @@ class MongoDbService(
 data class FilteredArticleResponseData(
     val title: String,
     val lang: String,
-    val revid: String,
     val description: String?,
     val thumbnailUrl: String?
 )

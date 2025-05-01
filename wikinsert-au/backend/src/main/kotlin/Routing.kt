@@ -16,12 +16,11 @@ fun Application.configureRouting() {
         post("/heatmap") {
             val srcRevisionId = call.parameters["src_rev_id"] ?: error("rev_id not found")
             val srcTitle = call.parameters["src_title"] ?: error("title not found")
-            val targetRevisionId = call.parameters["target_rev_id"] ?: error("rev_id not found")
             val targetTitle = call.parameters["target_title"] ?: error("title not found")
 
             val lang = call.parameters["lang"] ?: error("lang not found")
 
-            val srcSentenceData = dbService.getScores(srcRevisionId, targetRevisionId, srcTitle, targetTitle, lang)
+            val srcSentenceData = dbService.getScores(srcRevisionId, srcTitle, targetTitle, lang)
             val jsonEncode = Json.encodeToString(srcSentenceData)
             println("Heatmap: $jsonEncode")
             call.respondText(jsonEncode)

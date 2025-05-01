@@ -76,3 +76,14 @@ data class ArticleScore(
     val _id: String,
     val scores: List<SentenceScore>
 )
+
+@Serializable
+data class Target(
+    val _id: String,
+    val title: String,
+    val lang: String,
+    val lead: String,
+    val thumbnail: Thumbnail,
+    val description: String,
+)
+
