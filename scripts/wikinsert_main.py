@@ -6,7 +6,6 @@ import _md5
 import pandas as pd
 from dotenv import load_dotenv
 
-from scripts.sentence_score import load_mention_map, load_model
 from sentence_score import SentenceScorer
 from wiki_mongo_db import WikiMongoDB
 from wiki_sentence_utils import fetch_article_metadata
