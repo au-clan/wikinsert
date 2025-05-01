@@ -25,7 +25,7 @@ class WikiPipeline:
         MENTION_MAP_PATH = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
         MODEL_DIR = os.environ.get("MODEL_DIR", "/path/to/model_dir")
         self.db = WikiMongoDB(mongo_uri, db_name)
-        self.scorer = SentenceScorer(SCORED_DATA_PATH, MENTION_MAP_PATH)
+        self.scorer = SentenceScorer(MODEL_DIR, MENTION_MAP_PATH)
 
 
     def extract_article(self, lang, title, revid):
