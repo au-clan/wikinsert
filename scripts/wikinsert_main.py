@@ -6,19 +6,10 @@ import _md5
 import pandas as pd
 from dotenv import load_dotenv
 
-from wiki_sentence_utils import fetch_article_metadata
-
-# Load environment variables from .env file
-load_dotenv()
-
-# Paths to input parquet files; change these as needed
-SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
-SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
-MENTION_MAP_PATH = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
-MODEL_DIR = os.environ.get("MODEL_DIR", "/path/to/model_dir")
-
-from sentence_score import get_sentence_scores
+from scripts.sentence_score import load_mention_map, load_model
+from sentence_score import SentenceScorer
 from wiki_mongo_db import WikiMongoDB
+from wiki_sentence_utils import fetch_article_metadata
 from wiki_sentence_utils import parse_article
 
 
@@ -27,7 +18,16 @@ class WikiPipeline:
         import os
         mongo_uri = mongo_uri or os.environ.get("MONGO_URI", "mongodb://localhost:27017/")
         db_name = db_name or os.environ.get("DB_NAME", "wikinsert")
+        # Load environment variables from .env file
+        load_dotenv()
+        # Paths to input parquet files; change these as needed
+        SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
+        SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
+        MENTION_MAP_PATH = os.environ.get("MENTION_MAP_PATH", "/path/to/mention_map.parquet")
+        MODEL_DIR = os.environ.get("MODEL_DIR", "/path/to/model_dir")
         self.db = WikiMongoDB(mongo_uri, db_name)
+        self.scorer = SentenceScorer(SCORED_DATA_PATH, MENTION_MAP_PATH)
+
 
     def extract_article(self, lang, title, revid):
         """
@@ -77,12 +77,11 @@ class WikiPipeline:
 
         source_sections = self.db.get_sections(source_id)
 
-        scores = get_sentence_scores(
+        scores = self.scorer.get_sentence_scores(
             source_sections,
             source_title,
             target_title,
             target_lead,
-            model_dir=MODEL_DIR,
         )
         # Save to DB
         self.db.add_scores(source_id, target_id, scores.to_dict('records'))
@@ -111,6 +110,7 @@ class WikiPipeline:
             # Pair the first article with the second, for example
             (extracted_ids[1], extracted_ids[0])
         ]
+
         for (source_id, target_id) in pairs_to_score:
             self.score_and_store(source_id, target_id, )
 
