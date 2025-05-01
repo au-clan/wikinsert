@@ -106,8 +106,8 @@ def load_model(model_dir, use_cuda=True):
 
 class SentenceScorer:
     def __init__(self, model_path, mention_map_path):
-        self.mention_map = load_mention_map(MENTION_MAP_PATH)
-        self.model = load_model(MODEL_DIR)
+        self.mention_map = load_mention_map(mention_map_path)
+        self.model = load_model(model_path)
 
     def get_sentence_scores(
             self,
