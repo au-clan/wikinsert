@@ -68,35 +68,19 @@ def load_mention_map(mention_map_path):
 def load_model(model_dir, use_cuda=True):
     logging.info(f"Loading model from {model_dir}")
 
-    # If model_dir is not provided, use a default model
-    if not model_dir:
-        logging.info("Using default model")
-        model = {
-            'model': AutoModel.from_pretrained('bert-base-multilingual-cased'),
-            'tokenizer': AutoTokenizer.from_pretrained('bert-base-multilingual-cased')
-        }
-        model['model'].eval()
-        model['classification_head'] = nn.Sequential(
-            nn.Linear(model['model'].config.hidden_size, model['model'].config.hidden_size),
-            nn.ReLU(),
-            nn.Linear(model['model'].config.hidden_size, 1)
-        )
-        model['classification_head'].eval()
-    else:
-        # Load the model from the specified directory
-        model = {
-            'model': AutoModel.from_pretrained(os.path.join(model_dir, 'model')),
-            'tokenizer': AutoTokenizer.from_pretrained(os.path.join(model_dir, 'tokenizer'))
-        }
-        model['model'].eval()
-        model['classification_head'] = nn.Sequential(
-            nn.Linear(model['model'].config.hidden_size, model['model'].config.hidden_size),
-            nn.ReLU(),
-            nn.Linear(model['model'].config.hidden_size, 1)
-        )
-        model['classification_head'].load_state_dict(torch.load(
-            os.path.join(model_dir, 'classification_head.pth'), map_location='cpu'))
-        model['classification_head'].eval()
+    model = {
+        'model': AutoModel.from_pretrained(os.path.join(model_dir, 'model')),
+        'tokenizer': AutoTokenizer.from_pretrained(os.path.join(model_dir, 'tokenizer'))
+    }
+    model['model'].eval()
+    model['classification_head'] = nn.Sequential(
+        nn.Linear(model['model'].config.hidden_size, model['model'].config.hidden_size),
+        nn.ReLU(),
+        nn.Linear(model['model'].config.hidden_size, 1)
+    )
+    model['classification_head'].load_state_dict(torch.load(
+        os.path.join(model_dir, 'classification_head.pth'), map_location='cpu'))
+    model['classification_head'].eval()
 
     if use_cuda:
         model['model'] = model['model'].to('cuda' if torch.cuda.is_available() else 'cpu')
