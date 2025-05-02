@@ -1,0 +1,119 @@
+<template>
+	<div>
+		<cdx-typeahead-search
+			id="typeahead-search-wikipedia"
+			form-action="https://en.wikipedia.org/w/index.php"
+			:use-button="true"
+			:search-results="searchResults"
+			:show-thumbnail="true"
+			:highlight-query="true"
+			:auto-expand-width="true"
+			placeholder="Search Wikipedia"
+			@input="onInput"
+			@search-result-click="onSearchResultClick"
+			@submit="onSubmit"
+		>
+			<template #default>
+				<input
+					type="hidden"
+					name="language"
+					value="en"
+				>
+				<input
+					type="hidden"
+					name="title"
+					value="Special:Search"
+				>
+			</template>
+		</cdx-typeahead-search>
+	</div>
+</template>
+
+<script lang="ts">
+import { defineComponent, ref } from 'vue';
+import { CdxTypeaheadSearch } from '@wikimedia/codex';
+import { FilteredArticle } from '../../../extension/src/popup.js'
+
+export default defineComponent( {
+	name: 'TypeaheadSearchWikipedia',
+	components: { CdxTypeaheadSearch },
+	setup() {
+		const searchResults = ref( [] );
+		const currentSearchTerm = ref( '' );
+
+		function onInput( value ) {
+			// eslint-disable-next-line no-console
+			console.log( 'input event emitted with value:', value );
+
+			// Internally track the current search term.
+			currentSearchTerm.value = value;
+
+			// Unset search results and the search footer URL if there is no value.
+			if ( !value || value === '' ) {
+				searchResults.value = [];
+				return;
+			}
+
+      /**
+       * Format search results for consumption by TypeaheadSearch.
+       *
+       * @param filteredArticles
+       * @return
+       */
+      function adaptApiResponse( filteredArticles: FilteredArticle[] ) {
+        return filteredArticles.map( ( { title, lang, description, thumbnail } ) => ( {
+          label: title,
+          value: crypto.randomUUID(),
+          description: description,
+          url: `https://${encodeURIComponent(lang)}.wikipedia.org/wiki/${ encodeURIComponent( key ) }`,
+          thumbnail: thumbnail ? {
+            url: thumbnail.url,
+            width: thumbnail.width,
+            height: thumbnail.height
+          } : undefined
+        } ) );
+      }
+
+      const baseApiUrl = "http://odin.st.lab.au.dk:8081";
+      const lang = 'en'; // TODO: Get the language from the user interface
+			const url = `${baseApiUrl}/search?` +
+                `&q=${encodeURIComponent(value)}` +
+                `&lang=${encodeURIComponent(lang)}`;
+			fetch(
+				url
+			).then( ( resp ) => resp.json() )
+				.then( ( data ) => {
+					if ( currentSearchTerm.value === value ) {
+            const articles = data  // This is our array of FilteredArticle
+            renderArticles(articles, searchDropdown, searchInput, searchForm);
+            searchDropdown.classList.remove("hidden");
+						searchResults.value = data.pages && data.pages.length > 0 ?
+							adaptApiResponse( data.pages ) :
+							[];
+					}
+				} ).catch( () => {
+					// On error, reset search results and search footer URL.
+          console.log("Could not fetch data from server")
+					searchResults.value = [];
+				} );
+		}
+
+		function onSearchResultClick( value ) {
+			// eslint-disable-next-line no-console
+			console.log( 'search-result-click event emitted with value:', value );
+		}
+
+		function onSubmit( value ) {
+			// eslint-disable-next-line no-console
+			console.log( 'submit event emitted with value:', value );
+		}
+
+		return {
+			searchResults,
+			onInput,
+			onSearchResultClick,
+			onSubmit
+		};
+	}
+} );
+</script>
