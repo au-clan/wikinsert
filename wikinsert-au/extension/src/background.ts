@@ -37,10 +37,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // background.ts
 chrome.runtime.onMessage.addListener(
     (message: any, sender, sendResponse) => {
-        if (message.action === "performFilteredSearch") {
+        if (message.action === "performFilteredSearchOnTargets") {
             const {sourceTitle, query, lang = "en"} = message;
 
-            const url = `${baseApiUrl}/search?` +
+            const url = `${baseApiUrl}/searchTargets?` +
                 `source_title=${encodeURIComponent(sourceTitle)}` +
                 `&q=${encodeURIComponent(query)}` +
                 `&lang=${encodeURIComponent(lang)}`;

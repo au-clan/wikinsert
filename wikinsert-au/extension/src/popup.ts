@@ -86,12 +86,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-// Add this interface at the top of your file
-interface FilteredArticle {
+export interface Thumbnail {
+    source: string;
+    width: number;
+    height: number;
+}
+export interface FilteredArticle {
     title: string;
     lang: string;
     description?: string;
-    thumbnailUrl?: string;
+    thumbnail?: Thumbnail;
 }
 
 async function performSearch(query: string, srcTitle: string, lang: string): Promise<void> {
@@ -110,7 +114,7 @@ async function performSearch(query: string, srcTitle: string, lang: string): Pro
 
     chrome.runtime.sendMessage(
         {
-            action: "performFilteredSearch",
+            action: "performFilteredSearchOnTargets",
             sourceTitle: srcTitle, // the page we are on
             query: query,
             lang: lang,
@@ -161,10 +165,10 @@ function renderArticles(
         const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}}`;
 
         let imageUrl = "";
-        if (article.thumbnailUrl) {
-            imageUrl = article.thumbnailUrl.startsWith("http")
-                ? article.thumbnailUrl
-                : "https:" + article.thumbnailUrl;
+        if (article.thumbnail) {
+            imageUrl = article.thumbnail.source.startsWith("http")
+                ? article.thumbnail.source
+                : "https:" + article.thumbnail.source;
         }
 
         const resultItem = document.createElement("div");

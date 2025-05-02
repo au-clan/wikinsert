@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "main": "background.js",
   "scripts": {
-    "build:css": "npx @tailwindcss/cli -i ./public/popup.css -o ./dist/popup.css",
+    "build:css": "npx @tailwindcss/cli -i public/popup.css -o ./dist/popup.css",
     "build:js": "webpack --config webpack/webpack.config.js",
     "build": " npm run build:js && npm run build:css",
-    "dev:css": "npx @tailwindcss/cli -i ./public/popup.css -o ./dist/popup.css --watch",
+    "dev:css": "npx @tailwindcss/cli -i public/popup.css -o ./dist/popup.css --watch",
     "dev:js": "webpack --watch --config webpack/webpack.config.js",
     "dev": " npm run dev:js && npm run dev:css"
   },
