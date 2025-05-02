@@ -90,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
 interface FilteredArticle {
     title: string;
     lang: string;
-    revid: string;
     description?: string;
     thumbnailUrl?: string;
 }
@@ -159,7 +158,7 @@ function renderArticles(
         const title = article.title;
         const description = article.description || "";
         // the article URL might be changed to local file or with revision id
-        const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}&oldid=${article.revid}`;
+        const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}}`;
 
         let imageUrl = "";
         if (article.thumbnailUrl) {

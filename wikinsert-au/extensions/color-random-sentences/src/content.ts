@@ -82,8 +82,6 @@ chrome.runtime.onMessage.addListener(
           action: "getHeatMap",
           srcRevId: srcRevId,
           srcTitle: srcTitle,
-          //TODO Hardcoded for now, will be changed later
-          targetRevId: "1264244422",
           targetTitle: "salmon",
           lang: "en",
         },

@@ -1,14 +1,13 @@
-const baseApiUrl = "http://localhost:8080";
+const baseApiUrl = "http://odin.st.lab.au.dk:8081";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getHeatMap") {
     console.log("Received getHeatMap message:", message);
-    const { srcRevId, srcTitle, targetRevId, targetTitle, lang } = message;
+      const {srcRevId, srcTitle, targetTitle, lang} = message;
 
     const params = new URLSearchParams({
       src_rev_id: String(srcRevId),
       src_title: srcTitle,
-      target_rev_id: String(targetRevId),
       target_title: targetTitle,
       lang: lang,
     });
