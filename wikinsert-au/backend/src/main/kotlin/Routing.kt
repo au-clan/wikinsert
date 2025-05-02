@@ -27,16 +27,28 @@ fun Application.configureRouting() {
 
         }
 
-        get("/search") {
+        get("/searchTargets") {
             val query = call.request.queryParameters["q"] ?: ""
             val sourceTitle = call.request.queryParameters["source_title"] ?: return@get call.respond(
                 HttpStatusCode.BadRequest,
                 "Missing or malformed source_title"
             )
-            val langCode = call.request.queryParameters["lang"] ?: "en"
+            val lang = call.request.queryParameters["lang"] ?: "en"
             println("Query: $query")
 
-            val finalArticles = dbService.filterArticlesBySearch(sourceTitle, langCode, query)
+            val finalArticles = dbService.getTargetsForSourceArticleBySearchQuery(sourceTitle, lang, query)
+            println("Final articles: $finalArticles")
+            val jsonEncode = Json.encodeToString(finalArticles)
+            call.respond(jsonEncode)
+        }
+
+        get("/search") {
+            val query = call.request.queryParameters["q"] ?: ""
+
+            val lang = call.request.queryParameters["lang"] ?: "en"
+            println("Query: $query")
+
+            val finalArticles = dbService.getArticlesBySearchQuery(query, lang)
             println("Final articles: $finalArticles")
             val jsonEncode = Json.encodeToString(finalArticles)
             call.respond(jsonEncode)

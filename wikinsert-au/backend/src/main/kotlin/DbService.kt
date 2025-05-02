@@ -13,10 +13,15 @@ interface DbService {
         lang: String
     ): List<SentenceData>
 
-    suspend fun filterArticlesBySearch(
+    suspend fun getTargetsForSourceArticleBySearchQuery(
         sourceTitle: String,
         langCode: String,
         query: String
+    ): List<FilteredArticleResponseData>
+
+    suspend fun getArticlesBySearchQuery(
+        query: String,
+        lang: String,
     ): List<FilteredArticleResponseData>
 }
 
@@ -47,7 +52,7 @@ class MongoDbService(
     private val articleScoreRepository: ArticleScoreRepository
 ) : DbService {
 
-    override suspend fun filterArticlesBySearch(
+    override suspend fun getTargetsForSourceArticleBySearchQuery(
         sourceTitle: String,
         langCode: String,
         query: String
@@ -74,7 +79,36 @@ class MongoDbService(
                 title = article.title,
                 lang = article.lang,
                 description = article.description,
-                thumbnailUrl = article.thumbnail.source
+                thumbnail = article.thumbnail
+            )
+        }
+    }
+
+    override suspend fun getArticlesBySearchQuery(
+        query: String,
+        lang: String
+    ): List<FilteredArticleResponseData> {
+        val pattern = ".*$query.*"
+        val regexOptions = "i"  // i for case-insensitive
+
+        val dbQuery =
+            Filters.and(
+                Filters.eq("lang", lang),
+                Filters.or(
+                    Filters.regex("title", pattern, regexOptions),
+                    Filters.regex("description", pattern, regexOptions),
+                )
+            )
+
+        val filteredArticles = articleRepository.applyBsonFilter(dbQuery)
+        println("Filtered articles: $filteredArticles")
+        return filteredArticles.map { article ->
+            FilteredArticleResponseData(
+                title = article.title,
+                lang = article.lang,
+                description = article.description,
+                thumbnail = article.thumbnail,
+                revid = article.revid
             )
         }
     }
@@ -132,7 +166,8 @@ data class FilteredArticleResponseData(
     val title: String,
     val lang: String,
     val description: String?,
-    val thumbnailUrl: String?
+    val thumbnail: Thumbnail?,
+    val revid: String? = null
 )
 
 @Serializable
