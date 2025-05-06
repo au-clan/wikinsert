@@ -3,7 +3,7 @@
 
 .wikimedia-heading {
     font-size: 64px;
-    font-weight: var(--font-weight-hairline);
+    font-weight: var(--font-weight-light);
     line-height: var(--line-height-xxx-large);
     margin: 0;
 }

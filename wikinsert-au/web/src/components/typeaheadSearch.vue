@@ -84,9 +84,10 @@ export default defineComponent( {
 				url
 			).then( ( resp ) => resp.json() )
 				.then( ( data ) => {
+					console.log( 'data:', data );
 					if ( currentSearchTerm.value === value ) {
-						searchResults.value = data.pages && data.pages.length > 0 ?
-							adaptApiResponse( data.pages ) :
+						searchResults.value = data && data.length > 0 ?
+							adaptApiResponse( data ) :
 							[];
 					}
 				} ).catch( () => {
