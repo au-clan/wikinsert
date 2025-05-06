@@ -22,9 +22,9 @@ data class Article(
 
 @Serializable
 data class Thumbnail(
-    val source: String,
-    val width: Int,
-    val height: Int
+    val source: String?,
+    val width: Int?,
+    val height: Int?
 )
 
 
@@ -83,7 +83,6 @@ data class Target(
     val title: String,
     val lang: String,
     val lead: String,
-    val thumbnail: Thumbnail,
+    val thumbnail: Thumbnail?,
     val description: String,
 )
-
