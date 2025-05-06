@@ -1,6 +1,6 @@
 {
-  "name": "Hello Extensions of the world!",
-  "description": "Base Level Extension",
+  "name": "Wikinsert",
+  "description": "Entity insertion tool for Wikipedia editors",
   "version": "1.0",
   "manifest_version": 3,
   "permissions": [

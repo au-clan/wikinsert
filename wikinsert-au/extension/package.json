@@ -26,6 +26,8 @@
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.0.7",
+    "@wikimedia/codex": "^2.0.0-rc.1",
+    "@wikimedia/codex-design-tokens": "^2.0.0-rc.1",
     "glob": "^11.0.1",
     "sentence-splitter": "^5.0.0",
     "tailwindcss": "^4.0.7"

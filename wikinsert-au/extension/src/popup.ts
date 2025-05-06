@@ -78,6 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const formData = new FormData(searchForm);
             const searchValue = formData.get("entity") as string;
+            const toggle = document.getElementById("highlightToggle")
+            toggle?.classList.remove("hidden")
             console.log("User search input:", searchValue);
             // Future logic to send the search value to your script can be added here
         });

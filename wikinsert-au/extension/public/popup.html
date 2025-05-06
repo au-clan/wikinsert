@@ -8,45 +8,50 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 
-<div>
+<body class="h-[300px] w-[400px] bg-base-200 flex items-center justify-center">
+  <div class="flex flex-col items-center text-center">
+    <!-- Logo and heading -->
+    <div class="flex items-center gap-2">
+      <img src="https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png" alt="Wikipedia Logo"
+        class="w-12 h-12" />
+      <h1 class="wikimedia-heading wikimedia-text">Wikinsert</h1>
+    </div>
 
-  <body class="flex h-[500px] w-[300px] justify-center bg-base-200">
-    <div class="p-6">
-      <h2 class="text-2xl font-bold mb-4 text-center self-start">Search for a Wikipedia article to insert</h2>
-
-      <!-- Hidden toggle (for reference) -->
-      <div class="form-control mb-4">
-        <label class="cursor-pointer label">
-          <span class="label-text text-sm">Color Sentences</span>
-          <input type="checkbox" id="toggleColor" class="toggle toggle-primary" />
-        </label>
+    <!-- Search form -->
+    <form id="searchForm" class="pt-4 cdx-typeahead-search w-full px-8">
+      <div class="cdx-search-input cdx-search-input--has-end-button">
+        <div class="cdx-search-input__input-wrapper">
+          <div class="cdx-text-input cdx-text-input--has-start-icon">
+            <input type="search" name="entity" id="searchInput" placeholder="Search Wikipedia" autocomplete="off"
+              class="cdx-text-input__input w-full" />
+            <span class="cdx-text-input__icon cdx-text-input__start-icon"></span>
+          </div>
+        </div>
+        <button type="submit" class="cdx-button cdx-search-input__end-button mt-2">Search</button>
       </div>
+    </form>
 
-      <!-- Search form -->
-      <form id="searchForm" class="input-group">
-        <div class="form-control">
-          <label class="flex flex-col label">
-            <div class="relative">
-              <input type="text" name="entity" id="searchInput" placeholder="Search Wikipedia..." autocomplete="off"
-                class="input input-bordered w-full pr-10" />
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                class="h-4 w-4 opacity-70 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                <path fill-rule="evenodd"
-                  d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
-                  clip-rule="evenodd" />
-              </svg>
-            </div>
+    <!-- Dropdown for search results -->
+    <div id="searchDropdown"
+      class="absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
+    </div>
+
+    <!-- Toggle switch (initially hidden) -->
+    <div id="highlightToggle" class="hidden pt-4">
+      <span class="cdx-toggle-switch">
+        <input id="toggleColor" class="cdx-toggle-switch__input" type="checkbox" />
+        <span class="cdx-toggle-switch__switch">
+          <span class="cdx-toggle-switch__switch__grip"></span>
+        </span>
+        <div class="cdx-toggle-switch__label cdx-label">
+          <label for="toggleColor" class="cdx-label__label">
+            <span class="cdx-label__label__text"> Highlight sentences </span>
           </label>
         </div>
-      </form>
-
-      <!-- Dropdown for search results -->
-      <div id="searchDropdown"
-        class="absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
-      </div>
+      </span>
     </div>
-    <script src="popup.js"></script>
-  </body>
-</div>
 
+    <script src="popup.js"></script>
+  </div>
+</body>
 </html>
