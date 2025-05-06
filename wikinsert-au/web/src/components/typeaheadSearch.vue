@@ -30,9 +30,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
-import { CdxTypeaheadSearch } from '@wikimedia/codex';
-import { FilteredArticle } from '../../../extension/src/popup.js'
+import {defineComponent, ref} from 'vue';
+import {CdxTypeaheadSearch} from '@wikimedia/codex';
+import {FilteredArticle} from '../../../extension/src/popup.js'
 
 export default defineComponent( {
 	name: 'TypeaheadSearchWikipedia',
@@ -61,11 +61,11 @@ export default defineComponent( {
        * @return
        */
       function adaptApiResponse( filteredArticles: FilteredArticle[] ) {
-        return filteredArticles.map( ( { title, lang, description, thumbnail } ) => ( {
+        return filteredArticles.map( ( { title, lang, description, thumbnail, revid } ) => ( {
           label: title,
           value: crypto.randomUUID(),
           description: description,
-          url: `https://${encodeURIComponent(lang)}.wikipedia.org/wiki/${ encodeURIComponent( key ) }`,
+          url: `https://${encodeURIComponent(lang)}.wikipedia.org/w/index.php?/title=${title}&oldid=${revid}`,
           thumbnail: thumbnail ? {
             url: thumbnail.url,
             width: thumbnail.width,
@@ -84,8 +84,7 @@ export default defineComponent( {
 			).then( ( resp ) => resp.json() )
 				.then( ( data ) => {
 					if ( currentSearchTerm.value === value ) {
-            const articles = data  // This is our array of FilteredArticle
-            renderArticles(articles, searchDropdown, searchInput, searchForm);
+            renderArticles(data, searchDropdown, searchInput, searchForm);
             searchDropdown.classList.remove("hidden");
 						searchResults.value = data.pages && data.pages.length > 0 ?
 							adaptApiResponse( data.pages ) :

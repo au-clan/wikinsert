@@ -96,6 +96,7 @@ export interface FilteredArticle {
     lang: string;
     description?: string;
     thumbnail?: Thumbnail;
+    revid?: string;
 }
 
 async function performSearch(query: string, srcTitle: string, lang: string): Promise<void> {
