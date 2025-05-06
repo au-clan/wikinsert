@@ -1,4 +1,5 @@
 import logging
+from urllib import parse
 
 import pandas as pd
 import requests
@@ -79,6 +80,10 @@ import os
 # Paths to input parquet files; change these as needed
 SOURCE_ARTICLES_PATH = os.environ.get("SOURCE_ARTICLES_PATH", "/path/to/source_articles.parquet")
 SCORED_DATA_PATH = os.environ.get("SCORED_DATA_PATH", "/path/to/score_data.parquet")
+
+
+def fix_title(title):
+    return parse.unquote(title).replace('_', ' ')
 
 def normalize_html_text(text):
     # Remove spaces and tabs before and after line breaks

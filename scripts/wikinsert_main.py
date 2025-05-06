@@ -8,8 +8,7 @@ from dotenv import load_dotenv
 
 from sentence_score import SentenceScorer
 from wiki_mongo_db import WikiMongoDB
-from wiki_sentence_utils import fetch_article_metadata
-from wiki_sentence_utils import parse_article
+from wiki_sentence_utils import fetch_article_metadata, parse_article, fix_title
 
 
 class WikiPipeline:
@@ -36,6 +35,8 @@ class WikiPipeline:
            - Save article sections to 'sections'
         2) Return the article_id (md5).
         """
+        # Fix title for parsing
+        title = fix_title(title)
         article_id = _md5.md5(f"{lang}{title}{revid}".encode()).hexdigest()
 
         article_meta_data = self.db.get_article_meta_data(article_id)
@@ -56,6 +57,8 @@ class WikiPipeline:
            relevant info (like lead section, if desired).
         3) Run scoring, store results in 'scores'.
         """
+        # Fix title
+        target_title = fix_title(target_title)
         # Check if scores already exist
         article_meta = self.db.get_article_meta_data(source_id)
         lang = article_meta["lang"]
@@ -100,8 +103,7 @@ class WikiPipeline:
         # Extract each
         extracted_ids = []
         for (lang, title, revid) in articles_to_extract:
-            lower_case_title = title.lower()
-            article_id = self.extract_article(lang, lower_case_title, revid)
+            article_id = self.extract_article(lang, title, revid)
             extracted_ids.append(article_id)
 
         # Let’s define a few pairs to score
@@ -129,7 +131,7 @@ class WikiPipeline:
             #df_sources = df_sources.sample(n=3, random_state=42)
         id_map = {}
         for _, row in df_sources.iterrows():
-            title = row['source_title'].lower()
+            title = row['source_title']
             revid = str(row['first_version'])
             src_id = self.extract_article(lang, title, revid)
             id_map[(title, revid)] = src_id
@@ -138,7 +140,7 @@ class WikiPipeline:
         # Process each unique source-target pair
         for _, row in df_scores[
             ['source_title', 'first_version', 'target_title', 'target_lead']].drop_duplicates().iterrows():
-            src_title = row['source_title'].lower()
+            src_title = fix_title(row['source_title'])
             src_rev = str(row['first_version'])
             src_id = id_map.get((src_title, src_rev))
             if not src_id:
@@ -153,12 +155,9 @@ def main():
     logging.basicConfig(level=logging.INFO)
     pipeline = WikiPipeline()
 
-    # This main() gives an example pipeline run:
-    # pipeline.full_pipeline_example()
-
     # Uncomment the line below to run the full pipeline with parquet files
-    #pipeline.full_pipeline(testing=True)
-    #logging.info("Finished testing")
+    # pipeline.full_pipeline(testing=True)
+    # logging.info("Finished testing")
     # withouth testing
     pipeline.full_pipeline(testing=False)
 
