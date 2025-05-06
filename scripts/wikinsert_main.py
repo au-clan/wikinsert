@@ -126,6 +126,7 @@ class WikiPipeline:
         # take only the first 20 for testing
         if testing:
             df_sources = df_sources.head(20)
+            #df_sources = df_sources.sample(n=3, random_state=42)
         id_map = {}
         for _, row in df_sources.iterrows():
             title = row['source_title'].lower()
@@ -156,8 +157,8 @@ def main():
     # pipeline.full_pipeline_example()
 
     # Uncomment the line below to run the full pipeline with parquet files
-    pipeline.full_pipeline(testing=True)
-    logging.info("Finished testing")
+    #pipeline.full_pipeline(testing=True)
+    #logging.info("Finished testing")
     # withouth testing
     pipeline.full_pipeline(testing=False)
 

@@ -111,11 +111,15 @@ class SentenceScorer:
         # make all the sentences into a single data fram withouth section separator
         sentences = []
         for section in sections:
+            section_title = section.get('title', '')
             for sentence in section['sentences']:
+                sentence['section'] = section_title
                 sentences.append(sentence)
 
         scored_df = pd.DataFrame(sentences)
         scored_df['score'] = 0.0
+        sep = self.model['tokenizer'].sep_token
+
 
         # Score sentences in batches
         with torch.no_grad():
@@ -125,23 +129,20 @@ class SentenceScorer:
 
                 # Prepend mentions into the target context if available
                 mention_str = self.mention_map.get(target_title, "")
-                if mention_str:
-                    input0 = [
-                        f"{target_title} {mention_str}{self.model['tokenizer'].sep_token}{target_lead}"
-                        for _ in range(len(batch_df))
-                    ]
-                else:
-                    input0 = [
-                        f"{target_title}{self.model['tokenizer'].sep_token}{target_lead}"
-                        for _ in range(len(batch_df))
-                    ]
+                prefix = (
+                    f"{target_title} {mention_str}{sep}{target_lead}"
+                    if mention_str else
+                    f"{target_title}{sep}{target_lead}"
+                )
 
-                input1 = batch_df['context'].tolist()
+                input0 = [prefix] * len(batch_df)
+                input1 = [f"{row['section']}{sep}{row['context']}" for _, row in batch_df.iterrows()]
 
-                inputs = list(zip(input0, input1))
-
-                input_tokens = self.model['tokenizer'](inputs, return_tensors='pt', padding='max_length',
-                                                  truncation=True, max_length=512).to('cpu')
+                input_tokens = self.model['tokenizer'](
+                    list(zip(input0, input1)),
+                    return_tensors='pt', padding='max_length',
+                    truncation=True, max_length=512
+                ).to('cpu')
 
                 embeddings = self.model['model'](**input_tokens)['last_hidden_state'][:, 0, :]
                 prediction = self.model['classification_head'](embeddings).squeeze().detach().cpu().numpy()
@@ -152,6 +153,9 @@ class SentenceScorer:
                 # Store predictions in the DataFrame
                 scored_df.iloc[i:i + batch_size, scored_df.columns.get_loc('score')] = prediction
         # drop the sentences and the context
+        logging.info("Final scored rows with context and sentence columns retained:")
+        for idx, row in scored_df.iterrows():
+            logging.info(row.to_dict())
         scored_df = scored_df.drop(columns=['context'])
         scored_df = scored_df.drop(columns=['sentence'])
         return scored_df

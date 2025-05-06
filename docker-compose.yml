@@ -2,6 +2,7 @@ services:
   # MongoDB container
   mongodb:
     image: mongodb/mongodb-community-server:7.0.0-ubi8
+    cpus: 8.0
     container_name: mongodb
     ports:
       - "27017:27017"
@@ -28,6 +29,7 @@ services:
       - pip-cache:/pip-cache
       - ./.env:/app/.env:ro
       - /home/aarora/multilingual_entity_insertion/boulenge/wikidumps_data:/data:ro
+      - /home/nikolaj.mikkelsen/locei_dataset/test:/test:ro
       - /home/aarora/multilingual_entity_insertion/models/roberta_full_multilingual-all:/models:ro
     depends_on:
       mongodb:
