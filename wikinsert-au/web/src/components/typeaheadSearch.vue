@@ -1,5 +1,5 @@
 <template>
-	<div>
+	<div class="wikimedia-text">
 		<cdx-typeahead-search
 			id="typeahead-search-wikipedia"
 			form-action="https://en.wikipedia.org/w/index.php"
@@ -8,7 +8,7 @@
 			:show-thumbnail="true"
 			:highlight-query="true"
 			:auto-expand-width="true"
-			placeholder="Search Wikipedia"
+			placeholder=""
 			@input="onInput"
 			@search-result-click="onSearchResultClick"
 			@submit="onSubmit"
