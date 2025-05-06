@@ -1,10 +1,2 @@
-@import './base.css';
 @import '@wikimedia/codex/dist/codex.style.css';
 @import '@wikimedia/codex-design-tokens/theme-wikimedia-ui.css';
-
-
-.wikimedia-text {
-  color: --color-base;
-  font-size: --font-size-medium;
-  font-family: --font-family-base;
-}

@@ -32,16 +32,17 @@
 <script lang="ts">
 import {defineComponent, ref} from 'vue';
 import {CdxTypeaheadSearch} from '@wikimedia/codex';
-import {FilteredArticle} from '../../../extension/src/popup.js'
+import type {SearchResult} from '@wikimedia/codex/dist/types/types.d.ts';
+import type {FilteredArticle} from '../../../extension/src/popup.js'
 
 export default defineComponent( {
 	name: 'TypeaheadSearchWikipedia',
 	components: { CdxTypeaheadSearch },
 	setup() {
-		const searchResults = ref( [] );
+		const searchResults = ref<SearchResult[]>( [] );
 		const currentSearchTerm = ref( '' );
 
-		function onInput( value ) {
+		function onInput( value: string ) {
 			// eslint-disable-next-line no-console
 			console.log( 'input event emitted with value:', value );
 
@@ -60,14 +61,14 @@ export default defineComponent( {
        * @param filteredArticles
        * @return
        */
-      function adaptApiResponse( filteredArticles: FilteredArticle[] ) {
+      function adaptApiResponse( filteredArticles: FilteredArticle[] ): SearchResult[] {
         return filteredArticles.map( ( { title, lang, description, thumbnail, revid } ) => ( {
           label: title,
           value: crypto.randomUUID(),
           description: description,
           url: `https://${encodeURIComponent(lang)}.wikipedia.org/w/index.php?/title=${title}&oldid=${revid}`,
           thumbnail: thumbnail ? {
-            url: thumbnail.url,
+            url: thumbnail.source,
             width: thumbnail.width,
             height: thumbnail.height
           } : undefined
@@ -84,8 +85,6 @@ export default defineComponent( {
 			).then( ( resp ) => resp.json() )
 				.then( ( data ) => {
 					if ( currentSearchTerm.value === value ) {
-            renderArticles(data, searchDropdown, searchInput, searchForm);
-            searchDropdown.classList.remove("hidden");
 						searchResults.value = data.pages && data.pages.length > 0 ?
 							adaptApiResponse( data.pages ) :
 							[];
@@ -97,12 +96,12 @@ export default defineComponent( {
 				} );
 		}
 
-		function onSearchResultClick( value ) {
+		function onSearchResultClick( value: string ) {
 			// eslint-disable-next-line no-console
 			console.log( 'search-result-click event emitted with value:', value );
 		}
 
-		function onSubmit( value ) {
+		function onSubmit( value: string ) {
 			// eslint-disable-next-line no-console
 			console.log( 'submit event emitted with value:', value );
 		}
