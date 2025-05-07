@@ -29,14 +29,15 @@
         </div>
         <button type="submit" class="cdx-button cdx-search-input__end-button mt-2">Search</button>
       </div>
+        <div id="searchDropdown"
+             class="cdx-typeahead-search__results absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
+        </div>
     </form>
 
     <!-- Dropdown for search results -->
-    <div id="searchDropdown"
-      class="absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
-    </div>
 
-    <!-- Toggle switch (initially hidden) -->
+
+      <!-- Toggle switch (initially hidden) -->
     <div id="highlightToggle" class="hidden pt-4">
       <span class="cdx-toggle-switch">
         <input id="toggleColor" class="cdx-toggle-switch__input" type="checkbox" />

@@ -82,6 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
             toggle?.classList.remove("hidden")
             console.log("User search input:", searchValue);
             // Future logic to send the search value to your script can be added here
+            // send message to content script the current target is selected
         });
     } else {
         console.error("Search form element not found");
@@ -114,7 +115,7 @@ async function performSearch(query: string, srcTitle: string, lang: string): Pro
         searchDropdown.classList.add("hidden");
         return;
     }
-
+    console.log("Performing search with query:", query);
     chrome.runtime.sendMessage(
         {
             action: "performFilteredSearchOnTargets",
@@ -165,10 +166,11 @@ function renderArticles(
         const title = article.title;
         const description = article.description || "";
         // the article URL might be changed to local file or with revision id
-        const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}}`;
+        const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}`;
 
         let imageUrl = "";
-        if (article.thumbnail) {
+
+        if (article.thumbnail?.source) {
             imageUrl = article.thumbnail.source.startsWith("http")
                 ? article.thumbnail.source
                 : "https:" + article.thumbnail.source;
@@ -183,7 +185,11 @@ function renderArticles(
         ${
             imageUrl
                 ? `<img src="${imageUrl}" alt="${title}" class="bg-white w-12 h-12 object-cover rounded" />`
-                : ""
+                : `<span class="cdx-thumbnail">
+                        <span class="cdx-thumbnail__placeholder">
+                            <span class="cdx-thumbnail__placeholder__icon"></span>
+                        </span>
+                    </span>`
         }
         <div>
           <div class="font-bold text-lg">${title}</div>
@@ -198,10 +204,19 @@ function renderArticles(
 
         resultItem.innerHTML = textPart + buttonPart;
         resultItem.addEventListener("click", (e) => {
-            if ((e.target as HTMLElement).classList.contains("openTabBtn")) {
+            if (e.ctrlKey || e.metaKey || (e.target as HTMLElement).classList.contains("openTabBtn")) {
                 e.stopPropagation(); // Prevent also selecting the item
                 window.open(articleUrl, "_blank");
             } else {
+                chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                    const activeTab = tabs[0]?.id;
+                    if (activeTab) {
+                        chrome.tabs.sendMessage(activeTab, {
+                            action: "setTarget",
+                            targetTitle: title,
+                        });
+                    }
+                });
                 searchInput.value = title;
                 console.log("Selected item:", title);
                 container.classList.add("hidden");

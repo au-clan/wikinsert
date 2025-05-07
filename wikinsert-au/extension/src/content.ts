@@ -1,6 +1,5 @@
 // A WeakMap for storing each paragraph's original HTML
 let originalHTMLMap = new WeakMap<HTMLElement, string>();
-
 // Type definition for Sentence
 type HTMLSentenceMapping = {
   id: number;
@@ -14,6 +13,11 @@ type TextNode = {
   start: number;
   end: number;
 };
+
+// Track dynamic score range for heatmap normalization
+let heatScoreMin = Infinity;
+let heatScoreMax = -Infinity;
+
 
 const xpathText = `//div[@id='mw-content-text']//text()[
   not(ancestor-or-self::noscript) and
@@ -57,6 +61,7 @@ const xpathText = `//div[@id='mw-content-text']//text()[
 ]
 `; 
 addWikinsertButtonToNavBar()
+
 let currentHeatMap: HTMLSentenceMapping[] = [];
 const currentPageKey = location.href;
 chrome.storage.local.set({[currentPageKey]: false});
@@ -77,24 +82,32 @@ chrome.runtime.onMessage.addListener(
   (message: { action: string }, sender, sendResponse): void => {
     if (message.action === "highlight") {
       const start = performance.now();
-      chrome.runtime.sendMessage(
-        {
-          action: "getHeatMap",
-          srcRevId: srcRevId,
-          srcTitle: srcTitle,
-          targetTitle: "salmon",
-          lang: "en",
-        },
-        (response: HTMLSentenceMapping[]) => {
-          if (response) {
-            console.log("Sentences received:", response);
-            currentHeatMap = response;
-            highlightSentences(currentHeatMap);
-          } else {
-            console.warn("No sentences returned");
-          }
-        }
-      );
+        chrome.storage.local.get([`${currentPageKey}-target`], (result) => {
+            const targetTitle = result[`${currentPageKey}-target`];
+            chrome.runtime.sendMessage(
+                {
+                    action: "getHeatMap",
+                    srcRevId: srcRevId,
+                    srcTitle: srcTitle,
+                    targetTitle: targetTitle,
+                    lang: srcLang,
+                },
+                (response: HTMLSentenceMapping[]) => {
+                    if (response) {
+                        console.log("Sentences received:", response);
+                        currentHeatMap = response;
+
+                        // Compute dynamic range of scores for normalization
+                        heatScoreMin = Math.min(...currentHeatMap.map((s) => s.score));
+                        heatScoreMax = Math.max(...currentHeatMap.map((s) => s.score));
+
+                        highlightSentences(currentHeatMap);
+                    } else {
+                        console.warn("No sentences returned");
+                    }
+                }
+            );
+        });
 
       chrome.storage.local.set({[currentPageKey]: true});
       console.log("Highlighting applied in", performance.now() - start, "ms");
@@ -262,9 +275,6 @@ function getTextNodesIn(): TextNode[] {
     globalOffset = end;
     currentNode = textNodes.iterateNext() as Text | null;
   }
-  nodes.forEach((node) => {
-    console.log(node.node.textContent, node.start, node.end);
-  });
   return nodes;
 }
 
@@ -272,7 +282,11 @@ function getTextNodesIn(): TextNode[] {
  * Generates a heat-based HSL red color.
  */
 function getHeatColor(heat: number): string {
-  const norm = (heat - 0.5) / 0.5;
+    // Normalize heat value between 0 and 1
+    const norm = heatScoreMax > heatScoreMin
+        ? (heat - heatScoreMin) / (heatScoreMax - heatScoreMin)
+        : 0;
+    // Generate an HSL red color based on normalized score
   return `hsl(0, ${70 + norm * 20}%, ${95 - norm * 30}%)`;
 }
 
@@ -292,7 +306,10 @@ function addWikinsertButtonToNavBar() {
   
   const wikinsertSpan = document.createElement("span")
   wikinsertSpan.textContent = "Wikinsert"
-  wikinsertLink!.onclick = openPopup
+    wikinsertLink!.onclick = (e) => {
+        e.preventDefault()
+        openPopup()
+    }
   wikinsertLink.appendChild(wikinsertSpan)
   wikinsertVectorMenuItem.appendChild(wikinsertLink)
 
@@ -300,5 +317,15 @@ function addWikinsertButtonToNavBar() {
 }
 
 function openPopup() {
-  chrome.runtime.sendMessage("openPopup")
+    chrome.runtime.sendMessage({action: "openPopup"})
 }
+
+// Handle storing the selected targetTitle from the popup
+chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
+    if (message.action === "setTarget") {
+        chrome.storage.local.set({[`${currentPageKey}-target`]: message.targetTitle});
+    }
+});
+
+
+openPopup();
