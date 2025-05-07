@@ -3,7 +3,6 @@ package com.example
 import com.mongodb.client.model.Filters
 import kotlinx.serialization.Serializable
 import java.security.MessageDigest
-import java.util.*
 
 interface DbService {
     suspend fun getScores(
@@ -120,14 +119,18 @@ class MongoDbService(
         targetTitle: String,
         lang: String
     ): List<SentenceData> {
-        val lowerCaseSrc = srcTitle.lowercase(Locale.getDefault())
-        val lowerCaseTarget = targetTitle.lowercase(Locale.getDefault())
-        val sourceId = generateArticleId(lang, lowerCaseSrc, srcRevisionId)
-        val targetId = generateTargetId(lang, lowerCaseTarget)
+        val sourceId = generateArticleId(lang, srcTitle, srcRevisionId)
+        val targetId = generateTargetId(lang, targetTitle)
+        println("Target not lowercase: ${generateTargetId(lang, targetTitle)}")
+        println("Source not lowercase: ${generateArticleId(lang, srcTitle, srcRevisionId)}")
 
-        val pairId = generatePairId(sourceId, targetId)
+        val pairId = generatePairId(lang, sourceId, targetId)
+
+        println("Pair ID: $pairId")
 
         val articleScore = articleScoreRepository.getScoresByPairId(pairId)
+
+        println("Article score: $articleScore")
 
         return articleScore?.scores?.map { score ->
             SentenceData(
@@ -145,8 +148,8 @@ class MongoDbService(
     }
 
 
-    private fun generatePairId(sourceId: String, targetId: String): String {
-        val input = "$sourceId$targetId"
+    private fun generatePairId(lang: String, sourceId: String, targetId: String): String {
+        val input = "$lang$targetId$sourceId"
         return md5(input)
     }
 
