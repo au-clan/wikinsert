@@ -56,7 +56,7 @@ const xpathText = `//div[@id='mw-content-text']//text()[
   ])
 ]
 `; 
-
+addWikinsertButtonToNavBar()
 let currentHeatMap: HTMLSentenceMapping[] = [];
 const currentPageKey = location.href;
 chrome.storage.local.set({[currentPageKey]: false});
@@ -274,4 +274,31 @@ function getTextNodesIn(): TextNode[] {
 function getHeatColor(heat: number): string {
   const norm = (heat - 0.5) / 0.5;
   return `hsl(0, ${70 + norm * 20}%, ${95 - norm * 30}%)`;
+}
+
+function addWikinsertButtonToNavBar() {
+  const vectorMenuContentList = document.querySelector("#p-views .vector-menu-content-list")
+  if (!vectorMenuContentList) {
+    console.log("No vector menu to add wikinsert button to")
+    return
+  }
+
+  const wikinsertVectorMenuItem = document.createElement("li")
+  wikinsertVectorMenuItem.id = "ca-wikinsert"
+  wikinsertVectorMenuItem.className = "vector-tab-noicon mw-list-item"
+  
+  const wikinsertLink = document.createElement("a")
+  wikinsertLink.href = "#"
+  
+  const wikinsertSpan = document.createElement("span")
+  wikinsertSpan.textContent = "Wikinsert"
+  wikinsertLink!.onclick = openPopup
+  wikinsertLink.appendChild(wikinsertSpan)
+  wikinsertVectorMenuItem.appendChild(wikinsertLink)
+
+  vectorMenuContentList.prepend(wikinsertVectorMenuItem) 
+}
+
+function openPopup() {
+  chrome.runtime.sendMessage("openPopup")
 }

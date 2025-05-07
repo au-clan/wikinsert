@@ -66,3 +66,12 @@ chrome.runtime.onMessage.addListener(
         }
     }
 );
+
+chrome.runtime.onMessage.addListener(
+  (message: any, sender, sendResponse) =>{
+    if (message.action === "openPopup") {
+      console.log("Popup opened")
+      //Todo: imeplement
+    }
+  }
+);
