@@ -37,7 +37,7 @@ fun Application.module() {
 val koinModule = module {
     // MongoDB client and database
     single {
-        val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://localhost:27017/"
+        val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://odin.st.lab.au.dk:27017"
 
         // Create a codec registry that can handle POJO classes like Thumbnail
         val pojoCodecProvider = PojoCodecProvider.builder()

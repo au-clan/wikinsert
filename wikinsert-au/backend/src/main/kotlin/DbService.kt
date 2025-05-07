@@ -15,7 +15,7 @@ interface DbService {
 
     suspend fun getTargetsForSourceArticleBySearchQuery(
         sourceTitle: String,
-        langCode: String,
+        lang: String,
         query: String
     ): List<FilteredArticleResponseData>
 
@@ -54,12 +54,13 @@ class MongoDbService(
 
     override suspend fun getTargetsForSourceArticleBySearchQuery(
         sourceTitle: String,
-        langCode: String,
+        lang: String,
         query: String
     ): List<FilteredArticleResponseData> {
         val sourceArticle = articleRepository.getByTitle(sourceTitle) ?: return emptyList()
         println("Source article: $sourceArticle")
-        val targetIds = sourceArticle.targets ?: return emptyList()
+        val targetNames = sourceArticle.targets ?: return emptyList()
+        val targetIds = targetNames.map { name -> generateTargetId(lang, name) }
         val pattern = ".*$query.*"
         val regexOptions = "i"  // i for case-insensitive
 
