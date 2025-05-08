@@ -1,3 +1,5 @@
+import { cdxIconLinkExternal, cdxIconConfigure, cdxIconSubtract } from '@wikimedia/codex-icons';
+
 document.addEventListener("DOMContentLoaded", () => {
   const toggle = document.getElementById("toggleColor") as HTMLInputElement | null;
     let wikiLangCode = "";
@@ -41,6 +43,26 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   });
+
+    /* ----- menu buttons ----- */
+    const settingsBtn = document.getElementById("settings");
+    const closeBtn    = document.getElementById("minimize");
+    if (!settingsBtn || !closeBtn) {
+        console.error("Settings or close button not found");
+        return;
+    }
+    settingsBtn.innerHTML = createSvgIcon(cdxIconConfigure);
+    closeBtn.innerHTML = createSvgIcon(cdxIconSubtract);
+    
+    closeBtn?.addEventListener("click", () => {
+    window.close();                       // closes the popup
+    });
+
+    settingsBtn?.addEventListener("click", () => {
+    console.log("Settings button clicked (todo: open settings window)");
+    // Placeholder for future settings window logic
+    });
+  
 
   // 3) Handle the search form submission
   const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
@@ -192,7 +214,7 @@ function renderArticles(
         li.className =
             "cdx-menu-item cdx-menu-item--enabled cdx-menu-item--has-description " +
             "cdx-menu-item--hide-description-overflow cursor-pointer flex items-center " +
-            "justify-between border-b border-gray-200 last:border-b-0";
+            "justify-between border-b border-gray-200 last:border-b-0 px-2";
 
         const anchor = document.createElement("a");
         anchor.href = articleUrl;
@@ -216,18 +238,12 @@ function renderArticles(
         anchor.appendChild(thumb);
         anchor.appendChild(text);
         li.appendChild(anchor);
+
         // Small icon to open quickly in a new tab
         const iconSpan = document.createElement("span");
-        iconSpan.className = "w-4 h-4 opacity-70 hover:opacity-100";
+        iconSpan.className = 'w-4 h-4 cdx-icon ml-2 mr-1 shrink-0 opacity-70 hover:opacity-100';
         iconSpan.title = "Open in new tab (Ctrl/⌘‑click)";
-        iconSpan.innerHTML = `
-            <svg xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 3h7v7" />
-            <path d="M10 14L21 3" />
-            <path d="M5 7v14h14v-5" />
-            </svg>`;
+        iconSpan.innerHTML = createSvgIcon(cdxIconLinkExternal.ltr.toString());
         iconSpan.addEventListener("click", (ev) => {
             ev.stopPropagation();
             window.open(articleUrl, "_blank");
@@ -238,7 +254,7 @@ function renderArticles(
         li.addEventListener("click", (e) => {
             e.preventDefault();
             const me = e as MouseEvent;
-            if (e.ctrlKey || e.metaKey || (e.target as HTMLElement).classList.contains("openTabBtn")) {
+            if (e.ctrlKey || e.metaKey) {
                 e.stopPropagation(); // Prevent also selecting the item
                 window.open(articleUrl, "_blank");
             } else {
@@ -261,4 +277,8 @@ function renderArticles(
 
         container.appendChild(li);
     });
+}
+
+function createSvgIcon(icon: string): string {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"  stroke="currentColor"><g>${icon}</g></svg>`;
 }

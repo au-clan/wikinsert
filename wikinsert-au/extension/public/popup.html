@@ -6,20 +6,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Toggle Color</title>
   <link rel="stylesheet" href="popup.css" />
-    <link rel="stylesheet" href="https://unpkg.com/@wikimedia/codex@latest/dist/codex.style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@wikimedia/codex@latest/dist/codex.style.css"/>
 </head>
 
-<body class="h-[300px] w-[400px] bg-base-200 flex flex-col p-4 gap-4">
-<div class="flex flex-col items-center text-center gap-4">
+<body class="w-[350px] bg-base-200 flex flex-col py-2 px-0 gap-4">
+<div class="flex flex-col items-center text-center gap-2">
+    <!-- Top menu -->
+    <div id="popupMenu" class="w-full flex justify-between items-center opacity-70 text-gray-500">
+      <span id="minimize" class="opacity-70 hover:opacity-100 cdx-icon cursor-pointer"></span>
+      <span id="settings" class="opacity-70 hover:opacity-100 cdx-icon cursor-pointer"></span>
+    </div>
     <!-- Logo and heading -->
-    <div class="flex items-center gap-2">
+    <div id="header" class="flex items-center gap-2">
       <img src="https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png" alt="Wikipedia Logo"
-        class="w-12 h-12" />
-      <h1 class="wikimedia-heading wikimedia-text">Wikinsert</h1>
+        class="w-8 h-8" />
+      <h1 class="wikimedia-heading-2 wikimedia-text">Wikinsert</h1>
     </div>
 
     <!-- Search form -->
-    <form id="searchForm" class="relative cdx-typeahead-search w-[360px] max-w-full">
+    <form id="searchForm" class="relative cdx-typeahead-search w-full">
       <div class="cdx-search-input cdx-search-input--has-end-button">
         <div class="cdx-search-input__input-wrapper">
           <div class="cdx-text-input cdx-text-input--has-start-icon">
@@ -31,12 +36,8 @@
         <button type="submit" class="cdx-button cdx-search-input__end-button mt-2">Search</button>
       </div>
         <div id="searchDropdownWrapper" class="relative hidden">
-            <p class="wikimedia-text text-gray-500 mt-2">
-                Tip: Hold <kbd>Ctrl</kbd> (or <kbd>⌘</kbd> on Mac) and click a result, or use the ↗ icon, to open in a
-                new tab.
-            </p>
             <ul id="searchDropdown" role="listbox"
-                class="cdx-menu cdx-menu--has-icons cdx-typeahead-search__results absolute left-0 right-0 border border-gray-200 mt-1 rounded max-h-60 overflow-y-auto hidden">
+                class="cdx-menu cdx-menu--has-icons cdx-typeahead-search__results absolute left-0 right-0 rounded max-h-60 overflow-y-auto hidden">
             </ul>
         </div>
     </form>
@@ -48,18 +49,28 @@
     <div id="highlightToggle" class="hidden pt-4">
       <span class="cdx-toggle-switch">
         <input id="toggleColor" class="cdx-toggle-switch__input" type="checkbox" />
-        <span class="cdx-toggle-switch__switch">
-          <span class="cdx-toggle-switch__switch__grip"></span>
-        </span>
-        <div class="cdx-toggle-switch__label cdx-label">
-          <label for="toggleColor" class="cdx-label__label">
-            <span class="cdx-label__label__text"> Highlight sentences </span>
-          </label>
+        <span class="cdx-toggle-switch__switch"></span>
+        <label for="toggleColor" class="cdx-toggle-switch__label">
+          Highlight sentences
+        </label>        
         </div>
       </span>
     </div>
 
+    <!-- State showing which targets are selected -->
+    <div id="selectedTargets" class="">
+      <h2 class="wikimedia-text">Selected Targets:</h2>
+      <ul id="targetList" class="list-disc pl-4"></ul>
+    </div>
+
     <script src="popup.js"></script>
   </div>
+  <footer>
+        <!-- Trademark (CLAN / AU / BACHELOR) -->
+     <!-- make it such that it is always at the bottom of the page center end aligned bottom -->
+     <div id="trademark" class="absolute bottom-0 left-0 right-0 mt-4 text-center text-gray-400">
+      <p class="text-xs">CLAN / AU / BACHELOR</p>
+    </div>
+  </footer>
 </body>
 </html>
