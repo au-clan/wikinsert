@@ -1,5 +1,6 @@
 @import '@wikimedia/codex/dist/codex.style.css';
 @import '@wikimedia/codex-design-tokens/theme-wikimedia-ui.css';
+@import "tailwindcss";
 
 .wikimedia-heading {
     font-size: 64px;

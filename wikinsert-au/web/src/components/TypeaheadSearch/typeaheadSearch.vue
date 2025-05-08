@@ -7,7 +7,7 @@
 			:search-results="searchResults"
 			:show-thumbnail="true"
 			:highlight-query="true"
-			:auto-expand-width="true"
+      :visible-item-limit=6
 			placeholder=""
 			@input="onInput"
 			@search-result-click="onSearchResultClick"
@@ -33,7 +33,7 @@
 import {defineComponent, ref} from 'vue';
 import {CdxTypeaheadSearch} from '@wikimedia/codex';
 import type {SearchResult} from '@wikimedia/codex/dist/types/types.d.ts';
-import type {FilteredArticle} from '../../../extension/src/popup.js'
+import type {FilteredArticle} from '../../../../extension/src/popup.js'
 
 export default defineComponent( {
 	name: 'TypeaheadSearchWikipedia',
