@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (activeTab?.url) {
       const urlKey = activeTab.url;
       chrome.storage.local.get([urlKey], (result) => {
-        toggle.checked = (result[urlKey] === true);
+          toggle.checked = result[urlKey] === true;
       });
 
 
@@ -45,9 +45,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // 3) Handle the search form submission
   const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
   const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
-  const searchDropdown = document.getElementById("searchDropdown") as HTMLDivElement;
-  if (!searchForm || !searchInput || !searchDropdown) {
-    console.error("Search form, input, or dropdown element not found");
+    const searchDropdown = document.getElementById("searchDropdown") as HTMLUListElement | null;
+    const searchDropdownWrapper = document.getElementById("searchDropdownWrapper") as HTMLElement | null;
+
+    if (!searchForm || !searchInput || !searchDropdown || !searchDropdownWrapper) {
+        console.error("Search form, input, dropdown, or wrapper element not found");
     return;
   }
 
@@ -63,12 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const query = (event.target as HTMLInputElement).value;
         performSearch(query, srcTitle, wikiLangCode);
     }, 300);
+
     searchInput.addEventListener("input", debouncedSearch);
 
     // Also perform search on pressing Enter (optional since live search is enabled)
-    searchInput.addEventListener("keypress", (event) => {
-        if (event.key === "Enter") {
-            event.preventDefault();
+    searchInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            e.preventDefault();
             performSearch(searchInput.value, srcTitle, wikiLangCode);
         }
     });
@@ -105,14 +108,22 @@ export interface FilteredArticle {
 async function performSearch(query: string, srcTitle: string, lang: string): Promise<void> {
     const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
     const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
-    const searchDropdown = document.getElementById("searchDropdown") as HTMLDivElement;
+    const searchDropdown = document.getElementById("searchDropdown") as HTMLUListElement;
+    const searchDropdownWrapper = document.getElementById("searchDropdownWrapper") as HTMLElement;
+    if (!searchDropdownWrapper) {
+        console.error("Wrapper element not found");
+        return;
+    }
+    if (!searchForm || !searchInput || !searchDropdown || !searchDropdownWrapper) {
+        console.error("Search form, input, dropdown, or wrapper element not found");
+    }
     if (!searchForm || !searchInput || !searchDropdown) {
         console.error("Search form, input, or dropdown element not found");
         return;
     }
     if (!query.trim()) {
         searchDropdown.innerHTML = "";
-        searchDropdown.classList.add("hidden");
+        searchDropdownWrapper.classList.add("hidden");
         return;
     }
     console.log("Performing search with query:", query);
@@ -132,11 +143,11 @@ async function performSearch(query: string, srcTitle: string, lang: string): Pro
             try {
                 const articles = response.results as FilteredArticle[]; // This is our array of FilteredArticle
                 renderArticles(articles, searchDropdown, searchInput, searchForm);
-                searchDropdown.classList.remove("hidden");
+                searchDropdownWrapper.classList.remove("hidden");
             } catch (error) {
                 console.error("Error fetching Wikipedia data:", error);
-                searchDropdown.innerHTML = `<div class="p-2 text-sm text-red-500">Error fetching results.</div>`;
-                searchDropdown.classList.remove("hidden");
+                searchDropdown.innerHTML = `<li class="cdx-menu-item"><span class="p-2 text-sm text-red-500">Error fetching results.</span></li>`;
+                searchDropdownWrapper.classList.remove("hidden");
             }
         }
     );
@@ -158,16 +169,15 @@ function renderArticles(
     container.innerHTML = "";
 
     if (articles.length === 0) {
-        container.innerHTML = `<div class="p-2 text-sm opacity-70">No results found.</div>`;
+        container.innerHTML =
+            `<li class="cdx-menu-item"><span class="p-2 text-sm opacity-70">No results found.</span></li>`;
         return;
     }
 
     articles.forEach((article) => {
         const title = article.title;
         const description = article.description || "";
-        // the article URL might be changed to local file or with revision id
         const articleUrl = `https://${encodeURIComponent(article.lang)}.wikipedia.org/w/index.php?title=${encodeURIComponent(article.title)}`;
-
         let imageUrl = "";
 
         if (article.thumbnail?.source) {
@@ -176,34 +186,58 @@ function renderArticles(
                 : "https:" + article.thumbnail.source;
         }
 
-        const resultItem = document.createElement("div");
-        resultItem.className =
-            "block p-2 border-b last:border-b-0 bg-primary text-primary-content hover:bg-neutral hover:text-neutral-content cursor-pointer flex justify-between items-center";
+        // Build Codex‑styled <li>
+        const li = document.createElement("li");
+        li.setAttribute("role", "option");
+        li.className =
+            "cdx-menu-item cdx-menu-item--enabled cdx-menu-item--has-description " +
+            "cdx-menu-item--hide-description-overflow cursor-pointer flex items-center " +
+            "justify-between border-b border-gray-200 last:border-b-0";
 
-        const textPart = `
-      <div class="flex items-center space-x-3">
-        ${
-            imageUrl
-                ? `<img src="${imageUrl}" alt="${title}" class="bg-white w-12 h-12 object-cover rounded" />`
-                : `<span class="cdx-thumbnail">
-                        <span class="cdx-thumbnail__placeholder">
-                            <span class="cdx-thumbnail__placeholder__icon"></span>
-                        </span>
-                    </span>`
-        }
-        <div>
-          <div class="font-bold text-lg">${title}</div>
-          <div class="text-sm">${description}</div>
-        </div>
-      </div>
-    `;
+        const anchor = document.createElement("a");
+        anchor.href = articleUrl;
+        anchor.className = "cdx-menu-item__content flex-1 overflow-hidden";
+        anchor.setAttribute("target", "_blank");
+        // Thumbnail
+        const thumb = document.createElement("span");
+        thumb.className = "cdx-thumbnail cdx-menu-item__thumbnail";
+        thumb.innerHTML = imageUrl
+            ? `<span class="cdx-no-invert cdx-thumbnail__image" style="background-image:url('${imageUrl}');"></span>`
+            : `<span class="cdx-thumbnail__placeholder"><span class="cdx-thumbnail__placeholder__icon"></span></span>`;
 
-        const buttonPart = `
-      <button type="button" class="btn btn-xs ml-2 openTabBtn">Open</button>
-    `;
+        // Text block
+        const text = document.createElement("span");
+        text.className = "cdx-menu-item__text truncate";
+        text.innerHTML = `
+            <span class="cdx-search-result-title"><bdi>${title}</bdi></span>
+            <span class="cdx-menu-item__text__description"><bdi>${description}</bdi></span>
+        `;
 
-        resultItem.innerHTML = textPart + buttonPart;
-        resultItem.addEventListener("click", (e) => {
+        anchor.appendChild(thumb);
+        anchor.appendChild(text);
+        li.appendChild(anchor);
+        // Small icon to open quickly in a new tab
+        const iconSpan = document.createElement("span");
+        iconSpan.className = "w-4 h-4 opacity-70 hover:opacity-100";
+        iconSpan.title = "Open in new tab (Ctrl/⌘‑click)";
+        iconSpan.innerHTML = `
+            <svg xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 3h7v7" />
+            <path d="M10 14L21 3" />
+            <path d="M5 7v14h14v-5" />
+            </svg>`;
+        iconSpan.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            window.open(articleUrl, "_blank");
+        });
+        li.appendChild(iconSpan);
+
+        // Interaction
+        li.addEventListener("click", (e) => {
+            e.preventDefault();
+            const me = e as MouseEvent;
             if (e.ctrlKey || e.metaKey || (e.target as HTMLElement).classList.contains("openTabBtn")) {
                 e.stopPropagation(); // Prevent also selecting the item
                 window.open(articleUrl, "_blank");
@@ -219,11 +253,12 @@ function renderArticles(
                 });
                 searchInput.value = title;
                 console.log("Selected item:", title);
-                container.classList.add("hidden");
+                const wrapper = document.getElementById("searchDropdownWrapper");
+                if (wrapper) wrapper.classList.add("hidden");
                 searchForm.requestSubmit();
             }
         });
 
-        container.appendChild(resultItem);
+        container.appendChild(li);
     });
 }

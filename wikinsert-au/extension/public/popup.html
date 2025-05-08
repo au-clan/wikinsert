@@ -6,10 +6,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Toggle Color</title>
   <link rel="stylesheet" href="popup.css" />
+    <link rel="stylesheet" href="https://unpkg.com/@wikimedia/codex@latest/dist/codex.style.css"/>
 </head>
 
-<body class="h-[300px] w-[400px] bg-base-200 flex items-center justify-center">
-  <div class="flex flex-col items-center text-center">
+<body class="h-[300px] w-[400px] bg-base-200 flex flex-col p-4 gap-4">
+<div class="flex flex-col items-center text-center gap-4">
     <!-- Logo and heading -->
     <div class="flex items-center gap-2">
       <img src="https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png" alt="Wikipedia Logo"
@@ -18,7 +19,7 @@
     </div>
 
     <!-- Search form -->
-    <form id="searchForm" class="pt-4 cdx-typeahead-search w-full px-8">
+    <form id="searchForm" class="relative cdx-typeahead-search w-[360px] max-w-full">
       <div class="cdx-search-input cdx-search-input--has-end-button">
         <div class="cdx-search-input__input-wrapper">
           <div class="cdx-text-input cdx-text-input--has-start-icon">
@@ -29,8 +30,14 @@
         </div>
         <button type="submit" class="cdx-button cdx-search-input__end-button mt-2">Search</button>
       </div>
-        <div id="searchDropdown"
-             class="cdx-typeahead-search__results absolute left-0 right-0 gap-1 border border-gray-200 mt-1 rounded shadow-lg max-h-60 overflow-y-auto hidden">
+        <div id="searchDropdownWrapper" class="relative hidden">
+            <p class="wikimedia-text text-gray-500 mt-2">
+                Tip: Hold <kbd>Ctrl</kbd> (or <kbd>⌘</kbd> on Mac) and click a result, or use the ↗ icon, to open in a
+                new tab.
+            </p>
+            <ul id="searchDropdown" role="listbox"
+                class="cdx-menu cdx-menu--has-icons cdx-typeahead-search__results absolute left-0 right-0 border border-gray-200 mt-1 rounded max-h-60 overflow-y-auto hidden">
+            </ul>
         </div>
     </form>
 
