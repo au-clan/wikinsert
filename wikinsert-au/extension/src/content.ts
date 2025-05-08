@@ -120,7 +120,22 @@ chrome.runtime.onMessage.addListener(
 );
 
 /**
- * Highlights sentences using the Range object.
+ *  * Cache the original <p> innerHTML for later restoration.
+ */
+function storeOriginalParagraphHTML(container: HTMLElement) {
+    container
+        .querySelectorAll<HTMLParagraphElement>("p")
+        .forEach((p) => {
+            if (!originalHTMLMap.has(p)) {
+                originalHTMLMap.set(p, p.innerHTML);
+            }
+        });
+}
+
+/**
+ * Highlights every sentence *once* by walking the text nodes only a single
+ * time. Sentences are processed from the end of the article to the start so
+ * that DOM mutations never invalidate the pre‑computed global offsets.
  */
 function highlightSentences(sentences: HTMLSentenceMapping[]): void {
   const contentContainer = document.getElementById("mw-content-text");
@@ -128,18 +143,29 @@ function highlightSentences(sentences: HTMLSentenceMapping[]): void {
     console.error("Content container not found");
     return;
   }
-  sentences.forEach((sentence) => {
-    wrapRangeInContainer(sentence);
-  });
+
+    // Remember the pristine HTML so removeHighlighting() can restore it fast.
+    storeOriginalParagraphHTML(contentContainer);
+
+    // Snapshot all eligible text nodes *before* we mutate the DOM.
+    const textNodes = getTextNodesIn();
+
+    // Work from back to front to keep the global‑offset mapping valid.
+    const ordered = sentences
+        .slice()
+        .sort((a, b) => b.startOffset - a.startOffset);
+
+    ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
 }
+
 
 /**
  * Wraps a sentence range in a <span> with a highlight.
  */
 function wrapRangeInContainer(
   sentence: HTMLSentenceMapping,
+  textNodes: TextNode[]
 ): void {
-  const textNodes = getTextNodesIn();
   const { startOffset, endOffset, score, id } = sentence;
 
   for (const node of textNodes) {
@@ -160,33 +186,7 @@ function wrapRangeInContainer(
     const startInNode = localStart - node.start;
     const endInNode = localEnd - node.start;
     
-    // if (startNodeInfo === null &&
-    //   sentence.startOffset >= node.start &&
-    //   sentence.startOffset < node.end) {
-    //   startNodeInfo = {
-    //     node: node.node,
-    //     offset: sentence.startOffset - node.start
-    //   };
-    //   console.log("start ", startNodeInfo);
-    //   console.log("node ", node.node.textContent);
-    // }
 
-    // // If this node contains the end point
-    // if (endNodeInfo === null &&
-    //   sentence.endOffset > node.start &&
-    //   sentence.endOffset <= node.end) {
-    //   endNodeInfo = {
-    //     node: node.node,
-    //     offset: sentence.endOffset - node.start
-    //   };
-    //   console.log("end ", endNodeInfo);
-    //   console.log("node ", node.node.textContent);
-    // }
-
-    // // Break early if we found both nodes
-    // if (startNodeInfo && endNodeInfo) {
-    //   break;
-    // }
     if (startInNode < endInNode) {
       const range = document.createRange();
       range.setStart(node.node, startInNode);
@@ -204,26 +204,6 @@ function wrapRangeInContainer(
     }
   }
 
-  // if (!startNodeInfo || !endNodeInfo) {
-  //   console.warn(`Could not find text nodes for sentence ${sentence.id}`);
-  //   return;
-  // }
-
-  // const range = document.createRange();
-  // range.setStart(startNodeInfo.node, startNodeInfo.offset);
-  // range.setEnd(endNodeInfo.node, endNodeInfo.offset);
-
-  // // Create the span that will wrap the sentence
-  // const span = document.createElement("span");
-  // span.className = "sentence-span";
-  // span.id = `sentence-${sentence.id}`;
-  // span.style.backgroundColor = getHeatColor(sentence.score);
-
-
-  // // Wrap the sentence in the span
-  // const extracted = range.extractContents();
-  // span.appendChild(extracted);
-  // range.insertNode(span);
 }
 
 
