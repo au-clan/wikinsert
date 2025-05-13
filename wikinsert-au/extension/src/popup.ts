@@ -1,29 +1,91 @@
-import { cdxIconLinkExternal, cdxIconConfigure, cdxIconSubtract } from '@wikimedia/codex-icons';
-import { createSvgIcon } from './utils';
+import {cdxIconCancel, cdxIconConfigure, cdxIconLinkExternal, cdxIconSubtract} from '@wikimedia/codex-icons';
+import {createSvgIcon} from './utils';
+
 
 document.addEventListener("DOMContentLoaded", () => {
-    const toggle = document.getElementById("toggleColor") as HTMLInputElement | null;
+    const toggleContainer = document.getElementById("toggleContainer");
+    const toggleInput = document.getElementById("toggleInput") as HTMLInputElement | null;
+    const selectedTargetName = document.getElementById("selectedTargetName") as HTMLSpanElement | null;
+    const clearTargetBtn = document.getElementById("clearTargetBtn") as HTMLButtonElement | null;
+    const targetStatus = document.getElementById("targetStatus") as HTMLDivElement | null;
+    const noTargetMessage = document.getElementById("noTargetMessage") as HTMLDivElement | null;
+
     let wikiLangCode = "";
     let srcTitle = "";
+    let pageKey = "";
+
+    if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage || !toggleContainer || !toggleInput) {
+        console.error("One or more elements not found");
+        return;
+    }
+
+    function showSelectedTarget(targetTitle: string) {
+        if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage || !toggleContainer) {
+            console.error("One or more elements not found");
+            return;
+        }
+        selectedTargetName.textContent = `Inserting "${targetTitle}"`;
+        targetStatus.classList.remove("hidden");
+        noTargetMessage.classList.add("hidden");
+    }
+
+    function showNoSelectedTarget() {
+        if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage || !toggleContainer) {
+            console.error("One or more elements not found");
+            return;
+        }
+        selectedTargetName.textContent = "";
+        targetStatus.classList.add("hidden");
+        noTargetMessage.classList.remove("hidden");
+    }
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        if (tabs[0]?.id) {
+        const activeTab = tabs[0];
+        if (activeTab?.url) {
+            pageKey = activeTab.url.split("#")[0]
             chrome.tabs.sendMessage(
-                tabs[0].id,
+                activeTab.id!,
                 { action: "getPageInfo" },
                 (response) => {
-                    const { title, lang } = response;
+                    wikiLangCode = response.lang;
+                    srcTitle = response.title;
+
                     console.log("Received page info:", response);
-                    wikiLangCode = lang;
-                    srcTitle = title;
+
+                    // Check if a target is selected
+                    chrome.storage.local.get([`${pageKey}-target`], (result) => {
+                        const targetTitle = result[`${pageKey}-target`];
+                        if (targetTitle) {
+                            showSelectedTarget(targetTitle);
+                        } else {
+                            showNoSelectedTarget();
+                        }
+                    });
+
                 }
             );
         }
     });
 
 
-    if (!toggle) {
-        console.error("Toggle element not found");
+    // Listen for changes to the toggle state
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        if (namespace === 'local' && changes[pageKey]) {
+            toggleInput.checked = changes[pageKey].newValue === true;
+        }
+    });
+    // Handle the clear target button click
+    clearTargetBtn.addEventListener("click", () => {
+        chrome.storage.local.remove([`${pageKey}-target`, `${pageKey}-heatmap`], () => {
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                chrome.tabs.sendMessage(tabs[0].id!, {action: "remove"});
+            });
+            showNoSelectedTarget();
+        });
+    });
+
+    if (!toggleInput) {
+        console.error("Toggle input not found");
         return;
     }
 
@@ -31,15 +93,14 @@ document.addEventListener("DOMContentLoaded", () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const activeTab = tabs[0];
         if (activeTab?.url) {
-            const urlKey = activeTab.url;
-            chrome.storage.local.get([urlKey], (result) => {
-                toggle.checked = result[urlKey] === true;
+            // Initially set the toggle state
+            chrome.storage.local.get([pageKey], (result) => {
+                toggleInput.checked = result[pageKey] === true;
             });
 
-
-            toggle.addEventListener("change", () => {
+            toggleInput.addEventListener("change", () => {
                 if (!activeTab.id) return;
-                const action = toggle.checked ? "highlight" : "remove";
+                const action = toggleInput.checked ? "highlight" : "remove";
                 chrome.tabs.sendMessage(activeTab.id, { action });
             });
         }
@@ -58,6 +119,11 @@ document.addEventListener("DOMContentLoaded", () => {
     closeBtn?.addEventListener("click", () => {
         window.close();                       // closes the popup
     });
+
+    const cancelBtn = document.getElementById("cancel");
+    if (cancelBtn) {
+        cancelBtn.innerHTML = createSvgIcon(cdxIconCancel);
+    }
 
     // 3) Handle the search form submission
     const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
@@ -98,11 +164,25 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const formData = new FormData(searchForm);
             const searchValue = formData.get("entity") as string;
-            const toggle = document.getElementById("highlightToggle")
-            toggle?.classList.remove("hidden")
-            console.log("User search input:", searchValue);
-            // Future logic to send the search value to your script can be added here
-            // send message to content script the current target is selected
+            const targetTitle = (document.getElementById("searchInput") as HTMLInputElement).value;
+
+            chrome.storage.local.set({[`${pageKey}-target`]: targetTitle}, () => {
+                showSelectedTarget(targetTitle);
+            });
+
+            // send message to highlight the selected target
+            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                const activeTab = tabs[0];
+                if (activeTab?.id) {
+                    chrome.tabs.sendMessage(activeTab.id, {action: "highlight"});
+                }
+            });
+
+
+            // clear the search input on 
+            searchInput.value = "";
+            searchDropdown.innerHTML = "";
+            searchDropdownWrapper.classList.add("hidden");
         });
     } else {
         console.error("Search form element not found");
@@ -273,3 +353,4 @@ function renderArticles(
         container.appendChild(li);
     });
 }
+

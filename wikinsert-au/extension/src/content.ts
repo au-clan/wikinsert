@@ -62,9 +62,49 @@ const xpathText = `//div[@id='mw-content-text']//text()[
 `; 
 addWikinsertButtonToNavBar()
 
+const currentPageKey = location.href.split('#')[0];
 let currentHeatMap: HTMLSentenceMapping[] = [];
-const currentPageKey = location.href;
-chrome.storage.local.set({[currentPageKey]: false});
+
+const keys = [
+    currentPageKey,
+    `${currentPageKey}-heatmap`,
+    `${currentPageKey}-target`
+];
+
+interface StorageResult {
+    [key: string]: any;
+}
+
+chrome.storage.local.get(keys, (result: StorageResult) => {
+    const updates: StorageResult = {};
+
+    if (result[currentPageKey] === undefined) {
+        updates[currentPageKey] = false;
+    }
+
+    if (result[`${currentPageKey}-heatmap`] === undefined) {
+        updates[`${currentPageKey}-heatmap`] = [];
+    } else {
+        currentHeatMap = result[`${currentPageKey}-heatmap`] as HTMLSentenceMapping[];
+    }
+
+    if (result[`${currentPageKey}-target`] === undefined) {
+        updates[`${currentPageKey}-target`] = "";
+    }
+
+    if (Object.keys(updates).length > 0) {
+        chrome.storage.local.set(updates);
+    }
+
+    const isEnabled = result[currentPageKey] === true;
+    const target = result[`${currentPageKey}-target`] || "";
+
+    if (isEnabled && currentHeatMap.length > 0 && target !== "") {
+        console.log("Restoring highlighting");
+        console.log("Current heatmap:", currentHeatMap);
+        highlightSentences(currentHeatMap);
+    }
+});
 
 const srcTitle = document.getElementsByClassName("mw-page-title-main")[0]?.textContent || "hello";
 const srcLang = location.hostname.split(".")[0];
@@ -81,6 +121,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener(
   (message: { action: string }, sender, sendResponse): void => {
     if (message.action === "highlight") {
+        //remove first
+        removeHighlighting();
       const start = performance.now();
         chrome.storage.local.get([`${currentPageKey}-target`], (result) => {
             const targetTitle = result[`${currentPageKey}-target`];
@@ -96,11 +138,9 @@ chrome.runtime.onMessage.addListener(
                     if (response) {
                         console.log("Sentences received:", response);
                         currentHeatMap = response;
-
+                        // store the heatmap in local storage
+                        chrome.storage.local.set({[`${currentPageKey}-heatmap`]: currentHeatMap});
                         // Compute dynamic range of scores for normalization
-                        heatScoreMin = Math.min(...currentHeatMap.map((s) => s.score));
-                        heatScoreMax = Math.max(...currentHeatMap.map((s) => s.score));
-
                         highlightSentences(currentHeatMap);
                     } else {
                         console.warn("No sentences returned");
@@ -115,6 +155,7 @@ chrome.runtime.onMessage.addListener(
       console.log("Removing highlighting");
       removeHighlighting();
       chrome.storage.local.set({[currentPageKey]: false});
+        chrome.storage.local.remove(`${currentPageKey}-heatmap`);
     }
   }
 );
@@ -138,6 +179,8 @@ function storeOriginalParagraphHTML(container: HTMLElement) {
  * that DOM mutations never invalidate the pre‑computed global offsets.
  */
 function highlightSentences(sentences: HTMLSentenceMapping[]): void {
+    heatScoreMin = Math.min(...currentHeatMap.map((s) => s.score));
+    heatScoreMax = Math.max(...currentHeatMap.map((s) => s.score));
   const contentContainer = document.getElementById("mw-content-text");
   if (!contentContainer) {
     console.error("Content container not found");
