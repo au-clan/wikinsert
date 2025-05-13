@@ -16,8 +16,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    restart:
-      always
+    restart: always
 
   # Python data population container
   python-populator:
@@ -39,10 +38,12 @@ services:
     environment:
       - MONGO_URI=mongodb://mongodb:27017/
       - DB_NAME=wikinsert
-      - SOURCE_ARTICLES_PATH=/data/report_examples/revisions_files/revisions_en.parquet
-      - SCORED_DATA_PATH=/data/report_examples/scored_data/en_5_scored.parquet
-      - MENTION_MAP_PATH=/data/report_examples/ready_to_score_data/mention_map_en.parquet
-      - MODEL_DIR=/models
+      - SOURCE_ARTICLES_PATH=${SOURCE_ARTICLES_PATH:-/data/report_examples/revisions_files/revisions_en.parquet}
+      - SCORED_DATA_PATH=${SCORED_DATA_PATH:-/data/report_examples/scored_data/en_5_scored.parquet}
+      - MENTION_MAP_PATH=${MENTION_MAP_PATH:-/data/report_examples/ready_to_score_data/mention_map_en.parquet}
+      - MODEL_DIR=${MODEL_DIR:-/models}
+    profiles:
+      - populator
 
   # Ktor API container
   ktor-api:
@@ -53,15 +54,15 @@ services:
     ports:
       - "8081:8080"
     depends_on:
-      python-populator:
-        condition: service_completed_successfully
+      - mongodb
     networks:
       - wikinsert-network
     environment:
       - MONGODB_URI=mongodb://mongodb:27017/
       - MONGODB_DATABASE=wikinsert
-    restart:
-      always
+    restart: always
+    profiles:
+      - api
 
 networks:
   wikinsert-network:
