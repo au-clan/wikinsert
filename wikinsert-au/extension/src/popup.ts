@@ -1,87 +1,82 @@
 import { cdxIconLinkExternal, cdxIconConfigure, cdxIconSubtract } from '@wikimedia/codex-icons';
+import { createSvgIcon } from './utils';
 
 document.addEventListener("DOMContentLoaded", () => {
-  const toggle = document.getElementById("toggleColor") as HTMLInputElement | null;
+    const toggle = document.getElementById("toggleColor") as HTMLInputElement | null;
     let wikiLangCode = "";
     let srcTitle = "";
 
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]?.id) {
-          chrome.tabs.sendMessage(
-              tabs[0].id,
-              {action: "getPageInfo"},
-              (response) => {
-                  const {title, lang} = response;
-                  console.log("Received page info:", response);
-                  wikiLangCode = lang;
-                  srcTitle = title;
-              }
-          );
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]?.id) {
+            chrome.tabs.sendMessage(
+                tabs[0].id,
+                { action: "getPageInfo" },
+                (response) => {
+                    const { title, lang } = response;
+                    console.log("Received page info:", response);
+                    wikiLangCode = lang;
+                    srcTitle = title;
+                }
+            );
+        }
+    });
+
+
+    if (!toggle) {
+        console.error("Toggle element not found");
+        return;
     }
-  });
+
+    // 1) Get the active tab's URL and read the stored highlight state
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const activeTab = tabs[0];
+        if (activeTab?.url) {
+            const urlKey = activeTab.url;
+            chrome.storage.local.get([urlKey], (result) => {
+                toggle.checked = result[urlKey] === true;
+            });
 
 
-  if (!toggle) {
-    console.error("Toggle element not found");
-    return;
-  }
-
-  // 1) Get the active tab's URL and read the stored highlight state
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const activeTab = tabs[0];
-    if (activeTab?.url) {
-      const urlKey = activeTab.url;
-      chrome.storage.local.get([urlKey], (result) => {
-          toggle.checked = result[urlKey] === true;
-      });
-
-
-      toggle.addEventListener("change", () => {
-        if (!activeTab.id) return;
-        const action = toggle.checked ? "highlight" : "remove";
-        chrome.tabs.sendMessage(activeTab.id, { action });
-      });
-    }
-  });
+            toggle.addEventListener("change", () => {
+                if (!activeTab.id) return;
+                const action = toggle.checked ? "highlight" : "remove";
+                chrome.tabs.sendMessage(activeTab.id, { action });
+            });
+        }
+    });
 
     /* ----- menu buttons ----- */
     const settingsBtn = document.getElementById("settings");
-    const closeBtn    = document.getElementById("minimize");
+    const closeBtn = document.getElementById("minimize");
     if (!settingsBtn || !closeBtn) {
         console.error("Settings or close button not found");
         return;
     }
     settingsBtn.innerHTML = createSvgIcon(cdxIconConfigure);
     closeBtn.innerHTML = createSvgIcon(cdxIconSubtract);
-    
+
     closeBtn?.addEventListener("click", () => {
-    window.close();                       // closes the popup
+        window.close();                       // closes the popup
     });
 
-    settingsBtn?.addEventListener("click", () => {
-    console.log("Settings button clicked (todo: open settings window)");
-    // Placeholder for future settings window logic
-    });
-  
-
-  // 3) Handle the search form submission
-  const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
-  const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
+    // 3) Handle the search form submission
+    const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
+    const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
     const searchDropdown = document.getElementById("searchDropdown") as HTMLUListElement | null;
     const searchDropdownWrapper = document.getElementById("searchDropdownWrapper") as HTMLElement | null;
 
     if (!searchForm || !searchInput || !searchDropdown || !searchDropdownWrapper) {
         console.error("Search form, input, dropdown, or wrapper element not found");
-    return;
-  }
+        return;
+    }
 
-  function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
-    let timeout: ReturnType<typeof setTimeout>;
-    return function (...args: any[]) {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => func(...args), wait);
-    } as T;
-  }
+    function debounce<T extends (...args: any[]) => void>(func: T, wait: number): T {
+        let timeout: ReturnType<typeof setTimeout>;
+        return function (...args: any[]) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func(...args), wait);
+        } as T;
+    }
 
     const debouncedSearch = debounce((event: Event) => {
         const query = (event.target as HTMLInputElement).value;
@@ -258,7 +253,7 @@ function renderArticles(
                 e.stopPropagation(); // Prevent also selecting the item
                 window.open(articleUrl, "_blank");
             } else {
-                chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+                chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
                     const activeTab = tabs[0]?.id;
                     if (activeTab) {
                         chrome.tabs.sendMessage(activeTab, {
@@ -277,8 +272,4 @@ function renderArticles(
 
         container.appendChild(li);
     });
-}
-
-function createSvgIcon(icon: string): string {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"  stroke="currentColor"><g>${icon}</g></svg>`;
 }
