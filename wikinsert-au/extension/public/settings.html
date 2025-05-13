@@ -25,20 +25,19 @@
       <div class="setting-description">Adjust how much text gets highlighted based on relevance scores</div>
       <div class="slider-container">
         <span class="slider-label">Low</span>
-        <input type="range" id="densitySlider" min="5" max="50" value="25">
+          <input type="range" id="densitySlider" min="5" max="100" value="50" step="5" class="slider"/>
         <span class="slider-label">High</span>
       </div>
       <div id="densityValue" style="font-size: 11px; text-align: center; margin-top: 4px;">
       </div>
       <div style="margin-top: 1.5rem; text-align: right;">
         <button id="saveBtn" style="
-      padding: 0.5rem 1rem; 
-      background-color: #2563eb; 
-      color: white; 
-      border-radius: 0.375rem;
-      cursor: pointer;
-      transition: background-color 0.3s;
-    " onmouseover="this.style.backgroundColor='#1d4ed8'" onmouseout="this.style.backgroundColor='#2563eb'">
+            padding: 0.5rem 1rem; 
+            background-color: #2563eb; 
+            color: white; 
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: background-color 0.3s;">
           Save Settings
         </button>
       </div>
@@ -53,6 +52,7 @@
         <p class="text-xs">CLAN / AU / BACHELOR</p>
       </div>
     </footer>
+  </div>
 </body>
 
 </html>

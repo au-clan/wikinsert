@@ -59,7 +59,7 @@ const xpathText = `//div[@id='mw-content-text']//text()[
       contains(@class, "references")
   ])
 ]
-`; 
+`;
 addWikinsertButtonToNavBar()
 
 const currentPageKey = location.href.split('#')[0];
@@ -68,7 +68,8 @@ let currentHeatMap: HTMLSentenceMapping[] = [];
 const keys = [
     currentPageKey,
     `${currentPageKey}-heatmap`,
-    `${currentPageKey}-target`
+    `${currentPageKey}-target`,
+    "density",
 ];
 
 interface StorageResult {
@@ -92,6 +93,10 @@ chrome.storage.local.get(keys, (result: StorageResult) => {
         updates[`${currentPageKey}-target`] = "";
     }
 
+    if (result["density"] === undefined) {
+        updates["density"] = 50; // Default density value
+    }
+
     if (Object.keys(updates).length > 0) {
         chrome.storage.local.set(updates);
     }
@@ -113,7 +118,7 @@ const srcRevId = new URLSearchParams(location.search).get("oldid") || "0";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "getPageInfo") {
-    sendResponse({title: srcTitle, lang: srcLang});
+      sendResponse({title: srcTitle, lang: srcLang});
   }
 });
 
@@ -149,12 +154,12 @@ chrome.runtime.onMessage.addListener(
             );
         });
 
-      chrome.storage.local.set({[currentPageKey]: true});
+        chrome.storage.local.set({[currentPageKey]: true});
       console.log("Highlighting applied in", performance.now() - start, "ms");
     } else if (message.action === "remove") {
       console.log("Removing highlighting");
       removeHighlighting();
-      chrome.storage.local.set({[currentPageKey]: false});
+        chrome.storage.local.set({[currentPageKey]: false});
         chrome.storage.local.remove(`${currentPageKey}-heatmap`);
     }
   }
@@ -179,13 +184,17 @@ function storeOriginalParagraphHTML(container: HTMLElement) {
  * that DOM mutations never invalidate the pre‑computed global offsets.
  */
 function highlightSentences(sentences: HTMLSentenceMapping[]): void {
-    heatScoreMin = Math.min(...currentHeatMap.map((s) => s.score));
-    heatScoreMax = Math.max(...currentHeatMap.map((s) => s.score));
-  const contentContainer = document.getElementById("mw-content-text");
-  if (!contentContainer) {
-    console.error("Content container not found");
-    return;
-  }
+    heatScoreMin = Math.min(...sentences.map((s) => s.score));
+    heatScoreMax = Math.max(...sentences.map((s) => s.score));
+    chrome.storage.local.get("density", (result) => {
+        const density = result.density as number;
+        const filteredSentences = filterTopDensitySentences(sentences, density);
+
+        const contentContainer = document.getElementById("mw-content-text");
+        if (!contentContainer) {
+            console.error("Content container not found");
+            return;
+        }
 
     // Remember the pristine HTML so removeHighlighting() can restore it fast.
     storeOriginalParagraphHTML(contentContainer);
@@ -194,11 +203,12 @@ function highlightSentences(sentences: HTMLSentenceMapping[]): void {
     const textNodes = getTextNodesIn();
 
     // Work from back to front to keep the global‑offset mapping valid.
-    const ordered = sentences
-        .slice()
-        .sort((a, b) => b.startOffset - a.startOffset);
+        const ordered = filteredSentences
+            .slice()
+            .sort((a, b) => b.startOffset - a.startOffset);
 
     ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
+    });
 }
 
 
@@ -228,7 +238,7 @@ function wrapRangeInContainer(
 
     const startInNode = localStart - node.start;
     const endInNode = localEnd - node.start;
-    
+
 
     if (startInNode < endInNode) {
       const range = document.createRange();
@@ -294,7 +304,7 @@ function getTextNodesIn(): TextNode[] {
 
     const start = globalOffset;
     const end = globalOffset + text.length;
-    nodes.push({node: currentNode, start, end});
+      nodes.push({node: currentNode, start, end});
     globalOffset = end;
     currentNode = textNodes.iterateNext() as Text | null;
   }
@@ -313,6 +323,26 @@ function getHeatColor(heat: number): string {
   return `hsl(0, ${70 + norm * 20}%, ${95 - norm * 30}%)`;
 }
 
+/**
+ *
+ * function getHeatColor(heat: number): string {
+ const norm = heatScoreMax > heatScoreMin
+ ? (heat - heatScoreMin) / (heatScoreMax - heatScoreMin)
+ : 0;
+
+ // Hue gradually moves from Yellow (50°) → Red (0°)
+ const hue = 50 - (50 * norm);
+
+ // Saturation smoothly increases from 0% (white) to 100% (fully colored)
+ const saturation = norm * 100;
+
+ // Lightness gradually decreases from 95% (white/pale) to 50% (strong/darker color)
+ const lightness = 95 - (45 * norm);
+
+ return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+ }
+ */
+
 function addWikinsertButtonToNavBar() {
   const vectorMenuContentList = document.querySelector("#p-views .vector-menu-content-list")
   if (!vectorMenuContentList) {
@@ -323,11 +353,11 @@ function addWikinsertButtonToNavBar() {
   const wikinsertVectorMenuItem = document.createElement("li")
   wikinsertVectorMenuItem.id = "ca-wikinsert"
   wikinsertVectorMenuItem.className = "vector-tab-noicon mw-list-item"
-  
-  const wikinsertLink = document.createElement("a")
+
+    const wikinsertLink = document.createElement("a")
   wikinsertLink.href = "#"
-  
-  const wikinsertSpan = document.createElement("span")
+
+    const wikinsertSpan = document.createElement("span")
   wikinsertSpan.textContent = "Wikinsert"
     wikinsertLink!.onclick = (e) => {
         e.preventDefault()
@@ -336,7 +366,7 @@ function addWikinsertButtonToNavBar() {
   wikinsertLink.appendChild(wikinsertSpan)
   wikinsertVectorMenuItem.appendChild(wikinsertLink)
 
-  vectorMenuContentList.prepend(wikinsertVectorMenuItem) 
+    vectorMenuContentList.prepend(wikinsertVectorMenuItem)
 }
 
 function openPopup() {
