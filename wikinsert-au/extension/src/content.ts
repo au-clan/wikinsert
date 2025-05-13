@@ -311,6 +311,12 @@ function getTextNodesIn(): TextNode[] {
   return nodes;
 }
 
+function filterTopDensitySentences(sentences: HTMLSentenceMapping[], densityPercentage: number): HTMLSentenceMapping[] {
+    const sortedByScore = sentences.slice().sort((a, b) => b.score - a.score);
+    const cutoffIndex = Math.ceil(sortedByScore.length * (densityPercentage / 100));
+    return sortedByScore.slice(0, cutoffIndex);
+}
+
 /**
  * Generates a heat-based HSL red color.
  */
