@@ -14,7 +14,7 @@ export function initTargetDisplay(pageKey: string) {
     // Check if the target is changed, listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
         console.log("Storage changes detected:", changes);
-        if (namespace === 'local') {
+        if (namespace === "local") {
             console.log("Target changed:", changes[`${pageKey}-target`]);
             const targetTitle = changes[`${pageKey}-target`].newValue;
             updateTargetDisplay(targetTitle);
@@ -25,13 +25,29 @@ export function initTargetDisplay(pageKey: string) {
 }
 
 export function updateTargetDisplay(targetTitle?: string) {
-    const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
-    const selectedTargetName = document.getElementById("selectedTargetName") as HTMLSpanElement | null;
-    const clearTargetBtn = document.getElementById("clearTargetBtn") as HTMLButtonElement | null;
-    const targetStatus = document.getElementById("targetStatus") as HTMLDivElement | null;
-    const noTargetMessage = document.getElementById("noTargetMessage") as HTMLDivElement | null;
+    const searchInput = document.getElementById(
+        "searchInput",
+    ) as HTMLInputElement | null;
+    const selectedTargetName = document.getElementById(
+        "selectedTargetName",
+    ) as HTMLSpanElement | null;
+    const clearTargetBtn = document.getElementById(
+        "clearTargetBtn",
+    ) as HTMLButtonElement | null;
+    const targetStatus = document.getElementById(
+        "targetStatus",
+    ) as HTMLDivElement | null;
+    const noTargetMessage = document.getElementById(
+        "noTargetMessage",
+    ) as HTMLDivElement | null;
 
-    if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage || !searchInput) {
+    if (
+        !selectedTargetName ||
+        !clearTargetBtn ||
+        !targetStatus ||
+        !noTargetMessage ||
+        !searchInput
+    ) {
         console.error("One or more elements not found");
         return;
     }
@@ -48,7 +64,9 @@ export function updateTargetDisplay(targetTitle?: string) {
 }
 
 function initClearBtn(pageKey: string) {
-    const clearTargetBtn = document.getElementById("clearTargetBtn") as HTMLButtonElement | null;
+    const clearTargetBtn = document.getElementById(
+        "clearTargetBtn",
+    ) as HTMLButtonElement | null;
 
     if (!clearTargetBtn) {
         console.error("Clear target button not found");

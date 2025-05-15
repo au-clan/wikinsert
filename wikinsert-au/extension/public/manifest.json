@@ -13,7 +13,7 @@
   "host_permissions": [
     "https://*.wikipedia.org/*"
   ],
-   "action": {
+  "action": {
     "default_popup": "popup.html"
   },
   "content_scripts": [

@@ -2,7 +2,7 @@ import {HTMLSentenceMapping} from "../types";
 import {highlightSentences} from "./highlighting";
 
 export function initStorage() {
-    chrome.storage.session.get(['pageInfo'], ({pageInfo}) => {
+    chrome.storage.session.get(["pageInfo"], ({pageInfo}) => {
         const pageKey = pageInfo.pageKey;
         const keys = [
             `${pageKey}-highlighted`,
@@ -37,7 +37,8 @@ export function initStorage() {
             const target = result[`${pageKey}-target`] || "";
 
             chrome.storage.local.get([`${pageKey}-heatmap`], (result) => {
-                const currentHeatMap: HTMLSentenceMapping[] = result[`${pageKey}-heatmap`] || [];
+                const currentHeatMap: HTMLSentenceMapping[] =
+                    result[`${pageKey}-heatmap`] || [];
                 if (isEnabled && currentHeatMap.length > 0 && target !== "") {
                     console.log("Restoring highlighting");
                     console.log("Current heatmap:", currentHeatMap);

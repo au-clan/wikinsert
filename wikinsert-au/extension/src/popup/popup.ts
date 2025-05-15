@@ -3,14 +3,12 @@ import {initMenu} from "./menu";
 import {initTargetDisplay} from "./target";
 import {initToggleInput} from "./toggle";
 
-
 document.addEventListener("DOMContentLoaded", () => {
-    chrome.storage.session.get('pageInfo', (result) => {
+    chrome.storage.session.get("pageInfo", (result) => {
         if (result.pageInfo) {
             const {pageKey: storedPageKey, lang, title} = result.pageInfo;
             // Initialize the target display
             initTargetDisplay(storedPageKey);
-
 
             // Initialize the toggle input
             initToggleInput(storedPageKey);
@@ -39,5 +37,3 @@ export interface FilteredArticle {
     thumbnail?: Thumbnail;
     revid?: string;
 }
-
-

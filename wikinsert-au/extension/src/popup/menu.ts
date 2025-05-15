@@ -1,6 +1,9 @@
 import {createSvgIcon} from "../utils";
-import {cdxIconCancel, cdxIconConfigure, cdxIconSubtract} from '@wikimedia/codex-icons';
-
+import {
+    cdxIconCancel,
+    cdxIconConfigure,
+    cdxIconSubtract,
+} from "@wikimedia/codex-icons";
 
 export function initMenu() {
     const settingsBtn = document.getElementById("settings");

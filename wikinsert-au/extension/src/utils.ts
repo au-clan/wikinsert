@@ -3,5 +3,5 @@ export function createSvgIcon(icon: string): string {
 }
 
 export function openPopup() {
-    chrome.runtime.sendMessage({action: "openPopup"})
+    chrome.runtime.sendMessage({action: "openPopup"});
 }

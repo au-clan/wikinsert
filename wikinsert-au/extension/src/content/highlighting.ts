@@ -4,7 +4,6 @@ import {getHeatColor} from "./coloring";
 import {xpathText} from "./xpath";
 
 export function initHighlightListeners() {
-
     // Listen for messages from the extension popup
     chrome.runtime.onMessage.addListener(
         (message: { action: string }, sender, sendResponse): void => {
@@ -27,34 +26,42 @@ export function initHighlightListeners() {
                                 (response: HTMLSentenceMapping[]) => {
                                     if (response) {
                                         console.log("Sentences received:", response);
-                                        chrome.storage.local.set({[`${currentPageKey}-heatmap`]: response});
+                                        chrome.storage.local.set({
+                                            [`${currentPageKey}-heatmap`]: response,
+                                        });
                                         highlightSentences(response);
                                     } else {
                                         console.warn("No sentences returned");
                                     }
-                                }
+                                },
                             );
-                        })
-                        chrome.storage.local.set({[`${currentPageKey}-highlighted`]: true});
-                        console.log("Highlighting applied in", performance.now() - start, "ms");
+                        });
+                        chrome.storage.local.set({
+                            [`${currentPageKey}-highlighted`]: true,
+                        });
+                        console.log(
+                            "Highlighting applied in",
+                            performance.now() - start,
+                            "ms",
+                        );
                     });
                 } else if (message.action === "remove") {
                     removeHighlighting();
-                    chrome.storage.local.set({[`${currentPageKey}-highlighted`]: false});
-                }
-            });
+                    chrome.storage.local.set({
+                        [`${currentPageKey}-highlighted`]: false,
+                    });
         }
+            });
+        },
     );
 }
 
 function storeOriginalParagraphHTML(container: HTMLElement) {
-    container
-        .querySelectorAll<HTMLParagraphElement>("p")
-        .forEach((p) => {
-            if (!originalHTMLMap.has(p)) {
-                originalHTMLMap.set(p, p.innerHTML);
-            }
-        });
+    container.querySelectorAll<HTMLParagraphElement>("p").forEach((p) => {
+        if (!originalHTMLMap.has(p)) {
+            originalHTMLMap.set(p, p.innerHTML);
+        }
+    });
 }
 
 export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
@@ -76,7 +83,6 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
             });
         }
 
-
         const contentContainer = document.getElementById("mw-content-text");
         if (!contentContainer) {
             console.error("Content container not found");
@@ -95,13 +101,12 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
     });
 }
 
-
 /**
  * Wraps a sentence range in a <span> with a highlight.
  */
 function wrapRangeInContainer(
     sentence: HTMLSentenceMapping,
-    textNodes: TextNode[]
+    textNodes: TextNode[],
 ): void {
     const {startOffset, endOffset, score, id} = sentence;
 
@@ -123,7 +128,6 @@ function wrapRangeInContainer(
         const startInNode = localStart - node.start;
         const endInNode = localEnd - node.start;
 
-
         if (startInNode < endInNode) {
             const range = document.createRange();
             range.setStart(node.node, startInNode);
@@ -135,7 +139,11 @@ function wrapRangeInContainer(
             chrome.storage.session.get(["heatScoreMin", "heatScoreMax"], (result) => {
                 const heatScoreMin = result.heatScoreMin as number;
                 const heatScoreMax = result.heatScoreMax as number;
-                span.style.backgroundColor = getHeatColor(score, heatScoreMin, heatScoreMax);
+                span.style.backgroundColor = getHeatColor(
+                    score,
+                    heatScoreMin,
+                    heatScoreMax,
+                );
             });
 
             const extracted = range.extractContents();
@@ -144,7 +152,6 @@ function wrapRangeInContainer(
         }
     }
 }
-
 
 /**
  * Removes highlighting by restoring each paragraph’s original HTML.
@@ -172,8 +179,11 @@ function removeHighlighting(): void {
 function getTextNodesIn(): TextNode[] {
     const nodes: TextNode[] = [];
     let expression = document.createExpression(xpathText, null);
-    const textNodes = expression.evaluate(document, XPathResult.ORDERED_NODE_ITERATOR_TYPE);
-    let globalOffset = 0
+    const textNodes = expression.evaluate(
+        document,
+        XPathResult.ORDERED_NODE_ITERATOR_TYPE,
+    );
+    let globalOffset = 0;
     let currentNode = textNodes.iterateNext() as Text | null;
 
     while (currentNode) {
@@ -192,8 +202,13 @@ function getTextNodesIn(): TextNode[] {
     return nodes;
 }
 
-function filterTopDensitySentences(sentences: HTMLSentenceMapping[], densityPercentage: number): HTMLSentenceMapping[] {
+function filterTopDensitySentences(
+    sentences: HTMLSentenceMapping[],
+    densityPercentage: number,
+): HTMLSentenceMapping[] {
     const sortedByScore = sentences.slice().sort((a, b) => b.score - a.score);
-    const cutoffIndex = Math.ceil(sortedByScore.length * (densityPercentage / 100));
+    const cutoffIndex = Math.ceil(
+        sortedByScore.length * (densityPercentage / 100),
+    );
     return sortedByScore.slice(0, cutoffIndex);
 }

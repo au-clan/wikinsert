@@ -1,5 +1,7 @@
 export function initToggleInput(pageKey: string) {
-    const toggleInput = document.getElementById("toggleInput") as HTMLInputElement | null;
+    const toggleInput = document.getElementById(
+        "toggleInput",
+    ) as HTMLInputElement | null;
 
     if (!toggleInput) {
         console.error("Toggle input not found");
@@ -24,7 +26,7 @@ export function initToggleInput(pageKey: string) {
 
     // listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'local' && changes[`${pageKey}-highlighted`]) {
+        if (namespace === "local" && changes[`${pageKey}-highlighted`]) {
             toggleInput.checked = changes[`${pageKey}-highlighted`].newValue === true;
         }
     });
