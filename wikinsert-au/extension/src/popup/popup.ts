@@ -5,39 +5,25 @@ import {initToggleInput} from "./toggle";
 
 
 document.addEventListener("DOMContentLoaded", () => {
-    let wikiLangCode = "";
-    let srcTitle = "";
-    let pageKey = "";
+    chrome.storage.session.get('pageInfo', (result) => {
+        if (result.pageInfo) {
+            const {pageKey: storedPageKey, lang, title} = result.pageInfo;
+            // Initialize the target display
+            initTargetDisplay(storedPageKey);
 
-    // get the page info from the active tab
-    chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-        const activeTab = tabs[0];
-        if (activeTab?.url) {
-            pageKey = activeTab.url.split("#")[0]
-            chrome.tabs.sendMessage(
-                activeTab.id!,
-                {action: "getPageInfo"},
-                (response) => {
-                    wikiLangCode = response.lang;
-                    srcTitle = response.title;
-                }
-            );
+
+            // Initialize the toggle input
+            initToggleInput(storedPageKey);
+
+            // Initialize the menu
+            initMenu();
+
+            // Initialize the search form
+            initSearch(storedPageKey, lang, title);
+        } else {
+            console.error("Page info not found in session storage");
         }
     });
-
-    // Initialize the target display
-    initTargetDisplay(pageKey);
-
-
-    // Initialize the toggle input
-    initToggleInput(pageKey);
-
-    // Initialize the menu
-    initMenu();
-
-    // Initialize the search form
-    initSearch(pageKey, wikiLangCode, srcTitle);
-
 });
 
 export interface Thumbnail {

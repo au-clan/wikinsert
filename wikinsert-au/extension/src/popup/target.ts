@@ -1,5 +1,5 @@
 export function initTargetDisplay(pageKey: string) {
-    // Check if a target is selected
+    // Check if a target is selected initally
     chrome.storage.local.get([`${pageKey}-target`], (result) => {
         const targetTitle = result[`${pageKey}-target`];
         if (targetTitle) {
@@ -9,24 +9,33 @@ export function initTargetDisplay(pageKey: string) {
         }
     });
 
+    console.log("Initializing target display for page key:", pageKey);
+
+    // Check if the target is changed, listen for changes
+    chrome.storage.onChanged.addListener((changes, namespace) => {
+        console.log("Storage changes detected:", changes);
+        if (namespace === 'local') {
+            console.log("Target changed:", changes[`${pageKey}-target`]);
+            const targetTitle = changes[`${pageKey}-target`].newValue;
+            updateTargetDisplay(targetTitle);
+        }
+    });
+
     initClearBtn(pageKey);
 }
 
 export function updateTargetDisplay(targetTitle?: string) {
+    const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
     const selectedTargetName = document.getElementById("selectedTargetName") as HTMLSpanElement | null;
     const clearTargetBtn = document.getElementById("clearTargetBtn") as HTMLButtonElement | null;
     const targetStatus = document.getElementById("targetStatus") as HTMLDivElement | null;
     const noTargetMessage = document.getElementById("noTargetMessage") as HTMLDivElement | null;
 
-    if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage) {
+    if (!selectedTargetName || !clearTargetBtn || !targetStatus || !noTargetMessage || !searchInput) {
         console.error("One or more elements not found");
         return;
     }
-    if (!selectedTargetName || !targetStatus || !noTargetMessage) {
-        console.error("One or more essential elements for updating target display not found");
-        return;
-    }
-
+    searchInput.value = "";
     if (targetTitle) {
         selectedTargetName.textContent = `Inserting "${targetTitle}"`;
         targetStatus.classList.remove("hidden");
@@ -47,7 +56,7 @@ function initClearBtn(pageKey: string) {
     }
 
     clearTargetBtn.addEventListener("click", () => {
-        chrome.storage.local.remove([`${pageKey}-target`, `${pageKey}-heatmap`], () => {
+        chrome.storage.local.remove([`${pageKey}-target`], () => {
             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                 chrome.tabs.sendMessage(tabs[0].id!, {action: "remove"});
             });

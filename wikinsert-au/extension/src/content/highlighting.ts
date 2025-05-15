@@ -1,86 +1,80 @@
+import {HTMLSentenceMapping, TextNode} from "../types";
+import {originalHTMLMap} from "./content";
 import {getHeatColor} from "./coloring";
-import {
-    currentHeatMap,
-    currentPageKey,
-    HTMLSentenceMapping,
-    setCurrentHeatMap,
-    srcLang,
-    srcRevId,
-    srcTitle,
-    TextNode
-} from "./content";
 import {xpathText} from "./xpath";
 
 export function initHighlightListeners() {
 
-// Listen for messages from the extension popup
+    // Listen for messages from the extension popup
     chrome.runtime.onMessage.addListener(
         (message: { action: string }, sender, sendResponse): void => {
-            if (message.action === "highlight") {
-                //remove first
-                removeHighlighting();
-                const start = performance.now();
-                chrome.storage.local.get([`${currentPageKey}-target`], (result) => {
-                    const targetTitle = result[`${currentPageKey}-target`];
-                    chrome.runtime.sendMessage(
-                        {
-                            action: "getHeatMap",
-                            srcRevId: srcRevId,
-                            srcTitle: srcTitle,
-                            targetTitle: targetTitle,
-                            lang: srcLang,
-                        },
-                        (response: HTMLSentenceMapping[]) => {
-                            if (response) {
-                                console.log("Sentences received:", response);
-                                setCurrentHeatMap(response);
-                                // store the heatmap in local storage
-                                chrome.storage.local.set({[`${currentPageKey}-heatmap`]: currentHeatMap});
-                                // Compute dynamic range of scores for normalization
-                                highlightSentences(currentHeatMap);
-                            } else {
-                                console.warn("No sentences returned");
-                            }
-                        }
-                    );
-                });
-
-                chrome.storage.local.set({[currentPageKey]: true});
-                console.log("Highlighting applied in", performance.now() - start, "ms");
-            } else if (message.action === "remove") {
-                console.log("Removing highlighting");
-                removeHighlighting();
-                chrome.storage.local.set({[currentPageKey]: false});
-                chrome.storage.local.remove(`${currentPageKey}-heatmap`);
-            }
+            chrome.storage.session.get(["pageInfo"], (result) => {
+                const currentPageKey = result.pageInfo.pageKey;
+                if (message.action === "highlight") {
+                    removeHighlighting();
+                    const start = performance.now();
+                    chrome.storage.local.get([`${currentPageKey}-target`], (result) => {
+                        const targetTitle = result[`${currentPageKey}-target`];
+                        chrome.storage.session.get(["pageInfo"], (result) => {
+                            chrome.runtime.sendMessage(
+                                {
+                                    action: "getHeatMap",
+                                    srcRevId: result.pageInfo.revId,
+                                    srcTitle: result.pageInfo.title,
+                                    targetTitle: targetTitle,
+                                    lang: result.pageInfo.lang,
+                                },
+                                (response: HTMLSentenceMapping[]) => {
+                                    if (response) {
+                                        console.log("Sentences received:", response);
+                                        chrome.storage.local.set({[`${currentPageKey}-heatmap`]: response});
+                                        highlightSentences(response);
+                                    } else {
+                                        console.warn("No sentences returned");
+                                    }
+                                }
+                            );
+                        })
+                        chrome.storage.local.set({[`${currentPageKey}-highlighted`]: true});
+                        console.log("Highlighting applied in", performance.now() - start, "ms");
+                    });
+                } else if (message.action === "remove") {
+                    removeHighlighting();
+                    chrome.storage.local.set({[`${currentPageKey}-highlighted`]: false});
+                }
+            });
         }
     );
 }
 
-export function storeOriginalParagraphHTML(container: HTMLElement) {
-    chrome.storage.session.get("originalHTMLMap", (result) => {
-        if (result.originalHTMLMap) {
-            const originalHTMLMap = result.originalHTMLMap as WeakMap<HTMLElement, string>;
-            container
-                .querySelectorAll<HTMLParagraphElement>("p")
-                .forEach((p) => {
-                    if (!originalHTMLMap.has(p)) {
-                        originalHTMLMap.set(p, p.innerHTML);
-                    }
-                });
-        }
-    });
+function storeOriginalParagraphHTML(container: HTMLElement) {
+    container
+        .querySelectorAll<HTMLParagraphElement>("p")
+        .forEach((p) => {
+            if (!originalHTMLMap.has(p)) {
+                originalHTMLMap.set(p, p.innerHTML);
+            }
+        });
 }
 
 export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
-    chrome.storage.session.set({
-        heatScoreMin: Math.min(...sentences.map((s) => s.score)),
-        heatScoreMax: Math.max(...sentences.map((s) => s.score)),
-    });
+    const relative = true;
+    if (!relative) {
+        chrome.storage.session.set({
+            heatScoreMin: Math.min(...sentences.map((s) => s.score)),
+            heatScoreMax: Math.max(...sentences.map((s) => s.score)),
+        });
+    }
 
     chrome.storage.local.get("density", (result) => {
         const density = result.density as number;
         const filteredSentences = filterTopDensitySentences(sentences, density);
+        if (relative) {
+            chrome.storage.session.set({
+                heatScoreMin: Math.min(...filteredSentences.map((s) => s.score)),
+                heatScoreMax: Math.max(...filteredSentences.map((s) => s.score)),
+            });
+        }
 
 
         const contentContainer = document.getElementById("mw-content-text");
@@ -149,33 +143,26 @@ function wrapRangeInContainer(
             range.insertNode(span);
         }
     }
-
 }
 
 
 /**
  * Removes highlighting by restoring each paragraph’s original HTML.
  */
-export function removeHighlighting(): void {
+function removeHighlighting(): void {
     const container = document.getElementById("mw-content-text");
     if (!container) {
         console.error("Content container not found");
         return;
     }
+    container.querySelectorAll<HTMLParagraphElement>("p").forEach((paragraph) => {
+        if (originalHTMLMap.has(paragraph)) {
+            paragraph.innerHTML = originalHTMLMap.get(paragraph)!;
+        }
+    });
 
-    chrome.storage.session.get("originalHTMLMap", (result) => {
-        const originalHTMLMap = result.originalHTMLMap as WeakMap<HTMLElement, string>;
-        container.querySelectorAll<HTMLParagraphElement>("p").forEach((paragraph) => {
-            if (originalHTMLMap.has(paragraph)) {
-                paragraph.innerHTML = originalHTMLMap.get(paragraph)!;
-            }
-        });
-
-        // Fallback: Ensure all spans are removed in case original HTML restoration fails
-        document.querySelectorAll(".sentence-span").forEach((span) => {
-            span.replaceWith(...span.childNodes);
-        });
-        chrome.storage.session.remove("originalHTMLMap");
+    document.querySelectorAll(".sentence-span").forEach((span) => {
+        span.replaceWith(...span.childNodes);
     });
 }
 

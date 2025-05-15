@@ -1,5 +1,6 @@
-const baseApiUrl = "http://odin.st.lab.au.dk:8081/";
-
+//odin.st.lab.au.dk
+const baseApiUrl = "http://localhost:8080/";
+chrome.storage.session.setAccessLevel({accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS"});
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "getHeatMap") {
     console.log("Received getHeatMap message:", message);
@@ -76,11 +77,3 @@ chrome.runtime.onMessage.addListener(
     }
   }
 );
-
-// background.ts
-chrome.webNavigation.onCompleted.addListener(({frameId}) => {
-    if (frameId === 0) {                   // main frame only
-        chrome.action.openPopup()
-            .catch(err => console.error('openPopup failed:', err));
-    }
-}, {url: [{hostSuffix: '.wikipedia.org'}]});

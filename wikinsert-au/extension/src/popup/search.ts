@@ -58,7 +58,6 @@ export function initSearch(pageKey: string, wikiLangCode: string, srcTitle: stri
     if (searchForm) {
         searchForm.addEventListener("submit", (e) => {
             e.preventDefault();
-
             chrome.storage.local.get([`${pageKey}-heatmap`], (result) => {
                 const heatmap = result[`${pageKey}-heatmap`];
                 if (!heatmap || heatmap.length === 0) {
@@ -82,6 +81,7 @@ export function initSearch(pageKey: string, wikiLangCode: string, srcTitle: stri
 
 
                 // clear the search input on
+                searchInput.innerHTML = "";
                 searchInput.value = "";
                 searchDropdown.innerHTML = "";
                 searchDropdownWrapper.classList.add("hidden");
@@ -96,17 +96,10 @@ export function initSearch(pageKey: string, wikiLangCode: string, srcTitle: stri
 export async function performSearch(query: string, srcTitle: string, lang: string): Promise<void> {
     const searchForm = document.getElementById("searchForm") as HTMLFormElement | null;
     const searchInput = document.getElementById("searchInput") as HTMLInputElement | null;
-    const searchDropdown = document.getElementById("searchDropdown") as HTMLUListElement;
-    const searchDropdownWrapper = document.getElementById("searchDropdownWrapper") as HTMLElement;
-    if (!searchDropdownWrapper) {
-        console.error("Wrapper element not found");
-        return;
-    }
+    const searchDropdown = document.getElementById("searchDropdown") as HTMLUListElement | null;
+    const searchDropdownWrapper = document.getElementById("searchDropdownWrapper") as HTMLElement | null;
     if (!searchForm || !searchInput || !searchDropdown || !searchDropdownWrapper) {
         console.error("Search form, input, dropdown, or wrapper element not found");
-    }
-    if (!searchForm || !searchInput || !searchDropdown) {
-        console.error("Search form, input, or dropdown element not found");
         return;
     }
     if (!query.trim()) {
@@ -124,7 +117,9 @@ export async function performSearch(query: string, srcTitle: string, lang: strin
         },
         (response) => {
             if (!response?.success) {
-                // Handle error
+                console.error("Error fetching Wikipedia data:", response.error);
+                searchDropdown.innerHTML = `<li class="cdx-menu-item"><span class="p-2 text-sm text-red-500">Error fetching results.</span></li>`;
+                searchDropdownWrapper.classList.remove("hidden");
                 return;
             }
 
@@ -155,7 +150,6 @@ export function navigateDropdown(moveDown: boolean) {
     items[index].classList.add("highlighted");
     items[index].scrollIntoView({block: "nearest"});
 }
-
 /**
  * Renders a list of articles in the dropdown container
  * @param articles The array of articles to render
@@ -234,7 +228,6 @@ function renderArticles(
         // Interaction
         li.addEventListener("click", (e) => {
             e.preventDefault();
-            const me = e as MouseEvent;
             if (e.ctrlKey || e.metaKey) {
                 e.stopPropagation(); // Prevent also selecting the item
                 window.open(articleUrl, "_blank");

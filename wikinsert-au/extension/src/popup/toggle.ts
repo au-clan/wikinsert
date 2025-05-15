@@ -10,8 +10,8 @@ export function initToggleInput(pageKey: string) {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         const activeTab = tabs[0];
         if (activeTab?.url) {
-            chrome.storage.local.get([pageKey], (result) => {
-                toggleInput.checked = result[pageKey] === true;
+            chrome.storage.local.get([`${pageKey}-highlighted`], (result) => {
+                toggleInput.checked = result[`${pageKey}-highlighted`] === true;
             });
 
             toggleInput.addEventListener("change", () => {
@@ -24,8 +24,8 @@ export function initToggleInput(pageKey: string) {
 
     // listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === 'local' && changes[pageKey]) {
-            toggleInput.checked = changes[pageKey].newValue === true;
+        if (namespace === 'local' && changes[`${pageKey}-highlighted`]) {
+            toggleInput.checked = changes[`${pageKey}-highlighted`].newValue === true;
         }
     });
 }

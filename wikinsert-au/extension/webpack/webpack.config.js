@@ -9,8 +9,21 @@ const srcDir = path.join(__dirname, "..", "src");
 const pattern = path.join(srcDir, "*.ts").replace(/\\/g, '/');
 const tsFiles = glob.sync(pattern);
 
+const contentPattern = path.join(srcDir, "content", "*.ts").replace(/\\/g, '/');
+const popupPattern = path.join(srcDir, "popup", "*.ts").replace(/\\/g, '/');
+const contentFiles = glob.sync(contentPattern);
+const popupFiles = glob.sync(popupPattern);
+
 const entries = {};
 tsFiles.forEach((file) => {
+   const name = path.basename(file, '.ts');
+   entries[name] = file;
+});
+contentFiles.forEach((file) => {
+   const name = path.basename(file, '.ts');
+   entries[name] = file;
+});
+popupFiles.forEach((file) => {
    const name = path.basename(file, '.ts');
    entries[name] = file;
 });
