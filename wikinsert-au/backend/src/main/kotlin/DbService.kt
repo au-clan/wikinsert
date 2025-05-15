@@ -88,7 +88,8 @@ class MongoDbService(
         query: String,
         lang: String
     ): List<FilteredArticleResponseData> {
-        val pattern = ".*$query.*"
+        val escapedQuery = Regex.escape(query)
+        val pattern = ".*$escapedQuery.*"
         val regexOptions = "i"  // i for case-insensitive
 
         val dbQuery =

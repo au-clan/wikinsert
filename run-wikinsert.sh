@@ -1,5 +1,5 @@
 #!/bin/bash
-
+docker-compose down --remove-orphans || true
 # Help message
 usage() {
   echo "Usage: $0 [options]"

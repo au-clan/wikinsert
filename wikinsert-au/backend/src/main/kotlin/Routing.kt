@@ -33,9 +33,14 @@ fun Application.configureRouting() {
                 HttpStatusCode.BadRequest,
                 "Missing or malformed source_title"
             )
+            if (sourceTitle.isEmpty() || sourceTitle.isBlank()) {
+                return@get call.respond(
+                    HttpStatusCode.BadRequest,
+                    "Missing or malformed source_title"
+                )
+            }
             val lang = call.request.queryParameters["lang"] ?: "en"
             println("Query: $query")
-
             val finalArticles = dbService.getTargetsForSourceArticleBySearchQuery(sourceTitle, lang, query)
             println("Final articles: $finalArticles")
             val jsonEncode = Json.encodeToString(finalArticles)
