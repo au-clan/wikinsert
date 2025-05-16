@@ -1,5 +1,4 @@
-//odin.st.lab.au.dk
-const baseApiUrl = "http://localhost:8080/";
+const baseApiUrl = "http://odin.st.lab.au.dk:8081/";
 chrome.storage.session.setAccessLevel({
   accessLevel: "TRUSTED_AND_UNTRUSTED_CONTEXTS",
 });
