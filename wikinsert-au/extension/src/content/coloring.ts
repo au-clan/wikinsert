@@ -29,6 +29,7 @@ export function getHeatColor(score: number, min: number, max: number) {
 
 export function createSpectrumReference() {
   const spectrum = document.createElement("div");
+  spectrum.id = "heatmap-spectrum";
   spectrum.style.position = "fixed";
   spectrum.style.top = "50%";
   spectrum.style.transform = "translateY(-50%)";
@@ -66,5 +67,20 @@ export function createSpectrumReference() {
       barContainer.appendChild(bar);
     }
   }
+  spectrum.style.display = "none";
   document.body.appendChild(spectrum);
+}
+
+export function showSpectrum() {
+  const spectrum = document.getElementById("heatmap-spectrum");
+  if (spectrum) {
+    spectrum.style.display = "flex";
+  }
+}
+
+export function hideSpectrum() {
+  const spectrum = document.getElementById("heatmap-spectrum");
+  if (spectrum) {
+    spectrum.style.display = "none";
+  }
 }

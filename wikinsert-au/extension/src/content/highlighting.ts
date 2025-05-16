@@ -1,6 +1,6 @@
 import {HTMLSentenceMapping, TextNode} from "../types";
 import {originalHTMLMap} from "./content";
-import {getHeatColor} from "./coloring";
+import {getHeatColor, hideSpectrum, showSpectrum} from "./coloring";
 import {xpathText} from "./xpath";
 
 export function initHighlightListeners() {
@@ -99,6 +99,7 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
 
         ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
     });
+    showSpectrum();
 }
 
 /**
@@ -171,6 +172,8 @@ function removeHighlighting(): void {
     document.querySelectorAll(".sentence-span").forEach((span) => {
         span.replaceWith(...span.childNodes);
     });
+
+    hideSpectrum();
 }
 
 /**
