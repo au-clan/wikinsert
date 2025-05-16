@@ -50,7 +50,7 @@ export function initHighlightListeners() {
                     chrome.storage.local.set({
                         [`${currentPageKey}-highlighted`]: false,
                     });
-        }
+                }
             });
         },
     );

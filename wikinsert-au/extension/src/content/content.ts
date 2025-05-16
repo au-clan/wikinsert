@@ -1,7 +1,10 @@
 import {openPopup} from "../utils";
+import {createSpectrumReference} from "./coloring";
 import {initHighlightListeners} from "./highlighting";
 import {initStorage} from "./init";
 import {addWikinsertButtonToNavBar} from "./page-addons";
+
+createSpectrumReference();
 
 export const originalHTMLMap = new WeakMap<HTMLElement, string>();
 
