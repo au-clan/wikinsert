@@ -6,15 +6,17 @@ export function getHeatColor(score: number, min: number, max: number) {
   // Define RGB values for continuous gradient
   let r, g, b;
 
+    // Map norm to a WCAG‑AAA‑compliant heat spectrum: white → yellow → saturated red (#FF5E5E)
   r = 255;
-
-  // Green channel: starts high (yellow) and gradually decreases to zero (red)
-  // Using cubic easing to make the transition smoother
-  g = Math.round(255 * (1 - Math.pow(norm, 1.5)));
-
-  // Blue channel: very low to maintain vibrant colors
-  // Slight presence at the beginning helps create pale yellow
-  b = Math.round(230 * (1 - norm));
+    if (norm <= 0.5) {
+        const t = norm / 0.5;  // 0 at low, 1 at mid
+        g = 255;
+        b = Math.round(255 * (1 - t)); // 255 → 0
+    } else {
+        const t = (norm - 0.5) / 0.5; // 0 at mid, 1 at high
+        g = Math.round(255 + (94 - 255) * t); // 255 → 94
+        b = Math.round(0 + (94 - 0) * t); // 0   → 94
+    }
 
   // For very low values (norm < 0.1), make it closer to white
   if (norm < 0.1) {
