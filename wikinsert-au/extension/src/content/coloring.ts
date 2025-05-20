@@ -59,7 +59,7 @@ export function createSpectrumReference() {
   `;
   const barContainer = spectrum.querySelector("#heatmap-spectrum-bars") as HTMLElement;
   if (barContainer) {
-    const barCount = 10;
+    const barCount = 100;
     for (let i = 0; i < barCount; i++) {
       const bar = document.createElement("div");
       bar.style.flex = "1";
