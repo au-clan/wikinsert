@@ -2,8 +2,7 @@
 	<div class="wikimedia-text">
 		<cdx-typeahead-search
 			id="typeahead-search-wikipedia"
-			form-action="https://en.wikipedia.org/w/index.php"
-			:use-button="true"
+			form-action="#"
 			:search-results="searchResults"
 			:show-thumbnail="true"
 			:highlight-query="true"
@@ -16,12 +15,10 @@
 			<template #default>
 				<input
 					type="hidden"
-					name="language"
 					value="en"
 				>
 				<input
 					type="hidden"
-					name="title"
 					value="Special:Search"
 				>
 			</template>
@@ -36,6 +33,7 @@ import type {SearchResult} from '@wikimedia/codex/dist/types/types.d.ts';
 import type {FilteredArticle} from '../../../../extension/src/popup.js'
 
 export default defineComponent( {
+
 	name: 'TypeaheadSearchWikipedia',
 	components: { CdxTypeaheadSearch },
 	setup() {
@@ -54,6 +52,8 @@ export default defineComponent( {
 				searchResults.value = [];
 				return;
 			}
+			
+		const lang = 'en'; // TODO: Get the language from the user interface
 
       /**
        * Format search results for consumption by TypeaheadSearch.
@@ -62,7 +62,7 @@ export default defineComponent( {
        * @return
        */
       function adaptApiResponse( filteredArticles: FilteredArticle[] ): SearchResult[] {
-        return filteredArticles.map( ( { title, lang, description, thumbnail, revid } ) => ( {
+        return filteredArticles.map( ( { title, description, thumbnail, revid } ) => ( {
           label: title,
           value: crypto.randomUUID(),
           description: description,
@@ -76,7 +76,6 @@ export default defineComponent( {
       }
 
       const baseApiUrl = "http://odin.st.lab.au.dk:8081";
-      const lang = 'en'; // TODO: Get the language from the user interface
 			const url = `${baseApiUrl}/search?` +
                 `&q=${encodeURIComponent(value)}` +
                 `&lang=${encodeURIComponent(lang)}`;
@@ -104,7 +103,11 @@ export default defineComponent( {
 
 		function onSubmit( value: string ) {
 			// eslint-disable-next-line no-console
-			console.log( 'submit event emitted with value:', value );
+			const url = searchResults.value[0].url
+			if(!url) {
+				return
+			}
+			window.open(url)
 		}
 
 		return {
