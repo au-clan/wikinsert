@@ -26,7 +26,7 @@ export function getHeatColor(score: number, min: number, max: number) {
     b = Math.round(b * (1 - whiteBlend) + 255 * whiteBlend);
   }
 
-  return `rgb(${r}, ${g}, ${b})`;
+    return `rgba(${r}, ${g}, ${b}, 0.6)`;
 }
 
 export function createSpectrumReference() {
