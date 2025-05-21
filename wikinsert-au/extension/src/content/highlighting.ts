@@ -3,6 +3,23 @@ import {originalHTMLMap} from "./content";
 import {getHeatColor, hideSpectrum, showSpectrum} from "./coloring";
 import {xpathText} from "./xpath";
 
+const tooltip = document.createElement('div');
+tooltip.className = 'custom-tooltip';
+Object.assign(tooltip.style, {
+    position: 'fixed',
+    pointerEvents: 'none',
+    padding: '4px 8px',
+    background: 'rgba(0,0,0,0.8)',
+    color: '#fff',
+    borderRadius: '4px',
+    fontSize: '12px',
+    transition: 'opacity 0.2s',
+    opacity: '0',
+    zIndex: '9999',
+});
+document.body.appendChild(tooltip);
+
+
 export function initHighlightListeners() {
     // Listen for messages from the extension popup
     chrome.runtime.onMessage.addListener(
@@ -137,6 +154,18 @@ function wrapRangeInContainer(
             const span = document.createElement("span");
             span.className = "sentence-span";
             span.id = `sentence-${id}`;
+            // Tooltip event listeners
+            span.addEventListener('mouseenter', () => {
+                tooltip.textContent = `Score: ${score}`;
+                tooltip.style.opacity = '1';
+            });
+            span.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+            span.addEventListener('mousemove', (e) => {
+                tooltip.style.top = `${e.clientY + 10}px`;
+                tooltip.style.left = `${e.clientX + 10}px`;
+            });
             chrome.storage.session.get(["heatScoreMin", "heatScoreMax"], (result) => {
                 const heatScoreMin = result.heatScoreMin as number;
                 const heatScoreMax = result.heatScoreMax as number;
@@ -148,6 +177,13 @@ function wrapRangeInContainer(
             });
 
             const extracted = range.extractContents();
+            const extractedText = extracted.textContent || '';
+            // Skip highlighting whitespace-only fragments
+            if (!/\S/.test(extractedText)) {
+                // Reinsert the whitespace and skip wrapping
+                range.insertNode(extracted);
+                continue;
+            }
             span.appendChild(extracted);
             range.insertNode(span);
         }
