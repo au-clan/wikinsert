@@ -2,6 +2,7 @@ import {HTMLSentenceMapping, TextNode} from "../types";
 import {originalHTMLMap} from "./content";
 import {getHeatColor, hideSpectrum, showSpectrum} from "./coloring";
 import {xpathText} from "./xpath";
+import {normalizeSentencesMinMax} from "../utils";
 
 const tooltip = document.createElement('div');
 tooltip.className = 'custom-tooltip';
@@ -43,10 +44,16 @@ export function initHighlightListeners() {
                                 (response: HTMLSentenceMapping[]) => {
                                     if (response) {
                                         console.log("Sentences received:", response);
+                                        const normalizedSentences = normalizeSentencesMinMax(
+                                            response,
+                                            Math.min(...response.map((s) => s.score)),
+                                            Math.max(...response.map((s) => s.score)),
+                                        );
                                         chrome.storage.local.set({
-                                            [`${currentPageKey}-heatmap`]: response,
+                                            [`${currentPageKey}-heatmap`]: normalizedSentences,
                                         });
-                                        highlightSentences(response);
+
+                                        highlightSentences(normalizedSentences);
                                     } else {
                                         console.warn("No sentences returned");
                                     }
@@ -63,6 +70,7 @@ export function initHighlightListeners() {
                         );
                     });
                 } else if (message.action === "remove") {
+                    hideSpectrum();
                     removeHighlighting();
                     chrome.storage.local.set({
                         [`${currentPageKey}-highlighted`]: false,
@@ -82,7 +90,7 @@ function storeOriginalParagraphHTML(container: HTMLElement) {
 }
 
 export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
-    const relative = true;
+    const relative = false;
     if (!relative) {
         chrome.storage.session.set({
             heatScoreMin: Math.min(...sentences.map((s) => s.score)),
@@ -90,9 +98,9 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
         });
     }
 
-    chrome.storage.local.get("density", (result) => {
-        const density = result.density as number;
-        const filteredSentences = filterTopDensitySentences(sentences, density);
+    chrome.storage.local.get("intensity", (result) => {
+        const intensity = result.intensity as number;
+        const filteredSentences = filterTopIntensitySentences(sentences, intensity) as HTMLSentenceMapping[];
         if (relative) {
             chrome.storage.session.set({
                 heatScoreMin: Math.min(...filteredSentences.map((s) => s.score)),
@@ -154,26 +162,25 @@ function wrapRangeInContainer(
             const span = document.createElement("span");
             span.className = "sentence-span";
             span.id = `sentence-${id}`;
-            // Tooltip event listeners
-            span.addEventListener('mouseenter', () => {
-                tooltip.textContent = `Score: ${score}`;
-                tooltip.style.opacity = '1';
-            });
-            span.addEventListener('mouseleave', () => {
-                tooltip.style.opacity = '0';
-            });
-            span.addEventListener('mousemove', (e) => {
-                tooltip.style.top = `${e.clientY + 10}px`;
-                tooltip.style.left = `${e.clientX + 10}px`;
-            });
             chrome.storage.session.get(["heatScoreMin", "heatScoreMax"], (result) => {
                 const heatScoreMin = result.heatScoreMin as number;
                 const heatScoreMax = result.heatScoreMax as number;
                 span.style.backgroundColor = getHeatColor(
                     score,
-                    heatScoreMin,
-                    heatScoreMax,
+                    0,
+                    1,
                 );
+                span.addEventListener('mouseenter', () => {
+                    tooltip.textContent = `Score: ${score}`;
+                    tooltip.style.opacity = '1';
+                });
+                span.addEventListener('mouseleave', () => {
+                    tooltip.style.opacity = '0';
+                });
+                span.addEventListener('mousemove', (e) => {
+                    tooltip.style.top = `${e.clientY + 10}px`;
+                    tooltip.style.left = `${e.clientX + 10}px`;
+                });
             });
 
             const extracted = range.extractContents();
@@ -193,7 +200,7 @@ function wrapRangeInContainer(
 /**
  * Removes highlighting by restoring each paragraph’s original HTML.
  */
-function removeHighlighting(): void {
+export function removeHighlighting(): void {
     const container = document.getElementById("mw-content-text");
     if (!container) {
         console.error("Content container not found");
@@ -208,8 +215,6 @@ function removeHighlighting(): void {
     document.querySelectorAll(".sentence-span").forEach((span) => {
         span.replaceWith(...span.childNodes);
     });
-
-    hideSpectrum();
 }
 
 /**
@@ -241,13 +246,13 @@ function getTextNodesIn(): TextNode[] {
     return nodes;
 }
 
-function filterTopDensitySentences(
+function filterTopIntensitySentences(
     sentences: HTMLSentenceMapping[],
-    densityPercentage: number,
+    intensityPercentage: number,
 ): HTMLSentenceMapping[] {
-    const sortedByScore = sentences.slice().sort((a, b) => b.score - a.score);
-    const cutoffIndex = Math.ceil(
-        sortedByScore.length * (densityPercentage / 100),
+    // scores are already normalized between 0 and 1
+    const filteredSentences = sentences.filter(
+        (sentence) => sentence.score >= intensityPercentage,
     );
-    return sortedByScore.slice(0, cutoffIndex);
+    return filteredSentences;
 }

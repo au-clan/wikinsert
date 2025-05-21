@@ -8,7 +8,7 @@ export function initStorage() {
             `${pageKey}-highlighted`,
             `${pageKey}-heatmap`,
             `${pageKey}-target`,
-            "density",
+            "intensity",
         ];
         chrome.storage.local.get(keys, (result: Record<string, any>) => {
             const updates: Record<string, any> = {};
@@ -25,8 +25,8 @@ export function initStorage() {
                 updates[`${pageKey}-target`] = "";
             }
 
-            if (result["density"] === undefined) {
-                updates["density"] = 50; // Default density value
+            if (result["intensity"] === undefined) {
+                updates["intensity"] = 0.5; // Default intensity value
             }
 
             if (Object.keys(updates).length > 0) {

@@ -1,18 +1,14 @@
 import {createSvgIcon} from "../utils";
-import {
-    cdxIconCancel,
-    cdxIconConfigure,
-    cdxIconSubtract,
-} from "@wikimedia/codex-icons";
+import {cdxIconCancel, cdxIconSubtract,} from "@wikimedia/codex-icons";
 
 export function initMenu() {
-    const settingsBtn = document.getElementById("settings");
+    //const settingsBtn = document.getElementById("settings");
     const closeBtn = document.getElementById("minimize");
-    if (!settingsBtn || !closeBtn) {
+    if (!closeBtn) {
         console.error("Settings or close button not found");
         return;
     }
-    settingsBtn.innerHTML = createSvgIcon(cdxIconConfigure);
+    //settingsBtn.innerHTML = createSvgIcon(cdxIconConfigure);
     closeBtn.innerHTML = createSvgIcon(cdxIconSubtract);
 
     closeBtn?.addEventListener("click", () => {

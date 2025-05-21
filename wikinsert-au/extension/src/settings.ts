@@ -1,54 +1,54 @@
-import {createSvgIcon} from "./utils";
-import {cdxIconArrowPrevious} from "@wikimedia/codex-icons";
+// import {createSvgIcon} from "./utils";
+// import {cdxIconArrowPrevious} from "@wikimedia/codex-icons";
 
-document.addEventListener("DOMContentLoaded", () => {
-    const densitySlider = document.getElementById(
-        "densitySlider",
-    ) as HTMLInputElement;
-    const currentValueSpan = document.getElementById(
-        "densityValue",
-    ) as HTMLSpanElement;
-    const saveBtn = document.getElementById("saveBtn") as HTMLButtonElement;
-    const previousBtn = document.getElementById("previousBtn");
-    if (!previousBtn) {
-        console.error("Settings or close button not found");
-        return;
-    }
-    previousBtn.innerHTML = createSvgIcon(cdxIconArrowPrevious.ltr.toString());
+// document.addEventListener("DOMContentLoaded", () => {
+//     const intensitySlider = document.getElementById(
+//         "intensitySlider",
+//     ) as HTMLInputElement;
+//     const currentValueSpan = document.getElementById(
+//         "intensityValue",
+//     ) as HTMLSpanElement;
+//     const saveBtn = document.getElementById("saveBtn") as HTMLButtonElement;
+//     const previousBtn = document.getElementById("previousBtn");
+//     if (!previousBtn) {
+//         console.error("Settings or close button not found");
+//         return;
+//     }
+//     previousBtn.innerHTML = createSvgIcon(cdxIconArrowPrevious.ltr.toString());
 
-    // first state
-    chrome.storage.local.get("density", (result) => {
-        let densityValue = result.density;
-        if (!densityValue) {
-            console.log(result);
-            densityValue = 50;
-            chrome.storage.local.set({density: densityValue});
-        }
-        currentValueSpan.textContent = `Highlighting top ${densityValue}%`;
-        densitySlider.value = densityValue;
-    });
+//     // first state
+//     chrome.storage.local.get("intensity", (result) => {
+//         let intensityValue = result.intensity;
+//         if (!intensityValue) {
+//             console.log(result);
+//             intensityValue = 0.5;
+//             chrome.storage.local.set({intensity: intensityValue});
+//         }
+//         currentValueSpan.textContent = `Highlighting sentences ≥ ${intensityValue}`;
+//         intensitySlider.value = intensityValue;
+//     });
 
-    // listen for changes
-    chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === "local" && changes.density) {
-            const densityValue = changes.density.newValue;
-            chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
-                const activeTab = tabs[0];
-                if (activeTab?.id) {
-                    chrome.tabs.sendMessage(activeTab.id, {
-                        action: "highlight",
-                        density: densityValue,
-                    });
-                }
-            });
-        }
-    });
+//     // listen for changes
+//     chrome.storage.onChanged.addListener((changes, namespace) => {
+//         if (namespace === "local" && changes.intensity) {
+//             const intensityValue = changes.intensity.newValue;
+//             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
+//                 const activeTab = tabs[0];
+//                 if (activeTab?.id) {
+//                     chrome.tabs.sendMessage(activeTab.id, {
+//                         action: "highlight",
+//                         intensity: intensityValue,
+//                     });
+//                 }
+//             });
+//         }
+//     });
 
-    densitySlider.addEventListener("input", () => {
-        currentValueSpan.textContent = `Highlighting top ${densitySlider.value}%`;
-    });
+//     intensitySlider.addEventListener("input", () => {
+//         currentValueSpan.textContent = `Highlighting sentences ≥ ${intensitySlider.value}`;
+//     });
 
-    saveBtn.addEventListener("click", () => {
-        chrome.storage.local.set({density: densitySlider.value});
-    });
-});
+//     saveBtn.addEventListener("click", () => {
+//         chrome.storage.local.set({intensity: parseFloat(intensitySlider.value)});
+//     });
+// });
