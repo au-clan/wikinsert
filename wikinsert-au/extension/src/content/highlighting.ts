@@ -124,7 +124,20 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
 
         ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
     });
-    showSpectrum();
+
+
+    // show spectrum if heatmap is not empty
+    chrome.storage.session.get(["pageInfo"], (result) => {
+        const currentPageKey = result.pageInfo.pageKey;
+        chrome.storage.local.get([`${currentPageKey}-heatmap`], (result) => {
+            const heatmap = result[`${currentPageKey}-heatmap`];
+            if (heatmap && heatmap.length > 0) {
+                showSpectrum();
+            } else {
+                hideSpectrum();
+            }
+        });
+    });
 }
 
 /**
