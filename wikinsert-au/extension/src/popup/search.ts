@@ -144,7 +144,6 @@ export async function performSearch(
     searchDropdownWrapper.classList.add("hidden");
     return;
   }
-  console.log("Performing search with query:", query);
   chrome.runtime.sendMessage(
       {
         action: "performFilteredSearchOnTargets",

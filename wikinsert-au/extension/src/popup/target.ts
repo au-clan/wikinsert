@@ -9,13 +9,9 @@ export function initTargetDisplay(pageKey: string) {
         }
     });
 
-    console.log("Initializing target display for page key:", pageKey);
-
     // Check if the target is changed, listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        console.log("Storage changes detected:", changes);
         if (namespace === "local") {
-            console.log("Target changed:", changes[`${pageKey}-target`]);
             const targetTitle = changes[`${pageKey}-target`].newValue;
             updateTargetDisplay(targetTitle);
         }
