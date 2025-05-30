@@ -1,6 +1,7 @@
 import {HTMLSentenceMapping, TextNode} from "../types";
 import {originalHTMLMap} from "./content";
-import {getHeatColor, hideSpectrum, showSpectrum} from "./coloring";
+import {getHeatColor} from "./coloring";
+import {hideSpectrum, showSpectrum} from "./page-addons";
 import {xpathText} from "./xpath";
 import {normalizeSentencesMinMax} from "../utils";
 
