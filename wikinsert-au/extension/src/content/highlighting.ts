@@ -4,6 +4,10 @@ import {getHeatColor, hideSpectrum, showSpectrum} from "./coloring";
 import {xpathText} from "./xpath";
 import {normalizeSentencesMinMax} from "../utils";
 
+
+function smoothScrollTo(el: HTMLElement) {
+  el.scrollIntoView({ behavior: "smooth", block: "center" });
+}
 const tooltip = document.createElement('div');
 tooltip.className = 'custom-tooltip';
 Object.assign(tooltip.style, {
@@ -101,6 +105,13 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
     chrome.storage.local.get("intensity", (result) => {
         const intensity = result.intensity as number;
         const filteredSentences = filterTopIntensitySentences(sentences, intensity) as HTMLSentenceMapping[];
+        let topSentence: HTMLSentenceMapping | undefined;
+        if (filteredSentences.length) {
+            topSentence = filteredSentences.reduce(
+                (best, cur) => (cur.score > best.score ? cur : best),
+                filteredSentences[0],
+            );
+        }
         if (relative) {
             chrome.storage.session.set({
                 heatScoreMin: Math.min(...filteredSentences.map((s) => s.score)),
@@ -123,6 +134,26 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
             .sort((a, b) => b.startOffset - a.startOffset);
 
         ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
+        
+        if (topSentence) {
+            requestAnimationFrame(() => {
+                const span = document.getElementById(`sentence-${topSentence!.id}`);
+                if (!span) return;
+
+                /* add / reuse an anchor so a hash link still works */
+                let anchor = document.getElementById("wikinsert-top-highlight");
+                if (!anchor) {
+                    anchor = document.createElement("a");
+                    anchor.id = "wikinsert-top-highlight";
+                    anchor.style.position = "absolute";   // keeps it invisible
+                    anchor.style.width = "0";
+                    anchor.style.height = "0";
+                }
+                span.prepend(anchor);
+
+                smoothScrollTo(anchor);
+            });
+        }
     });
 
 
