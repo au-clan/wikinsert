@@ -1,8 +1,7 @@
 import {openPopup} from "../utils";
-import {createSpectrumReference} from "./coloring";
+import {addWikinsertButtonToNavBar, createSpectrumReference} from "./page-addons";
 import {initHighlightListeners} from "./highlighting";
 import {initStorage} from "./init";
-import {addWikinsertButtonToNavBar} from "./page-addons";
 
 createSpectrumReference();
 
