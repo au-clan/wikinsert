@@ -1,9 +1,10 @@
 import {HTMLSentenceMapping, TextNode} from "../types";
 import {originalHTMLMap} from "./content";
 import {getHeatColor} from "./coloring";
-import {hideSpectrum, showSpectrum} from "./page-addons";
+
 import {xpathText} from "./xpath";
 import {normalizeSentencesMinMax} from "../utils";
+import {hideFloatingDisplay, showFloatingDisplay} from "./page-addons";
 
 
 function smoothScrollTo(el: HTMLElement) {
@@ -58,7 +59,7 @@ export function initHighlightListeners() {
                                             [`${currentPageKey}-heatmap`]: normalizedSentences,
                                         });
 
-                                        highlightSentences(normalizedSentences);
+                                        highlightSentences(normalizedSentences, true);
                                     } else {
                                         console.warn("No sentences returned");
                                     }
@@ -75,7 +76,7 @@ export function initHighlightListeners() {
                         );
                     });
                 } else if (message.action === "remove") {
-                    hideSpectrum();
+                    hideFloatingDisplay();
                     removeHighlighting();
                     chrome.storage.local.set({
                         [`${currentPageKey}-highlighted`]: false,
@@ -94,7 +95,7 @@ function storeOriginalParagraphHTML(container: HTMLElement) {
     });
 }
 
-export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
+export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollTo: boolean): void {
     const relative = false;
     if (!relative) {
         chrome.storage.session.set({
@@ -135,8 +136,8 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
             .sort((a, b) => b.startOffset - a.startOffset);
 
         ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
-        
-        if (topSentence) {
+
+        if (topSentence && withScrollTo) {
             requestAnimationFrame(() => {
                 const span = document.getElementById(`sentence-${topSentence!.id}`);
                 if (!span) return;
@@ -164,9 +165,9 @@ export function highlightSentences(sentences: HTMLSentenceMapping[]): void {
         chrome.storage.local.get([`${currentPageKey}-heatmap`], (result) => {
             const heatmap = result[`${currentPageKey}-heatmap`];
             if (heatmap && heatmap.length > 0) {
-                showSpectrum();
+                showFloatingDisplay();
             } else {
-                hideSpectrum();
+                hideFloatingDisplay();
             }
         });
     });

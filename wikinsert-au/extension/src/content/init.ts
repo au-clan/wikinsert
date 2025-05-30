@@ -42,7 +42,7 @@ export function initStorage() {
                 if (isEnabled && currentHeatMap.length > 0 && target !== "") {
                     console.log("Restoring highlighting");
                     console.log("Current heatmap:", currentHeatMap);
-                    highlightSentences(currentHeatMap);
+                    highlightSentences(currentHeatMap, true);
                 }
             });
         });

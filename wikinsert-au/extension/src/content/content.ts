@@ -1,9 +1,7 @@
 import {openPopup} from "../utils";
-import {addWikinsertButtonToNavBar, createSpectrumReference} from "./page-addons";
+import {addWikinsertButtonToNavBar, floatingInfoDisplay} from "./page-addons";
 import {initHighlightListeners} from "./highlighting";
 import {initStorage} from "./init";
-
-createSpectrumReference();
 
 export const originalHTMLMap = new WeakMap<HTMLElement, string>();
 
@@ -32,6 +30,8 @@ chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
   if (message.action === "setTarget") {
     chrome.storage.local.set({
       [`${currentPageKey}-target`]: message.targetTitle,
+      [`${currentPageKey}-targetDescription`]: message.targetDescription || "",
+      [`${currentPageKey}-targetUrl`]: message.targetUrl || "",
     });
   }
 });
@@ -45,3 +45,5 @@ addWikinsertButtonToNavBar();
 
 // Open the popup when the page is loaded
 openPopup();
+
+floatingInfoDisplay();

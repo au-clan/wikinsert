@@ -2,162 +2,208 @@ import {openPopup} from "../utils";
 import {getHeatColor} from "./coloring";
 import {highlightSentences, removeHighlighting} from "./highlighting";
 
-export function addWikinsertButtonToNavBar() {
-    const vectorMenuContentList = document.querySelector(
-        "#p-views .vector-menu-content-list",
-    );
-    if (!vectorMenuContentList) {
-        console.log("No vector menu to add wikinsert button to");
-        return;
-    }
+/* ────────── navigation tab ────────── */
 
-    const wikinsertVectorMenuItem = document.createElement("li");
-    wikinsertVectorMenuItem.id = "ca-wikinsert";
-    wikinsertVectorMenuItem.className = "vector-tab-noicon mw-list-item";
+export function addWikinsertButtonToNavBar(): void {
+    const menu = document.querySelector("#p-views .vector-menu-content-list");
+    if (!menu) return;
 
-    const wikinsertLink = document.createElement("a");
-    wikinsertLink.href = "#";
+    const li = document.createElement("li");
+    li.id = "ca-wikinsert";
+    li.className = "vector-tab-noicon mw-list-item";
 
-    const wikinsertSpan = document.createElement("span");
-    wikinsertSpan.textContent = "Wikinsert";
-    wikinsertLink!.onclick = (e) => {
+    const a = document.createElement("a");
+    a.href = "#";
+    a.onclick = e => {
         e.preventDefault();
         openPopup();
     };
-    wikinsertLink.appendChild(wikinsertSpan);
-    wikinsertVectorMenuItem.appendChild(wikinsertLink);
 
-    vectorMenuContentList.prepend(wikinsertVectorMenuItem);
+    const span = document.createElement("span");
+    span.textContent = "Wikinsert";
+
+    a.appendChild(span);
+    li.appendChild(a);
+    menu.prepend(li);
 }
 
-export function createSpectrumReference() {
+/* ────────── floating info card ────────── */
+
+const FLOATING_INFO_ID = "floating-info-wrapper";
+
+export function floatingInfoDisplay(): void {
     const wrapper = document.createElement("div");
-    wrapper.id = "heatmap-wrapper";
-    wrapper.style.position = "fixed";
-    wrapper.style.display = "flex";
-    wrapper.style.top = "50%";
-    wrapper.style.transform = "translateY(-50%)";
-    wrapper.style.right = "0";
-    wrapper.style.zIndex = "9999";
+    wrapper.id = FLOATING_INFO_ID;
+    Object.assign(wrapper.style, {
+        position: "fixed",
+        top: "50%", right: "1rem",
+        transform: "translateY(-50%)",
+        zIndex: "9999",
+        display: "flex",
+        flexDirection: "column",
+        maxWidth: "min(16rem, calc(100vw - 2rem))",
+        background: "#fff",
+        boxShadow: "0 2px 12px rgba(0,0,0,.15)",
+        borderRadius: ".5rem",
+        fontSize: "12px",
+        color: "#1f2937",
+    });
 
-    const spectrum = document.createElement("div");
-    spectrum.id = "heatmap-spectrum";
-    spectrum.style.backgroundColor = "white";
-    spectrum.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
-    spectrum.style.borderTopLeftRadius = "0.5rem";
-    spectrum.style.borderBottomLeftRadius = "0.5rem";
-    spectrum.style.padding = "0.75rem";
-    spectrum.style.display = "flex";
-    spectrum.style.flexDirection = "column";
-    spectrum.style.alignItems = "center";
-    spectrum.style.gap = "0.5rem";
-    spectrum.style.fontSize = "12px";
-    spectrum.style.color = "#1f2937";
+    /* 1. target header */
+    const header = document.createElement("div");
+    header.id = "target-info";
+    header.style.padding = "0.75rem";
+    header.style.borderBottom = "1px solid #e5e7eb";
+    header.innerHTML = `
+  <div id="target-title" style="font-weight:600; line-height:1.2;"></div>
+  <div id="target-desc"
+       style="font-size:11px; opacity:.75; margin:.15rem 0; line-height:1.3;"></div>`;
+    wrapper.appendChild(header);
 
-    spectrum.innerHTML = `
-    <div style="font-weight: bold; text-align: center;">Relevance Heatmap</div>
-    <div id="heatmap-spectrum-bars" style="display: flex; height: 3rem; width: 12rem; border: 1px solid #e5e7eb; border-radius: 0.25rem; overflow: hidden;"></div>
-    <div style="display: flex; justify-content: space-between; width: 100%; font-size: 10px; padding: 0 0.25rem;">
-      <span>Low (0)</span>
-      <span>High (1)</span>
-    </div>
-  `;
-    const barContainer = spectrum.querySelector("#heatmap-spectrum-bars") as HTMLElement;
-    if (barContainer) {
-        const barCount = 100;
-        for (let i = 0; i < barCount; i++) {
-            const bar = document.createElement("div");
-            bar.style.flex = "1";
-            bar.style.height = "100%";
-            const normalized = i / (barCount - 1);
-            bar.style.backgroundColor = getHeatColor(normalized, 0, 1);
-            barContainer.appendChild(bar);
-        }
-    }
-    wrapper.appendChild(spectrum);
-
+    /* 2. intensity slider (now the only control block) */
     const sliderBox = document.createElement("div");
-    sliderBox.id = "heatmap-slider-box";
-    sliderBox.style.backgroundColor = "white";
-    sliderBox.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
-    sliderBox.style.borderTopLeftRadius = "0.5rem";
-    sliderBox.style.borderBottomLeftRadius = "0.5rem";
+    sliderBox.id = "intensity-container";
     sliderBox.style.padding = "0.75rem";
-    sliderBox.style.marginTop = "0.5rem";
-    sliderBox.style.display = "flex";
-    sliderBox.style.alignItems = "center";
-    sliderBox.style.gap = "0.5rem";
-    sliderBox.style.fontSize = "12px";
-    sliderBox.style.color = "#1f2937";
     sliderBox.innerHTML = `
-    <div id="slider-container" style="display:flex; align-items:center; gap:0.5rem; width:100%; padding:0.5rem 0; font-size:12px;">
-      <input type="range" id="intensitySlider" min="0" max="1" step="0.01" value="0.5" style="flex:1;" />
-      <span id="intensityValue">0.50</span>
-    </div>
-  `;
+  <div style="font-weight:600; margin-bottom:.25rem;">Highlight&nbsp;threshold</div>
+
+  <!-- five radio buttons in a single row -->
+  <fieldset id="intensityRadios"
+            style="display:flex; justify-content:space-between; width:100%; border:0; padding:0; margin:0;">
+    ${[
+        {label: "Low", val: 0},
+        {label: "", val: .25},
+        {label: "Medium", val: .50},
+        {label: "", val: .75},
+        {label: "High", val: 1},
+    ].map(({label, val}, i) => `
+      <label style="
+        flex:1; display:flex; flex-direction:column; align-items:center;
+        gap:4px; cursor:pointer; font-size:10px; user-select:none;
+      ">
+        <input type="radio" name="intensity"
+               value="${val}" ${i === 2 ? "checked" : ""}
+                style="appearance:none; width:1.1rem; height:1.1rem;
+                      border-radius:50%; border:3px solid #e5e7eb;
+                      margin-bottom:2px; cursor:pointer; transition:all 0.2s;
+                      background:${getHeatColor(val, 0, 1)};">
+        ${label ? `<span style="font-weight:500;">${label}</span>` : '<span style="height:14px;"></span>'}
+      </label>
+    `).join("")}
+  </fieldset>`;
     wrapper.appendChild(sliderBox);
 
     document.body.appendChild(wrapper);
 
-    // Add event listener to the slider
-    const slider = document.getElementById("intensitySlider") as HTMLInputElement;
-    const valueSpan = document.getElementById("intensityValue") as HTMLElement;
+    /* slider behaviour */
+    const radios = Array.from(
+        sliderBox.querySelectorAll<HTMLInputElement>("input[name='intensity']")
+    );
 
-
-    slider.style.appearance = "none";
-    slider.style.border = "1px solid #e5e7eb";
-    slider.style.borderRadius = "0.25rem";
-    const staticGradient = `linear-gradient(
-    to right,
-    ${getHeatColor(0, 0, 1)} 0%,
-    ${getHeatColor(0.33, 0, 1)} 33%,
-    ${getHeatColor(0.66, 0, 1)} 66%,
-    ${getHeatColor(1, 0, 1)} 100%
-  )`;
-    slider.style.background = staticGradient;
-
-    let highlightTimeout: number;
-
-    chrome.storage.local.get("intensity", (res) => {
-        const v = typeof res.intensity === "number" ? res.intensity : 0.5;
-        slider.value = v.toString();
-        valueSpan.textContent = v.toFixed(2);
+    /* initialise from storage */
+    chrome.storage.local.get("intensity", (r) => {
+        const v = typeof r.intensity === "number" ? r.intensity : 0.5;
+        const match = radios.find(r => Number(r.value) === v);
+        (match ?? radios[2]).checked = true;      // default to “Medium”
     });
-    slider.addEventListener("input", () => {
-        const v = parseFloat(slider.value);
-        valueSpan.textContent = v.toFixed(2);
-        chrome.storage.local.set({intensity: v});
-        // Remove existing highlights immediately
-        removeHighlighting();
-        // Debounce reapplication of highlights
-        if (highlightTimeout) {
-            clearTimeout(highlightTimeout);
-        }
-        highlightTimeout = window.setTimeout(() => {
-            chrome.storage.session.get(["pageInfo"], ({pageInfo}) => {
-                const pageKey = pageInfo.pageKey;
-                chrome.storage.local.get([`${pageKey}-heatmap`], (result) => {
-                    const heatmap = result[`${pageKey}-heatmap`] || [];
-                    highlightSentences(heatmap);
+
+    const updateRadioStyles = () => {
+        radios.forEach(radio => {
+            const input = radio as HTMLInputElement;
+            if (input.checked) {
+                input.style.borderColor = "#3366cc";
+                input.style.borderWidth = input.checked ? "2.5px" : "2px";
+                input.style.boxShadow = "0 0 0 2px rgba(51, 102, 204, 0.2)";
+            } else {
+                input.style.borderColor = "#e5e7eb";
+                input.style.borderWidth = "2px";
+                input.style.boxShadow = "none";
+            }
+        });
+    };
+
+    /* store & re-highlight on change */
+    radios.forEach(radio => {
+        radio.addEventListener("change", () => {
+            const v = Number((radio as HTMLInputElement).value);
+
+            chrome.storage.local.set({intensity: v});
+            updateRadioStyles();
+
+            /* debounce like before */
+            removeHighlighting();
+            clearTimeout((window as any).__intDebounce);
+            (window as any).__intDebounce = setTimeout(() => {
+                chrome.storage.session.get("pageInfo", ({pageInfo}) => {
+                    const key = pageInfo?.pageKey;
+                    if (!key) return hideFloatingDisplay();
+
+                    chrome.storage.local.get([`${key}-heatmap`], res =>
+                        highlightSentences(res[`${key}-heatmap`] || [], false)
+                    );
                 });
-            });
-        }, 25);
+            }, 25);
+        });
     });
-    hideSpectrum();
+    /* auto-sync target info */
+    chrome.storage.session.get("pageInfo", ({pageInfo}) => {
+        console.log("Page info:", pageInfo);
+        const key = pageInfo.pageKey;
+        if (!key) {
+            console.warn("No page key found in session storage.");
+            hideFloatingDisplay();
+        }
+        const watched = [
+            `${key}-target`,
+            `${key}-targetDescription`,
+            `${key}-targetUrl`,
+        ];
+
+        const fill = () =>
+            chrome.storage.local.get(watched, (r) =>
+                paintHeader(
+                    r[watched[0]] || "",
+                    r[watched[1]] || "",
+                    r[watched[2]] || "",
+                )
+            );
+
+        const paintHeader = (title: string, desc: string, url: string) => {
+            (document.getElementById("target-title") as HTMLElement).textContent = title || "—";
+
+            const descEl = document.getElementById("target-desc") as HTMLElement;
+
+            if (url) {
+                /* description + inline “See article” link */
+                const safeDesc = desc ? `${desc}.` : "";
+                descEl.innerHTML = `${safeDesc}
+            <a href="${url}"
+                target="_blank" rel="noopener noreferrer"
+                style="color:#3366cc;">See&nbsp;article</a>`;
+            } else {
+                /* just plain text */
+                descEl.textContent = desc;
+            }
+        };
+
+        fill();
+        chrome.storage.onChanged.addListener((chg, area) => {
+            if (area !== "local") return;
+            if (watched.some(k => k in chg)) fill();
+        });
+    });
+    updateRadioStyles();  // initial style update
+    hideFloatingDisplay();   // start collapsed
 }
 
-export function showSpectrum() {
-    const wrapper = document.getElementById("heatmap-wrapper");
-    if (wrapper) {
-        wrapper.style.display = "flex";
-        wrapper.style.flexDirection = "column";
-        wrapper.style.alignItems = "center";
-    }
+/* ────────── helpers used elsewhere ────────── */
+
+export function showFloatingDisplay(): void {
+    const w = document.getElementById(FLOATING_INFO_ID);
+    if (w) w.style.display = "flex";
 }
 
-export function hideSpectrum() {
-    const wrapper = document.getElementById("heatmap-wrapper");
-    if (wrapper) {
-        wrapper.style.display = "none";
-    }
+export function hideFloatingDisplay(): void {
+    const w = document.getElementById(FLOATING_INFO_ID);
+    if (w) w.style.display = "none";
 }

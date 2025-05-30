@@ -280,6 +280,8 @@ function renderArticles(
             chrome.tabs.sendMessage(activeTab, {
               action: "setTarget",
               targetTitle: title,
+              targetDescription: description,
+              targetUrl: articleUrl,
             });
           }
         });
