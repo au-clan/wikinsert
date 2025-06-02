@@ -8,7 +8,7 @@ import {hideFloatingDisplay, showFloatingDisplay} from "./page-addons";
 
 
 function smoothScrollTo(el: HTMLElement) {
-  el.scrollIntoView({ behavior: "smooth", block: "center" });
+    el.scrollIntoView({behavior: "smooth"});
 }
 const tooltip = document.createElement('div');
 tooltip.className = 'custom-tooltip';
@@ -106,14 +106,7 @@ export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollT
 
     chrome.storage.local.get("intensity", (result) => {
         const intensity = result.intensity as number;
-        const filteredSentences = filterTopIntensitySentences(sentences, intensity) as HTMLSentenceMapping[];
-        let topSentence: HTMLSentenceMapping | undefined;
-        if (filteredSentences.length) {
-            topSentence = filteredSentences.reduce(
-                (best, cur) => (cur.score > best.score ? cur : best),
-                filteredSentences[0],
-            );
-        }
+        const {filtered: filteredSentences, top: topSentence} = filterByIntensity(sentences, intensity);
         if (relative) {
             chrome.storage.session.set({
                 heatScoreMin: Math.min(...filteredSentences.map((s) => s.score)),
@@ -217,7 +210,9 @@ function wrapRangeInContainer(
                     1,
                 );
                 span.addEventListener('mouseenter', () => {
-                    tooltip.textContent = `Score: ${score}`;
+                    const description = score >= 0.9 ? "Very High" : (score >= 0.75 ? "High" : (score >= 0.4 ? "Medium" : (score >= 0.15 ? "Low" : "Very Low")));
+                    const scorePercentage = score * 100;
+                    tooltip.textContent = `${scorePercentage.toFixed(0)}% Relevance (${description})`;
                     tooltip.style.opacity = '1';
                 });
                 span.addEventListener('mouseleave', () => {
@@ -292,13 +287,26 @@ function getTextNodesIn(): TextNode[] {
     return nodes;
 }
 
-function filterTopIntensitySentences(
+function filterByIntensity(
     sentences: HTMLSentenceMapping[],
-    intensityPercentage: number,
-): HTMLSentenceMapping[] {
-    // scores are already normalized between 0 and 1
-    const filteredSentences = sentences.filter(
-        (sentence) => sentence.score >= intensityPercentage,
-    );
-    return filteredSentences;
+    threshold: number,
+): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping } {
+    const filtered: HTMLSentenceMapping[] = [];
+    let top: HTMLSentenceMapping | undefined;
+    let medium = 0, high = 0, veryHigh = 0;
+
+    for (const s of sentences) {
+        if (s.score >= 0.90) veryHigh++;
+        else if (s.score >= 0.75) high++;
+        else if (s.score >= 0.40) medium++;
+
+        if (s.score < threshold) continue;
+        filtered.push(s);
+        if (!top) top = s;
+        if (s.score >= 0.90 && (!top || top.score < 0.90)) top = s;
+    }
+
+    chrome.storage.session.set({sentenceStats: {medium, high, veryHigh}});
+
+    return {filtered, top};
 }

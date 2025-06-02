@@ -55,7 +55,7 @@ export function floatingInfoDisplay(): void {
     header.style.padding = "0.75rem";
     header.style.borderBottom = "1px solid #e5e7eb";
     header.innerHTML = `
-  <div id="target-title" style="font-weight:600; line-height:1.2;"></div>
+  <div id="target-title" style="font-size:14px; font-weight:600; line-height:1.25;"></div>
   <div id="target-desc"
        style="font-size:11px; opacity:.75; margin:.15rem 0; line-height:1.3;"></div>`;
     wrapper.appendChild(header);
@@ -64,21 +64,22 @@ export function floatingInfoDisplay(): void {
     const sliderBox = document.createElement("div");
     sliderBox.id = "intensity-container";
     sliderBox.style.padding = "0.75rem";
+    sliderBox.style.borderBottom = "1px solid #e5e7eb";
     sliderBox.innerHTML = `
   <div style="font-weight:600; margin-bottom:.25rem;">Highlight&nbsp;threshold</div>
 
   <!-- five radio buttons in a single row -->
   <fieldset id="intensityRadios"
-            style="display:flex; justify-content:space-between; width:100%; border:0; padding:0; margin:0;">
+            style="display:grid; grid-template-columns:repeat(5, 1fr); width:100%; border:0; padding:0; margin:0;">
     ${[
-        {label: "Low", val: 0},
-        {label: "", val: .25},
-        {label: "Medium", val: .50},
+        {label: "Very&nbsp;Low", val: 0},
+        {label: "", val: .15},
+        {label: "Medium", val: .40},
         {label: "", val: .75},
-        {label: "High", val: 1},
+        {label: "Very&nbsp;High", val: .90},
     ].map(({label, val}, i) => `
       <label style="
-        flex:1; display:flex; flex-direction:column; align-items:center;
+        display:flex; flex-direction:column; align-items:center;
         gap:4px; cursor:pointer; font-size:10px; user-select:none;
       ">
         <input type="radio" name="intensity"
@@ -86,12 +87,57 @@ export function floatingInfoDisplay(): void {
                 style="appearance:none; width:1.1rem; height:1.1rem;
                       border-radius:50%; border:3px solid #e5e7eb;
                       margin-bottom:2px; cursor:pointer; transition:all 0.2s;
-                      background:${getHeatColor(val, 0, 1)};">
+                      background:${getHeatColor(val + .1, 0, 1)};">
         ${label ? `<span style="font-weight:500;">${label}</span>` : '<span style="height:14px;"></span>'}
       </label>
     `).join("")}
   </fieldset>`;
     wrapper.appendChild(sliderBox);
+    const statsBox = document.createElement("div");
+    statsBox.id = "sentence-stats";
+    Object.assign(statsBox.style, {
+        padding: "0.75rem",
+        display: "grid",
+        gridTemplateColumns: "repeat(3, 1fr)",
+        rowGap: "4px",
+        columnGap: "4px",
+        fontSize: "11px",
+        opacity: ".9",
+        textAlign: "center",
+    });
+
+    /* first row – coloured badges (number only) */
+    statsBox.innerHTML = `
+    <span id="stat-veryHigh-val"
+            style="
+            display:inline-flex; align-items:center; justify-content:center;
+            width:2.5rem; height:1.25rem;
+            border-radius:0.625rem;
+            font-variant-numeric:tabular-nums;
+            background:${getHeatColor(1, 0, 1)}; color:#111827;
+            ">0</span>
+
+    <span id="stat-high-val"
+            style="
+            display:inline-flex; align-items:center; justify-content:center;
+            width:2.5rem; height:1.25rem;
+            border-radius:0.625rem;
+            font-variant-numeric:tabular-nums;
+            background:${getHeatColor(.85, 0, 1)}; color:#111827;
+            ">0</span>
+
+    <span id="stat-medium-val"
+            style="
+            display:inline-flex; align-items:center; justify-content:center;
+            width:2.5rem; height:1.25rem;
+            border-radius:0.625rem;
+            font-variant-numeric:tabular-nums;
+            background:${getHeatColor(.5, 0, 1)}; color:#111827;
+            ">0</span>
+    <span style="font-size:10px;">Very&nbsp;High</span>
+    <span style="font-size:10px;">High</span>
+    <span style="font-size:10px;">Medium</span>`;
+    wrapper.appendChild(statsBox);
 
     document.body.appendChild(wrapper);
 
@@ -145,6 +191,23 @@ export function floatingInfoDisplay(): void {
             }, 25);
         });
     });
+    const paintStats = (stats?: { medium: number; high: number; veryHigh: number }) => {
+        const box = document.getElementById("sentence-stats") as HTMLElement;
+        if (!box) return;
+
+        if (stats) {
+            box.style.display = "grid";
+            (document.getElementById("stat-veryHigh-val") as HTMLElement).textContent = String(stats.veryHigh);
+            (document.getElementById("stat-high-val") as HTMLElement).textContent = String(stats.high);
+            (document.getElementById("stat-medium-val") as HTMLElement).textContent = String(stats.medium);
+        } else {
+            box.style.display = "none";
+        }
+    };
+    chrome.storage.session.get("sentenceStats", ({sentenceStats}) =>
+        paintStats(sentenceStats)
+    );
+    
     /* auto-sync target info */
     chrome.storage.session.get("pageInfo", ({pageInfo}) => {
         console.log("Page info:", pageInfo);
@@ -188,8 +251,10 @@ export function floatingInfoDisplay(): void {
 
         fill();
         chrome.storage.onChanged.addListener((chg, area) => {
-            if (area !== "local") return;
-            if (watched.some(k => k in chg)) fill();
+            if (area === "local" && watched.some(k => k in chg)) fill();
+            if (area === "session" && "sentenceStats" in chg) {
+                paintStats(chg.sentenceStats.newValue);
+            }   
         });
     });
     updateRadioStyles();  // initial style update
