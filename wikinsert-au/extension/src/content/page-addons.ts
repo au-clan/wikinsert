@@ -108,35 +108,42 @@ export function floatingInfoDisplay(): void {
 
     /* first row – coloured badges (number only) */
     statsBox.innerHTML = `
-    <span id="stat-veryHigh-val"
-            style="
-            display:inline-flex; align-items:center; justify-content:center;
-            width:2.5rem; height:1.25rem;
-            border-radius:0.625rem;
-            font-variant-numeric:tabular-nums;
-            background:${getHeatColor(1, 0, 1)}; color:#111827;
-            ">0</span>
-
-    <span id="stat-high-val"
-            style="
-            display:inline-flex; align-items:center; justify-content:center;
-            width:2.5rem; height:1.25rem;
-            border-radius:0.625rem;
-            font-variant-numeric:tabular-nums;
-            background:${getHeatColor(.85, 0, 1)}; color:#111827;
-            ">0</span>
-
-    <span id="stat-medium-val"
-            style="
-            display:inline-flex; align-items:center; justify-content:center;
-            width:2.5rem; height:1.25rem;
-            border-radius:0.625rem;
-            font-variant-numeric:tabular-nums;
-            background:${getHeatColor(.5, 0, 1)}; color:#111827;
-            ">0</span>
-    <span style="font-size:10px;">Very&nbsp;High</span>
-    <span style="font-size:10px;">High</span>
-    <span style="font-size:10px;">Medium</span>`;
+        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
+            <span id="stat-veryHigh-val"
+                style="
+                    display:inline-flex; align-items:center; justify-content:center;
+                    width:2.5rem; height:1.25rem;
+                    border-radius:0.625rem;
+                    font-variant-numeric:tabular-nums;
+                    background:rgba(255, 94, 94, 0.6); color:#111827;">
+            0
+            </span>
+            <span style="font-size:10px;">Very&nbsp;High</span>
+        </div>
+        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
+            <span id="stat-high-val"
+                style="
+                    display:inline-flex; align-items:center; justify-content:center;
+                    width:2.5rem; height:1.25rem;
+                    border-radius:0.625rem;
+                    font-variant-numeric:tabular-nums;
+                    background:rgba(255, 142, 66, 0.6); color:#111827;">
+            0
+            </span>
+            <span style="font-size:10px;">High</span>
+        </div>
+        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
+            <span id="stat-medium-val"
+                style="
+                    display:inline-flex; align-items:center; justify-content:center;
+                    width:2.5rem; height:1.25rem;
+                    border-radius:0.625rem;
+                    font-variant-numeric:tabular-nums;
+                    background:rgba(255, 255, 0, 0.6); color:#111827;">
+            0
+            </span>
+            <span style="font-size:10px;">Medium</span>
+        </div>`;
     wrapper.appendChild(statsBox);
 
     document.body.appendChild(wrapper);
@@ -207,7 +214,7 @@ export function floatingInfoDisplay(): void {
     chrome.storage.session.get("sentenceStats", ({sentenceStats}) =>
         paintStats(sentenceStats)
     );
-    
+
     /* auto-sync target info */
     chrome.storage.session.get("pageInfo", ({pageInfo}) => {
         console.log("Page info:", pageInfo);
@@ -254,7 +261,7 @@ export function floatingInfoDisplay(): void {
             if (area === "local" && watched.some(k => k in chg)) fill();
             if (area === "session" && "sentenceStats" in chg) {
                 paintStats(chg.sentenceStats.newValue);
-            }   
+            }
         });
     });
     updateRadioStyles();  // initial style update
