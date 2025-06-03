@@ -87,7 +87,7 @@ export function floatingInfoDisplay(): void {
                 style="appearance:none; width:1.1rem; height:1.1rem;
                       border-radius:50%; border:3px solid #e5e7eb;
                       margin-bottom:2px; cursor:pointer; transition:all 0.2s;
-                      background:${getHeatColor(val + .1, 0, 1)};">
+                      background:${radioBg(val)};">
         ${label ? `<span style="font-weight:500;">${label}</span>` : '<span style="height:14px;"></span>'}
       </label>
     `).join("")}
@@ -267,6 +267,13 @@ export function floatingInfoDisplay(): void {
     updateRadioStyles();  // initial style update
     hideFloatingDisplay();   // start collapsed
 }
+
+/* helper: same RGB as getHeatColor, but always α = 0.6 */
+const radioBg = (v: number) => {
+    const [r, g, b] = getHeatColor(v, 0, 1)
+        .match(/\d+/g)!.slice(0, 3);          // grab “r, g, b”
+    return `rgba(${r}, ${g}, ${b}, 0.6)`;   // hard-coded alpha
+};
 
 /* ────────── helpers used elsewhere ────────── */
 

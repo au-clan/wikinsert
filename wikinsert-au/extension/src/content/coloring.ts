@@ -1,7 +1,5 @@
 export function getHeatColor(score: number, min: number, max: number) {
-
   let r, g, b;
-
   // Map norm to a WCAG‑AAA‑compliant heat spectrum: white → yellow → saturated red (#FF5E5E)
   r = 255;
   if (score <= 0.5) {
@@ -21,6 +19,6 @@ export function getHeatColor(score: number, min: number, max: number) {
     g = Math.round(g * (1 - whiteBlend) + 255 * whiteBlend);
     b = Math.round(b * (1 - whiteBlend) + 255 * whiteBlend);
   }
-
-  return `rgba(${r}, ${g}, ${b}, 0.6)`;
+    const alpha = Math.min(Math.max((score + 0.3) / 4, 0), 1);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
