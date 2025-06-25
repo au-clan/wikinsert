@@ -5,6 +5,7 @@ import {getHeatColor} from "./coloring";
 import {xpathText} from "./xpath";
 import {normalizeSentencesMinMax} from "../utils";
 import {hideFloatingDisplay, showFloatingDisplay} from "./page-addons";
+import { buildMinimap, removeMinimap } from "./minimap";
 
 
 function smoothScrollTo(el: HTMLElement) {
@@ -157,10 +158,13 @@ export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollT
         const currentPageKey = result.pageInfo.pageKey;
         chrome.storage.local.get([`${currentPageKey}-heatmap`], (result) => {
             const heatmap = result[`${currentPageKey}-heatmap`];
+            const sentences = heatmap as HTMLSentenceMapping[] || [];
             if (heatmap && heatmap.length > 0) {
+                buildMinimap(sentences)
                 showFloatingDisplay();
             } else {
                 hideFloatingDisplay();
+                removeMinimap();
             }
         });
     });
