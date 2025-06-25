@@ -37,14 +37,14 @@ Wikinsert is designed to be deployed using Docker Compose, which orchestrates th
 3. **Ktor API**: Serves pre-computed data to the UI layer
 
 ### Prerequisites
-
 - Docker and Docker Compose
-- Access to Wikipedia dump data (for the Python populator)
+- Access to Wikipedia dump data (for the Python populator) (behind VPN of AU)
 - Environment variables configuration
+- Access to the XLocEI model files (behind VPN of AU)
 
 ### Environment Variables
 
-The following environment variables can be configured in a `.env` file:
+The following environment variables are configured in `docker-compose.yml` file, this gives you flexibility, one could also use a `.env` file to set these variables, however since we are dockerizing the application, we will hardcode them in the `docker-compose.yml` file. :
 
 ```
 SOURCE_ARTICLES_PATH=/path/to/revisions_en.parquet
@@ -52,6 +52,8 @@ SCORED_DATA_PATH=/path/to/en_5_scored.parquet
 MENTION_MAP_PATH=/path/to/mention_map_en.parquet
 MODEL_DIR=/path/to/models
 ```
+
+Note that `SOURCE_ARTICLES` are the raw Wikipedia articles, and `SCORED_DATA` includes a sample that has been paired with target entities, so in practice, you would only need the pairs, however for some experiments, you might want to use the raw articles as well. The `MENTION_MAP` is a mapping of mentions to entities, and `MODEL_DIR` is the directory where the XLocEI model is stored.
 
 ### Deployment Steps
 
@@ -103,16 +105,18 @@ The `docker-compose.yml` file defines three services:
 
 ## Usage
 
-1. **Browser Extension**:
-    - Navigate to a Wikipedia article
+**Browser Extension**:
+    - Navigate to a Wikipedia article you have computed relevance scores for
     - Click the Wikinsert extension icon
-    - Search for a target entity
+    - Search for a target entity (which should be in the preprocessed dataset)
     - Toggle highlighting to see the heatmap overlay
 
-2. **Web App**:
-    - Access the web app URL
+**Web App**:
+This is a way of searching through your preprocessed dataset, and viewing the articles that can be highlighted, withouth directly going to the URL of the article. Helps with workflow simulation and user studies.
+    - Start the web app using `npm run dev`
+    - Access the web app URL at `http://localhost:8080`
     - Search for a Wikipedia article from the preprocessed dataset
-    - View the article with entity-aware highlighting
+    - Then use the browser extension to highlight entities in the article
 
 ## Search Interface
 
