@@ -1,4 +1,3 @@
-// extension/src/content/minimap.ts
 import {HTMLSentenceMapping} from "../types";
 import {getHeatColor} from "./coloring";
 
