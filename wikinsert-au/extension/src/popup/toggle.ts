@@ -1,3 +1,4 @@
+import { scopedKey } from "../utils";
 export function initToggleInput(pageKey: string) {
     const toggleInput = document.getElementById(
         "toggleInput",
@@ -12,8 +13,9 @@ export function initToggleInput(pageKey: string) {
     chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
         const activeTab = tabs[0];
         if (activeTab?.url) {
-            chrome.storage.local.get([`${pageKey}-highlighted`], (result) => {
-                toggleInput.checked = result[`${pageKey}-highlighted`] === true;
+            const highlightedKey = scopedKey(pageKey, "highlighted");
+            chrome.storage.session.get([highlightedKey], (result) => {
+                toggleInput.checked = result[highlightedKey] === true;
             });
 
             toggleInput.addEventListener("change", () => {
@@ -26,8 +28,11 @@ export function initToggleInput(pageKey: string) {
 
     // listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === "local" && changes[`${pageKey}-highlighted`]) {
-            toggleInput.checked = changes[`${pageKey}-highlighted`].newValue === true;
+        if (namespace === "session") {
+            const highlightedKey = scopedKey(pageKey, "highlighted");
+            if (changes[highlightedKey]) {
+                toggleInput.checked = changes[highlightedKey].newValue === true;
+            }
         }
     });
 }

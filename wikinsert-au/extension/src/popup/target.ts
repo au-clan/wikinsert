@@ -1,7 +1,9 @@
+import { scopedKey } from "../utils";
+
 export function initTargetDisplay(pageKey: string) {
     // Check if a target is selected initally
-    chrome.storage.local.get([`${pageKey}-target`], (result) => {
-        const targetTitle = result[`${pageKey}-target`];
+    chrome.storage.session.get([scopedKey(pageKey, "target")], (result) => {
+        const targetTitle = result[scopedKey(pageKey, "target")];
         if (targetTitle) {
             updateTargetDisplay(targetTitle);
         } else {
@@ -11,8 +13,9 @@ export function initTargetDisplay(pageKey: string) {
 
     // Check if the target is changed, listen for changes
     chrome.storage.onChanged.addListener((changes, namespace) => {
-        if (namespace === "local") {
-            const targetTitle = changes[`${pageKey}-target`].newValue;
+        if (namespace === "session") {
+            const targetChange = changes[scopedKey(pageKey, "target")];
+            const targetTitle = targetChange ? targetChange.newValue : undefined;
             updateTargetDisplay(targetTitle);
         }
     });
@@ -70,7 +73,7 @@ function initClearBtn(pageKey: string) {
     }
 
     clearTargetBtn.addEventListener("click", () => {
-        chrome.storage.local.remove([`${pageKey}-target`], () => {
+        chrome.storage.session.remove([scopedKey(pageKey, "target")], () => {
             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                 chrome.tabs.sendMessage(tabs[0].id!, {action: "remove"});
             });

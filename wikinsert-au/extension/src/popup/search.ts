@@ -2,6 +2,7 @@ import {cdxIconLinkExternal} from "@wikimedia/codex-icons";
 import {FilteredArticle} from "./popup";
 import {createSvgIcon} from "../utils";
 import {updateTargetDisplay} from "./target";
+import { scopedKey } from "../utils";
 
 export function initSearch(
     pageKey: string,
@@ -80,8 +81,9 @@ export function initSearch(
   if (searchForm) {
     searchForm.addEventListener("submit", (e) => {
       e.preventDefault();
-      chrome.storage.local.get([`${pageKey}-heatmap`], (result) => {
-        const heatmap = result[`${pageKey}-heatmap`];
+      const heatmapKey = scopedKey(pageKey, "heatmap");
+      chrome.storage.session.get([heatmapKey], (result) => {
+        const heatmap = result[heatmapKey] as any[];
         if (!heatmap || heatmap.length === 0) {
           return;
         }
@@ -89,7 +91,8 @@ export function initSearch(
         const formData = new FormData(searchForm);
         const searchValue = formData.get("entity") as string;
 
-        chrome.storage.local.set({[`${pageKey}-target`]: searchValue}, () => {
+        const targetKey = scopedKey(pageKey, "target");
+        chrome.storage.session.set({[targetKey]: searchValue}, () => {
           updateTargetDisplay(searchValue);
         });
 

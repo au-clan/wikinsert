@@ -1,19 +1,20 @@
-import {openPopup} from "../utils";
+import {openPopup, scopedKey} from "../utils";
 import {addWikinsertButtonToNavBar, floatingInfoDisplay} from "./page-addons";
 import {initHighlightListeners} from "./highlighting";
 import {initStorage} from "./init";
 
 export const originalHTMLMap = new WeakMap<HTMLElement, string>();
 
+
+
 const heatScoreMin = Infinity;
 const heatScoreMax = -Infinity;
-
+const currentPageKey = location.href.split("#")[0];
 chrome.storage.session.set({
-  heatScoreMin: heatScoreMin,
-  heatScoreMax: heatScoreMax,
+  [scopedKey(currentPageKey, "heatScoreMin")]: heatScoreMin,
+  [scopedKey(currentPageKey, "heatScoreMax")]: heatScoreMax,
 });
 
-const currentPageKey = location.href.split("#")[0];
 const srcTitle =
     document.getElementsByClassName("mw-page-title-main")[0]?.textContent || "";
 const srcLang = location.hostname.split(".")[0];
@@ -24,14 +25,16 @@ const pageInfo = {
   lang: srcLang,
   revId: srcRevId,
 };
-chrome.storage.session.set({pageInfo});
+chrome.storage.session.set({
+  [scopedKey(currentPageKey, "pageInfo")]: pageInfo,
+});
 
 chrome.runtime.onMessage.addListener((message: any, sender, sendResponse) => {
   if (message.action === "setTarget") {
-    chrome.storage.local.set({
-      [`${currentPageKey}-target`]: message.targetTitle,
-      [`${currentPageKey}-targetDescription`]: message.targetDescription || "",
-      [`${currentPageKey}-targetUrl`]: message.targetUrl || "",
+    chrome.storage.session.set({
+      [scopedKey(currentPageKey, "target")]: message.targetTitle || "",
+      [scopedKey(currentPageKey, "targetDescription")]: message.targetDescription || "",
+      [scopedKey(currentPageKey, "targetUrl")]: message.targetUrl || "",
     });
   }
 });

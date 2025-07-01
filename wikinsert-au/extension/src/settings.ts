@@ -17,12 +17,12 @@
 //     previousBtn.innerHTML = createSvgIcon(cdxIconArrowPrevious.ltr.toString());
 
 //     // first state
-//     chrome.storage.local.get("intensity", (result) => {
+//     chrome.storage.session.get("intensity", (result) => {
 //         let intensityValue = result.intensity;
 //         if (!intensityValue) {
 //             console.log(result);
 //             intensityValue = 0.5;
-//             chrome.storage.local.set({intensity: intensityValue});
+//             chrome.storage.session.set({intensity: intensityValue});
 //         }
 //         currentValueSpan.textContent = `Highlighting sentences ≥ ${intensityValue}`;
 //         intensitySlider.value = intensityValue;
@@ -30,7 +30,7 @@
 
 //     // listen for changes
 //     chrome.storage.onChanged.addListener((changes, namespace) => {
-//         if (namespace === "local" && changes.intensity) {
+//         if (namespace === "session" && changes.intensity) {
 //             const intensityValue = changes.intensity.newValue;
 //             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
 //                 const activeTab = tabs[0];
@@ -49,6 +49,6 @@
 //     });
 
 //     saveBtn.addEventListener("click", () => {
-//         chrome.storage.local.set({intensity: parseFloat(intensitySlider.value)});
+//         chrome.storage.session.set({intensity: parseFloat(intensitySlider.value)});
 //     });
 // });

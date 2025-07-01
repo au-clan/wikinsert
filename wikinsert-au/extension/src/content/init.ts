@@ -1,44 +1,45 @@
 import {HTMLSentenceMapping} from "../types";
+import { scopedKey } from "../utils";
 import {highlightSentences} from "./highlighting";
 
 export function initStorage() {
-    chrome.storage.session.get(["pageInfo"], ({pageInfo}) => {
+    const currentPageKey = location.href.split("#")[0];
+    chrome.storage.session.get(
+        [scopedKey(currentPageKey, "pageInfo")],
+        (res: Record<string, any>) => {
+            const pageInfo = res[scopedKey(currentPageKey, "pageInfo")];
         const pageKey = pageInfo.pageKey;
+        console.log("Initializing storage for page:", pageKey);
         const keys = [
-            `${pageKey}-highlighted`,
-            `${pageKey}-heatmap`,
-            `${pageKey}-target`,
-            "intensity",
+            scopedKey(pageKey, "highlighted"),
+            scopedKey(pageKey, "heatmap"),
+            scopedKey(pageKey, "target"),
         ];
-        chrome.storage.local.get(keys, (result: Record<string, any>) => {
+        chrome.storage.session.get(keys, (result: Record<string, any>) => {
             const updates: Record<string, any> = {};
 
-            if (result[`${pageKey}-highlighted`] === undefined) {
-                updates[`${pageKey}-highlighted`] = false;
+            if (result[scopedKey(pageKey, "highlighted")] === undefined) {
+                updates[scopedKey(pageKey, "highlighted")] = false;
             }
 
-            if (result[`${pageKey}-heatmap`] === undefined) {
-                updates[`${pageKey}-heatmap`] = [];
+            if (result[scopedKey(pageKey, "heatmap")] === undefined) {
+                updates[scopedKey(pageKey, "heatmap")] = [];
             }
 
-            if (result[`${pageKey}-target`] === undefined) {
-                updates[`${pageKey}-target`] = "";
-            }
-
-            if (result["intensity"] === undefined) {
-                updates["intensity"] = 0.5; // Default intensity value
+            if (result[scopedKey(pageKey, "target")] === undefined) {
+                updates[scopedKey(pageKey, "target")] = "";
             }
 
             if (Object.keys(updates).length > 0) {
-                chrome.storage.local.set(updates);
+                chrome.storage.session.set(updates);
             }
 
-            const isEnabled = result[`${pageKey}-highlighted`] === true;
-            const target = result[`${pageKey}-target`] || "";
+            const isEnabled = result[scopedKey(pageKey, "highlighted")] === true;
+            const target = result[scopedKey(pageKey, "target")] || "";
 
-            chrome.storage.local.get([`${pageKey}-heatmap`], (result) => {
+            chrome.storage.session.get([scopedKey(pageKey, "heatmap")], (result) => {
                 const currentHeatMap: HTMLSentenceMapping[] =
-                    result[`${pageKey}-heatmap`] || [];
+                    result[scopedKey(pageKey, "heatmap")] || [];
                 if (isEnabled && currentHeatMap.length > 0 && target !== "") {
                     console.log("Restoring highlighting");
                     console.log("Current heatmap:", currentHeatMap);
@@ -46,5 +47,6 @@ export function initStorage() {
                 }
             });
         });
-    });
+        }
+    );
 }
