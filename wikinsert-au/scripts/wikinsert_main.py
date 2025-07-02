@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import re
 
 import _md5
 import pandas as pd
@@ -9,6 +10,42 @@ from dotenv import load_dotenv
 from sentence_score import SentenceScorer
 from wiki_mongo_db import WikiMongoDB
 from wiki_sentence_utils import fetch_article_metadata, parse_article, fix_title
+
+# --- Utility ---------------------------------------------------------------
+LANGUAGE_CODES = {
+    "en","de","fr","es","it","nl","pt","ru","ja","zh","ar","sv","pl","cs","fi",
+    "no","da","ko","tr","he","uk","ca","hu","el","vi","id"
+}
+
+def extract_lang_from_filename(file_path: str) -> str:
+    """
+    Detect an ISO‑639‑1 language code that appears in the given file name.
+
+    The function:
+        1. Takes the basename of the path (ignoring directories).
+        2. Removes the file extension.
+        3. Splits the remaining name on underscores or hyphens.
+        4. Returns the first token that matches a known language code.
+        5. If no token matches, falls back to the first or last two‑letter token.
+
+    Raises:
+        ValueError if no plausible language code can be found.
+    """
+    base = os.path.basename(file_path)
+    name, _ = os.path.splitext(base)
+    tokens = re.split(r"[_\\-]", name)
+
+    # Direct match against the curated list
+    for tok in tokens:
+        if tok in LANGUAGE_CODES:
+            return tok
+
+    # Fallback: any 2‑letter alphabetic token
+    for tok in tokens:
+        if len(tok) == 2 and tok.isalpha():
+            return tok.lower()
+
+    raise ValueError(f"Could not determine language from filename '{file_path}'")
 
 
 class WikiPipeline:
@@ -122,7 +159,7 @@ class WikiPipeline:
         - Score pairs from SCORED_DATA_PATH
         """
         # Determine language from source file name
-        lang = os.path.basename(self.source_path).split('.')[0].split('_')[-1]
+        lang = extract_lang_from_filename(self.source_path)
         # Load source articles
         df_sources = pd.read_parquet(self.source_path)
         # take only the first 20 for testing
