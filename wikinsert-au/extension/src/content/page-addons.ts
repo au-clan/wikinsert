@@ -151,15 +151,24 @@ export function floatingInfoDisplay(): void {
     scaleBox.style.padding = "0.75rem";
     scaleBox.style.borderBottom = "1px solid #e5e7eb";
     scaleBox.innerHTML = `
-      <label style="display:block; margin-bottom:.5rem;">
-        <input type="radio" name="scaleType" value="smooth" checked>
-        Centered Smooth Scaling <br>
-        <small>Gives a score to each sentence, centering around the average.</small>
+      <div style="font-weight:600; margin-bottom:0.5rem;">Scaling options</div>
+      <label style="display:block; margin-bottom:0.75rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <input type="radio" name="scaleType" value="smooth" checked>
+          <span>Centered Smooth Scaling</span>
+        </div>
+        <small style="display:block; margin-left:2rem; margin-top:0.25rem;">
+          Gives a score to each sentence, centering around the average.
+        </small>
       </label>
-      <label style="display:block;">
-        <input type="radio" name="scaleType" value="relative">
-        Rank-based scaling <br>
-        <small>Gives a score to each sentence based on its rank among all others.</small>
+      <label style="display:block; margin-bottom:0.75rem;">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <input type="radio" name="scaleType" value="relative">
+          <span>Rank-based scaling</span>
+        </div>
+        <small style="display:block; margin-left:2rem; margin-top:0.25rem;">
+          Gives a score to each sentence based on its rank among all others.
+        </small>
       </label>
     `;
     wrapper.appendChild(scaleBox);
@@ -305,7 +314,7 @@ export function floatingInfoDisplay(): void {
             );
 
         const paintHeader = (title: string, desc: string, url: string) => {
-            (document.getElementById("target-title") as HTMLElement).textContent = title || "—";
+            (document.getElementById("target-title") as HTMLElement).textContent = `Inserting: ${title}` || "No target";
 
             const descEl = document.getElementById("target-desc") as HTMLElement;
 
