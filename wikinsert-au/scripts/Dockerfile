@@ -5,7 +5,7 @@ WORKDIR /app
 ENV PIP_CACHE_DIR=/pip-cache
 
 # Install dependencies
-COPY scripts/requirements.txt .
+COPY wikinsert-au/scripts/requirements.txt .
 RUN --mount=type=cache,target=/pip-cache \
     pip install --no-cache-dir -r requirements.txt
 

@@ -1,0 +1,14 @@
+# Python dependencies for the wikinsert scripts
+pymongo==4.11.3
+pandas==2.2.2
+numpy==1.26.4
+requests==2.32.3
+lxml==5.3.1
+tqdm==4.66.2
+torch==2.6.0
+transformers==4.50.3
+nltk==3.8.1
+mwtokenizer==0.2.0
+python-dotenv==1.1.0
+pyarrow==20.0.0
+fastparquet==2024.11.0
