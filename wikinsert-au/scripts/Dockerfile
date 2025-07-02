@@ -5,12 +5,12 @@ WORKDIR /app
 ENV PIP_CACHE_DIR=/pip-cache
 
 # Install dependencies
-COPY wikinsert-au/scripts/requirements.txt .
+COPY scripts/requirements.txt .
 RUN --mount=type=cache,target=/pip-cache \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy scripts
-COPY scripts/ /app/
+COPY scripts/ /app/  
 
 # Create entrypoint script
 RUN echo '#!/bin/bash\n\

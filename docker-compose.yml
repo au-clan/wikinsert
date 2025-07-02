@@ -21,7 +21,7 @@ services:
   # Python data population container
   python-populator:
     build:
-      context: .
+      context: ./wikinsert-au
       dockerfile: scripts/Dockerfile
     container_name: python-populator
     volumes:
