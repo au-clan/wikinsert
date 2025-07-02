@@ -3,7 +3,7 @@ import {originalHTMLMap} from "./content";
 import {getHeatColor} from "./coloring";
 
 import {xpathText} from "./xpath";
-import {normalizeSentencesLogistic, normalizeSentencesMinMax, scopedKey} from "../utils";
+import {normalizeSentencesEmpiricalCDF, normalizeSentencesLogistic, normalizeSentencesMinMax, normalizeSentencesRobust, normalizeSentencesZScoreSigmoid, scopedKey} from "../utils";
 import {hideFloatingDisplay, showFloatingDisplay} from "./page-addons";
 import { buildMinimap, removeMinimap } from "./minimap";
 
@@ -55,10 +55,8 @@ export function initHighlightListeners() {
                                 (response: HTMLSentenceMapping[]) => {
                                     if (response) {
                                         console.log("Sentences received:", response);
-                                        const normalizedSentences = normalizeSentencesMinMax(
+                                        const normalizedSentences = normalizeSentencesEmpiricalCDF(
                                             response,
-                                            Math.min(...response.map((s) => s.score)),
-                                            Math.max(...response.map((s) => s.score)),
                                         );
                                         chrome.storage.session.set({
                                             [scopedKey(currentPageKey, "heatmap")]: normalizedSentences,
@@ -142,6 +140,7 @@ export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollT
         ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
 
         if (topSentence && withScrollTo) {
+            console.log(`Scrolling to top sentence: ${topSentence.id} with score ${topSentence.score}`);
             requestAnimationFrame(() => {
                 const span = document.getElementById(`sentence-${topSentence!.id}`);
                 if (!span) return;
@@ -368,6 +367,7 @@ function filterByIntensity(
     let bins: number[];
     if (scores.length >= 6) {
         bins = jenksBreaks(scores, 5);
+        console.log(`Jenks breaks: ${bins.join(", ")}`);
         // Clamp to [0,1]
         bins[0] = 0;
         bins[bins.length - 1] = 1;
@@ -430,7 +430,7 @@ function filterByIntensity3(
 function filterByIntensity1(
     sentences: HTMLSentenceMapping[],
     threshold: number,
-): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping } {
+): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
     const filtered: HTMLSentenceMapping[] = [];
     let top: HTMLSentenceMapping | undefined;
     let medium = 0, high = 0, veryHigh = 0;
@@ -442,13 +442,15 @@ function filterByIntensity1(
 
         if (s.score < threshold) continue;
         filtered.push(s);
-        if (!top) top = s;
-        if (s.score >= 0.90 && (!top || top.score < 0.90)) top = s;
+        if (!top ||top.score < s.score) top = s;
     }
 
     chrome.storage.session.set({sentenceStats: {medium, high, veryHigh}});
 
-    return {filtered, top};
+    // Use fixed bins for simplicity
+    const bins = [0, 0.15, 0.4, 0.75, 0.9, 1];
+
+    return {filtered, top, bins};
 }
 
 function filterByIntensity2(
