@@ -6,26 +6,31 @@ let indicator: HTMLDivElement | null = null;
 
 /** Build (or rebuild) the minimap for the current article. */
 export function buildMinimap(sentences: HTMLSentenceMapping[]) {
-    removeMinimap();                                  // ←  wipe any previous map
+    removeMinimap();
+
 
     // ────────────────── outer frame ──────────────────
     container = document.createElement("div");
     container.id = "wikinsert-minimap";
     Object.assign(container.style, {
-        position: "fixed",
-        right: "8px",
-        top: "44px",
         width: "110px",
         height: "31vh",
+        marginTop: "0.5rem",
         background: "#fff",
         border: "1px solid #d0d0d0",
         borderRadius: "4px",
         overflow: "hidden",
-        zIndex: 9_998,
+        position: "relative",
+        zIndex: "9999",
         cursor: "pointer",
         boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
     });
-    document.body.appendChild(container);
+    const outerWrapper = document.getElementById("wikinsert-outer-wrapper");
+    if (outerWrapper) {
+        outerWrapper.appendChild(container);
+    } else {
+        document.body.appendChild(container);
+    }
 
         /* ─────── background “text” texture ───────
        A very cheap vertical stripe pattern that hints at
@@ -111,7 +116,10 @@ export function buildMinimap(sentences: HTMLSentenceMapping[]) {
 
 /** Remove minimap and listeners. */
 export function removeMinimap() {
-    if (container) { container.remove(); }
-    container  = null;
-    indicator  = null;
+    const old = document.getElementById("wikinsert-minimap");
+    if (old) {
+        old.remove();
+        container = null;
+        indicator = null;
+    }
 }

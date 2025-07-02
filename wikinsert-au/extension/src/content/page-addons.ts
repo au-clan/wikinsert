@@ -2,6 +2,9 @@ import {openPopup, scopedKey} from "../utils";
 import {getHeatColor} from "./coloring";
 import {highlightSentences, removeHighlighting} from "./highlighting";
 import { HTMLSentenceMapping } from "../types";
+import { removeMinimap } from "./minimap";
+
+const OUTER_WRAPPER_ID = "wikinsert-outer-wrapper";
 
 /* ────────── navigation tab ────────── */
 
@@ -36,13 +39,27 @@ export function floatingInfoDisplay(): void {
     const currentPageKey = location.href.split('#')[0];
     const intensityKey = scopedKey(currentPageKey, "intensity");
 
+    // Ensure outer wrapper exists
+    let outerWrapper = document.getElementById(OUTER_WRAPPER_ID) as HTMLDivElement | null;
+    if (!outerWrapper) {
+        outerWrapper = document.createElement("div");
+        outerWrapper.id = OUTER_WRAPPER_ID;
+        Object.assign(outerWrapper.style, {
+            position: "fixed",
+            top: "50%",
+            right: "1rem",
+            transform: "translateY(-50%)",
+            zIndex: "9999",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+        });
+        document.body.appendChild(outerWrapper);
+    }
+
     const wrapper = document.createElement("div");
     wrapper.id = FLOATING_INFO_ID;
     Object.assign(wrapper.style, {
-        position: "fixed",
-        top: "50%", right: "1rem",
-        transform: "translateY(-50%)",
-        zIndex: "9999",
         display: "flex",
         flexDirection: "column",
         maxWidth: "min(16rem, calc(100vw - 2rem))",
@@ -128,7 +145,7 @@ export function floatingInfoDisplay(): void {
   
     wrapper.appendChild(sliderBox);
 
-    document.body.appendChild(wrapper);
+    outerWrapper.appendChild(wrapper);
 
     /* helper to attach event listeners and update styles for radios */
     const updateRadioStyles = () => {
@@ -165,6 +182,7 @@ export function floatingInfoDisplay(): void {
                         const heatmap = (res[heatmapKey] as HTMLSentenceMapping[]) || [];
                         if (heatmap.length === 0) {
                             hideFloatingDisplay();
+                            removeMinimap();
                         } else {
                             highlightSentences(heatmap, false);
                         }
@@ -222,6 +240,7 @@ export function floatingInfoDisplay(): void {
         if (!key) {
             console.warn("No page key found in session storage.");
             hideFloatingDisplay();
+            removeMinimap();
         }
         const watched = [
             `${key}-target`,
@@ -281,6 +300,7 @@ export function floatingInfoDisplay(): void {
 
     updateRadioStyles();  // initial style update
     hideFloatingDisplay();   // start collapsed
+    removeMinimap();  // ensure minimap is removed if it exists
 }
 
 /* helper: same RGB as getHeatColor, but always α = 0.6 */

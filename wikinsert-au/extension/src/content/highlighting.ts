@@ -81,6 +81,7 @@ export function initHighlightListeners() {
                 } else if (message.action === "remove") {
                     hideFloatingDisplay();
                     removeHighlighting();
+                    removeMinimap();
                     chrome.storage.session.set({
                         [scopedKey(currentPageKey, "highlighted")]: false,
                     });
@@ -170,8 +171,8 @@ export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollT
         chrome.storage.session.get([heatmapKey], (result) => {
             const heatmap = result[heatmapKey] as HTMLSentenceMapping[] || [];
             if (heatmap && heatmap.length > 0) {
-                buildMinimap(heatmap)
                 showFloatingDisplay();
+                buildMinimap(heatmap)
             } else {
                 hideFloatingDisplay();
                 removeMinimap();
