@@ -1,4 +1,4 @@
-import {openPopup, scopedKey} from "../utils";
+import {openPopup, scopedKey, normalizeSentencesZScoreSigmoid, normalizeSentencesEmpiricalCDF} from "../utils";
 import {getHeatColor} from "./coloring";
 import {highlightSentences, removeHighlighting} from "./highlighting";
 import { HTMLSentenceMapping } from "../types";
@@ -145,6 +145,62 @@ export function floatingInfoDisplay(): void {
   
     wrapper.appendChild(sliderBox);
 
+    // Scale options
+    const scaleBox = document.createElement("div");
+    scaleBox.className = "scale-options";
+    scaleBox.style.padding = "0.75rem";
+    scaleBox.style.borderBottom = "1px solid #e5e7eb";
+    scaleBox.innerHTML = `
+      <label style="display:block; margin-bottom:.5rem;">
+        <input type="radio" name="scaleType" value="smooth" checked>
+        Centered Smooth Scaling <br>
+        <small>Gives a score to each sentence, centering around the average.</small>
+      </label>
+      <label style="display:block;">
+        <input type="radio" name="scaleType" value="relative">
+        Rank-based scaling <br>
+        <small>Gives a score to each sentence based on its rank among all others.</small>
+      </label>
+    `;
+    wrapper.appendChild(scaleBox);
+
+    // Handle scale selection
+    const scaleRadios = scaleBox.querySelectorAll('input[name="scaleType"]');
+    scaleRadios.forEach(radio => {
+      radio.addEventListener('change', () => {
+        const selected = (radio as HTMLInputElement).value;
+        console.log("Scale type changed:", selected);
+        chrome.storage.session.set(
+          { [scopedKey(currentPageKey, 'scaleType')]: selected },
+          () => {
+            const heatmapKey = scopedKey(currentPageKey, 'heatmap');
+            // Re-fetch raw sentence list and normalize under new scale
+            const rawKey = scopedKey(currentPageKey, "rawHeatmap");
+            chrome.storage.session.get([rawKey], (rawRes) => {
+              const raw: HTMLSentenceMapping[] = (rawRes[rawKey] as HTMLSentenceMapping[]) || [];
+              if (raw.length) {
+                const normalized = selected === "smooth"
+                  ? normalizeSentencesZScoreSigmoid(raw)
+                  : normalizeSentencesEmpiricalCDF(raw);
+                // Update stored heatmap then re-highlight
+                chrome.storage.session.set({ [heatmapKey]: normalized }, () => {
+                  removeHighlighting();
+                  highlightSentences(false);
+                });
+              }
+            });
+          }
+        );
+      });
+    });
+    // Initialize selection from storage
+    chrome.storage.session.get([scopedKey(currentPageKey, 'scaleType')], (res) => {
+      const val = res[scopedKey(currentPageKey, 'scaleType')] || 'smooth';
+      const match = Array.from(scaleRadios)
+        .find(r => (r as HTMLInputElement).value === val) as HTMLInputElement;
+      if (match) match.checked = true;
+    });
+
     outerWrapper.appendChild(wrapper);
 
     /* helper to attach event listeners and update styles for radios */
@@ -168,25 +224,14 @@ export function floatingInfoDisplay(): void {
         radios.forEach(radio => {
             radio.addEventListener("change", () => {
                 const v = Number((radio as HTMLInputElement).value);
-
                 chrome.storage.session.set({ [intensityKey]: v });
                 updateRadioStyles();
-
                 /* debounce like before */
                 removeHighlighting();
                 clearTimeout((window as any).__intDebounce);
                 (window as any).__intDebounce = setTimeout(() => {
-                    // retrieve the scoped heatmap for this page
-                    const heatmapKey = scopedKey(currentPageKey, "heatmap");
-                    chrome.storage.session.get([heatmapKey], (res) => {
-                        const heatmap = (res[heatmapKey] as HTMLSentenceMapping[]) || [];
-                        if (heatmap.length === 0) {
-                            hideFloatingDisplay();
-                            removeMinimap();
-                        } else {
-                            highlightSentences(heatmap, false);
-                        }
-                    });
+                    removeHighlighting();
+                    highlightSentences(false);
                 }, 25);
             });
         });

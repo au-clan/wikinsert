@@ -5,15 +5,7 @@ import {initStorage} from "./init";
 
 export const originalHTMLMap = new WeakMap<HTMLElement, string>();
 
-
-
-const heatScoreMin = Infinity;
-const heatScoreMax = -Infinity;
 const currentPageKey = location.href.split("#")[0];
-chrome.storage.session.set({
-  [scopedKey(currentPageKey, "heatScoreMin")]: heatScoreMin,
-  [scopedKey(currentPageKey, "heatScoreMax")]: heatScoreMax,
-});
 
 const srcTitle =
     document.getElementsByClassName("mw-page-title-main")[0]?.textContent || "";

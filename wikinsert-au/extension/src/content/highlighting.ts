@@ -3,9 +3,11 @@ import {originalHTMLMap} from "./content";
 import {getHeatColor} from "./coloring";
 
 import {xpathText} from "./xpath";
-import {normalizeSentencesEmpiricalCDF, normalizeSentencesLogistic, normalizeSentencesMinMax, normalizeSentencesRobust, normalizeSentencesZScoreSigmoid, scopedKey} from "../utils";
+import {normalizeSentencesEmpiricalCDF, normalizeSentencesZScoreSigmoid, scopedKey} from "../utils";
 import {hideFloatingDisplay, showFloatingDisplay} from "./page-addons";
 import { buildMinimap, removeMinimap } from "./minimap";
+
+let currentBins: number[] = [0, 0.15, 0.4, 0.75, 0.9, 1];
 
 
 function smoothScrollTo(el: HTMLElement) {
@@ -31,11 +33,10 @@ document.body.appendChild(tooltip);
 export function initHighlightListeners() {
     // Listen for messages from the extension popup
     chrome.runtime.onMessage.addListener(
-        (message: { action: string }, sender, sendResponse): void => {
+        (message: { action: string }): void => {
             const currentPageKey = location.href.split("#")[0];
             const pageInfoKey = scopedKey(currentPageKey, "pageInfo");
             chrome.storage.session.get([pageInfoKey], (result) => {
-                const pageInfo = result[pageInfoKey] as { pageKey: string; title: string; lang: string; revId: string };
                 // currentPageKey is already defined above
                 if (message.action === "highlight") {
                     removeHighlighting();
@@ -53,19 +54,16 @@ export function initHighlightListeners() {
                                     lang: pageInfo.lang,
                                 },
                                 (response: HTMLSentenceMapping[]) => {
-                                    if (response) {
-                                        console.log("Sentences received:", response);
-                                        const normalizedSentences = normalizeSentencesEmpiricalCDF(
-                                            response,
-                                        );
-                                        chrome.storage.session.set({
-                                            [scopedKey(currentPageKey, "heatmap")]: normalizedSentences,
-                                        });
-
-                                        highlightSentences(normalizedSentences, true);
-                                    } else {
-                                        console.warn("No sentences returned");
-                                    }
+                                  if (response) {
+                                    console.log("Sentences received:", response);
+                                    const rawKey = scopedKey(currentPageKey, "rawHeatmap");
+                                    // Store raw scores for later re-normalization
+                                    chrome.storage.session.set({ [rawKey]: response }, () => {
+                                      highlightSentences(true);
+                                    });
+                                  } else {
+                                    console.warn("No sentences returned");
+                                  }
                                 },
                             );
                         });
@@ -99,59 +97,43 @@ function storeOriginalParagraphHTML(container: HTMLElement) {
     });
 }
 
-export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollTo: boolean): void {
-    const currentPageKey = location.href.split('#')[0];
-    const intensityKey = scopedKey(currentPageKey, "intensity");
-    const relative = false;
-    if (!relative) {
-        chrome.storage.session.set({
-            [scopedKey(currentPageKey, "heatScoreMin")]: Math.min(...sentences.map((s) => s.score)),
-            [scopedKey(currentPageKey, "heatScoreMax")]: Math.max(...sentences.map((s) => s.score)),
-        });
+export function highlightSentences(withScrollTo: boolean): void {
+  const pageKey = location.href.split('#')[0];
+  const rawKey = scopedKey(pageKey, 'rawHeatmap');
+  chrome.storage.session.get([rawKey], ({ [rawKey]: raw = [] }) => {
+    if (!raw.length) {
+      hideFloatingDisplay();
+      removeMinimap();
+      return;
     }
+    chrome.storage.session.get([scopedKey(pageKey, 'scaleType')], ({ [scopedKey(pageKey, 'scaleType')]: type = 'smooth' }) => {
+      const normalized = type === 'smooth'
+        ? normalizeSentencesZScoreSigmoid(raw)
+        : normalizeSentencesEmpiricalCDF(raw);
+      chrome.storage.session.set({
+        [scopedKey(pageKey, 'heatmap')]: normalized,
+      }, () => {
+        const intensityKey = scopedKey(pageKey, 'intensity');
+        chrome.storage.session.get([intensityKey], ({ [intensityKey]: threshold = 0.5 }) => {
+          const { filtered, top, bins } = type === 'smooth'
+            ? filterByIntensitySmooth(normalized, threshold)
+            : filterByIntensityRelative(normalized, threshold);
+          currentBins = bins;
+          chrome.storage.session.set({ [scopedKey(pageKey, 'dynamicBins')]: bins });
+          removeHighlighting();
+          const textNodes = getTextNodesIn();
+          const ordered = filtered.slice().sort((a, b) => b.startOffset - a.startOffset);
+          ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
 
-    chrome.storage.session.get([intensityKey], (result) => {
-        const intensity = typeof result[intensityKey] === "number" ? result[intensityKey] : 0.5;
-        const {filtered: filteredSentences, top: topSentence, bins} = filterByIntensity(sentences, intensity);
-        console.log(bins);
-        if (relative) {
-            chrome.storage.session.set({
-                [scopedKey(currentPageKey, "heatScoreMin")]: Math.min(...filteredSentences.map((s) => s.score)),
-                [scopedKey(currentPageKey, "heatScoreMax")]: Math.max(...filteredSentences.map((s) => s.score)),
-            });
-        }
-        chrome.storage.session.set({
-            [scopedKey(currentPageKey, "dynamicBins")]: bins
-        });
-
-        const contentContainer = document.getElementById("mw-content-text");
-        if (!contentContainer) {
-            console.error("Content container not found");
-            return;
-        }
-
-        storeOriginalParagraphHTML(contentContainer);
-
-        const textNodes = getTextNodesIn();
-
-        const ordered = filteredSentences
-            .slice()
-            .sort((a, b) => b.startOffset - a.startOffset);
-
-        ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
-
-        if (topSentence && withScrollTo) {
-            console.log(`Scrolling to top sentence: ${topSentence.id} with score ${topSentence.score}`);
+          if (top && withScrollTo) {
             requestAnimationFrame(() => {
-                const span = document.getElementById(`sentence-${topSentence!.id}`);
+                const span = document.getElementById(`sentence-${top!.id}`);
                 if (!span) return;
-
-                /* add / reuse an anchor so a hash link still works */
                 let anchor = document.getElementById("wikinsert-top-highlight");
                 if (!anchor) {
                     anchor = document.createElement("a");
                     anchor.id = "wikinsert-top-highlight";
-                    anchor.style.position = "absolute";   // keeps it invisible
+                    anchor.style.position = "absolute";
                     anchor.style.width = "0";
                     anchor.style.height = "0";
                 }
@@ -160,25 +142,12 @@ export function highlightSentences(sentences: HTMLSentenceMapping[], withScrollT
                 smoothScrollTo(anchor);
             });
         }
-    });
-
-
-    // show spectrum if heatmap is not empty
-    const pageInfoKey = scopedKey(currentPageKey, "pageInfo");
-    chrome.storage.session.get([pageInfoKey], (result) => {
-        const pageInfo = result[pageInfoKey] as { pageKey: string; title: string; lang: string; revId: string };
-        const heatmapKey = scopedKey(currentPageKey, "heatmap");
-        chrome.storage.session.get([heatmapKey], (result) => {
-            const heatmap = result[heatmapKey] as HTMLSentenceMapping[] || [];
-            if (heatmap && heatmap.length > 0) {
-                showFloatingDisplay();
-                buildMinimap(heatmap)
-            } else {
-                hideFloatingDisplay();
-                removeMinimap();
-            }
+          showFloatingDisplay();
+          buildMinimap(normalized);
         });
+      });
     });
+  });
 }
 
 /**
@@ -190,7 +159,6 @@ function wrapRangeInContainer(
 ): void {
     const {startOffset, endOffset, score, id} = sentence;
 
-    const currentPageKey = location.href.split('#')[0];
     for (const node of textNodes) {
         if (node.node.length === 0) {
             continue;
@@ -217,30 +185,32 @@ function wrapRangeInContainer(
             const span = document.createElement("span");
             span.className = "sentence-span";
             span.id = `sentence-${id}`;
-            chrome.storage.session.get([
-                scopedKey(currentPageKey, "heatScoreMin"),
-                scopedKey(currentPageKey, "heatScoreMax")
-            ], (result) => {
-                const heatScoreMin = result[scopedKey(currentPageKey, "heatScoreMin")] as number;
-                const heatScoreMax = result[scopedKey(currentPageKey, "heatScoreMax")] as number;
-                span.style.backgroundColor = getHeatColor(
+            span.style.backgroundColor = getHeatColor(
                     score,
                     0,
                     1,
                 );
-                span.addEventListener('mouseenter', () => {
-                    const description = score >= 0.9 ? "Very High" : (score >= 0.75 ? "High" : (score >= 0.4 ? "Medium" : (score >= 0.15 ? "Low" : "Very Low")));
-                    const scorePercentage = score * 100;
-                    tooltip.textContent = `${scorePercentage.toFixed(0)}% Relevance (${description})`;
-                    tooltip.style.opacity = '1';
-                });
-                span.addEventListener('mouseleave', () => {
-                    tooltip.style.opacity = '0';
-                });
-                span.addEventListener('mousemove', (e) => {
-                    tooltip.style.top = `${e.clientY + 10}px`;
-                    tooltip.style.left = `${e.clientX + 10}px`;
-                });
+            span.addEventListener('mouseenter', () => {
+                // Determine category based on dynamic bins
+                const labels = ["Very Low", "Low", "Medium", "High", "Very High"];
+                let categoryIndex = labels.length - 1;
+                for (let i = 0; i < currentBins.length - 1; i++) {
+                    if (score < currentBins[i + 1]) {
+                    categoryIndex = i;
+                    break;
+                    }
+                }
+                const description = labels[categoryIndex];
+                const scorePercentage = score * 100;
+                tooltip.textContent = `${scorePercentage.toFixed(0)}% Relevance (${description})`;
+                tooltip.style.opacity = '1';
+            });
+            span.addEventListener('mouseleave', () => {
+                tooltip.style.opacity = '0';
+            });
+            span.addEventListener('mousemove', (e) => {
+                tooltip.style.top = `${e.clientY + 10}px`;
+                tooltip.style.left = `${e.clientX + 10}px`;
             });
 
             const extracted = range.extractContents();
@@ -264,8 +234,10 @@ export function removeHighlighting(): void {
     const container = document.getElementById("mw-content-text");
     if (!container) {
         console.error("Content container not found");
-        return;
+        return;  
     }
+    storeOriginalParagraphHTML(container);
+
     container.querySelectorAll<HTMLParagraphElement>("p").forEach((paragraph) => {
         if (originalHTMLMap.has(paragraph)) {
             paragraph.innerHTML = originalHTMLMap.get(paragraph)!;
@@ -359,28 +331,48 @@ function jenksBreaks(data: number[], numClasses: number): number[] {
     return breaks;
 }
 
-function filterByIntensity(
-    sentences: HTMLSentenceMapping[],
-    threshold: number,
+function filterByIntensitySmooth(
+  sentences: HTMLSentenceMapping[],
+  threshold: number
 ): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
-    const scores = sentences.map(s => s.score).sort((a, b) => a - b);
-    let bins: number[];
-    if (scores.length >= 6) {
-        bins = jenksBreaks(scores, 5);
-        console.log(`Jenks breaks: ${bins.join(", ")}`);
-        // Clamp to [0,1]
-        bins[0] = 0;
-        bins[bins.length - 1] = 1;
-    } else {
-        bins = [0, 0.15, 0.4, 0.75, 0.9, 1];
-    }
-    const filtered: HTMLSentenceMapping[] = [];
-    let top: HTMLSentenceMapping | undefined;
-    for (const s of sentences) {
-        const x = s.score;
-        if (x < threshold) continue;
-        filtered.push(s);
-        if (!top || x > top.score) top = s;
-    }
-    return {filtered, top, bins};
+  // Only consider scores ≥ 0.4 for natural breaks
+  const eligibleScores = sentences
+    .map(s => s.score)
+    .filter(v => v >= 0.4)
+    .sort((a, b) => a - b);
+  let bins: number[];
+  if (eligibleScores.length >= 6) {
+      bins = jenksBreaks(eligibleScores, 5);
+      // Force domain from 0.4 to 1
+      bins[0] = 0.4;
+      bins[bins.length - 1] = 1;
+  } else {
+      // Fixed fallback breaks between 0.4 and 1
+      bins = [0.4, 0.55, 0.65, 0.75, 0.85, 1];
+  }
+  const filtered: HTMLSentenceMapping[] = [];
+  let top: HTMLSentenceMapping | undefined;
+  for (const s of sentences) {
+      const x = s.score;
+      if (x < threshold) continue;
+      filtered.push(s);
+      if (!top || x > top.score) top = s;
+  }
+  return {filtered, top, bins};
+}
+
+function filterByIntensityRelative(
+  sentences: HTMLSentenceMapping[],
+  threshold: number
+): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
+  // Fixed relative-percentile breaks starting at 0.4
+  const bins = [0.4, 0.55, 0.65, 0.75, 0.85, 1];
+  const filtered: HTMLSentenceMapping[] = [];
+  let top: HTMLSentenceMapping | undefined;
+  for (const s of sentences) {
+    if (s.score < threshold) continue;
+    filtered.push(s);
+    if (!top || s.score > top.score) top = s;
+  }
+  return { filtered, top, bins };
 }

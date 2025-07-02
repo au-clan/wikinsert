@@ -37,13 +37,11 @@ export function initStorage() {
             const isEnabled = result[scopedKey(pageKey, "highlighted")] === true;
             const target = result[scopedKey(pageKey, "target")] || "";
 
-            chrome.storage.session.get([scopedKey(pageKey, "heatmap")], (result) => {
-                const currentHeatMap: HTMLSentenceMapping[] =
-                    result[scopedKey(pageKey, "heatmap")] || [];
-                if (isEnabled && currentHeatMap.length > 0 && target !== "") {
+            chrome.storage.session.get([scopedKey(pageKey, "rawHeatmap")], (res) => {
+                const raw: HTMLSentenceMapping[] = (res[scopedKey(pageKey, "rawHeatmap")] as HTMLSentenceMapping[]) || [];
+                if (isEnabled && raw.length > 0 && target !== "") {
                     console.log("Restoring highlighting");
-                    console.log("Current heatmap:", currentHeatMap);
-                    highlightSentences(currentHeatMap, true);
+                    highlightSentences(true);
                 }
             });
         });
