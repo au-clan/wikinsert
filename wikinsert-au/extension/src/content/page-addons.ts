@@ -1,8 +1,8 @@
 import {openPopup, scopedKey, normalizeSentencesZScoreSigmoid, normalizeSentencesEmpiricalCDF} from "../utils";
-import {getHeatColor} from "./coloring";
-import {highlightSentences, removeHighlighting} from "./highlighting";
+import {highlightSentences, removeHighlighting, filterByIntensitySmooth, filterByIntensityRelative} from "./highlighting";
 import { HTMLSentenceMapping } from "../types";
 import { removeMinimap } from "./minimap";
+import { getHeatColor } from "./coloring";
 
 const OUTER_WRAPPER_ID = "wikinsert-outer-wrapper";
 
@@ -164,33 +164,35 @@ export function floatingInfoDisplay(): void {
     `;
     wrapper.appendChild(scaleBox);
 
-    // Handle scale selection
+    // Handle scale selection (reset threshold to medium of new scale’s bins)
     const scaleRadios = scaleBox.querySelectorAll('input[name="scaleType"]');
     scaleRadios.forEach(radio => {
       radio.addEventListener('change', () => {
         const selected = (radio as HTMLInputElement).value;
         console.log("Scale type changed:", selected);
-        chrome.storage.session.set(
-          { [scopedKey(currentPageKey, 'scaleType')]: selected },
-          () => {
-            const heatmapKey = scopedKey(currentPageKey, 'heatmap');
-            // Re-fetch raw sentence list and normalize under new scale
-            const rawKey = scopedKey(currentPageKey, "rawHeatmap");
-            chrome.storage.session.get([rawKey], (rawRes) => {
-              const raw: HTMLSentenceMapping[] = (rawRes[rawKey] as HTMLSentenceMapping[]) || [];
-              if (raw.length) {
-                const normalized = selected === "smooth"
-                  ? normalizeSentencesZScoreSigmoid(raw)
-                  : normalizeSentencesEmpiricalCDF(raw);
-                // Update stored heatmap then re-highlight
-                chrome.storage.session.set({ [heatmapKey]: normalized }, () => {
-                  removeHighlighting();
-                  highlightSentences(false);
-                });
-              }
-            });
-          }
-        );
+        const rawKey = scopedKey(currentPageKey, 'rawHeatmap');
+        chrome.storage.session.get([rawKey], (rawRes) => {
+          const raw: HTMLSentenceMapping[] = (rawRes[rawKey] as HTMLSentenceMapping[]) || [];
+          if (!raw.length) return;
+          // Normalize under chosen scale
+          const normalized = selected === 'smooth'
+            ? normalizeSentencesZScoreSigmoid(raw)
+            : normalizeSentencesEmpiricalCDF(raw);
+          // Compute bins for new scale (threshold arg 0 just to get bins)
+          const { bins } = selected === 'smooth'
+            ? filterByIntensitySmooth(normalized, 0)
+            : filterByIntensityRelative(normalized, 0);
+          const mediumValue = bins[2]; 
+          // Store new scaleType and reset intensity to medium
+          chrome.storage.session.set({
+            [scopedKey(currentPageKey, 'scaleType')]: selected,
+            [intensityKey]: mediumValue
+          }, () => {
+            removeHighlighting();
+            highlightSentences(false);
+            updateRadioStyles();
+          });
+        });
       });
     });
     // Initialize selection from storage

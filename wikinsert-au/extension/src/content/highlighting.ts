@@ -331,7 +331,7 @@ function jenksBreaks(data: number[], numClasses: number): number[] {
     return breaks;
 }
 
-function filterByIntensitySmooth(
+export function filterByIntensitySmooth(
   sentences: HTMLSentenceMapping[],
   threshold: number
 ): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
@@ -361,7 +361,7 @@ function filterByIntensitySmooth(
   return {filtered, top, bins};
 }
 
-function filterByIntensityRelative(
+export function filterByIntensityRelative(
   sentences: HTMLSentenceMapping[],
   threshold: number
 ): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
