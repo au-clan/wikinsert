@@ -362,7 +362,6 @@ function filterByIntensity(
     sentences: HTMLSentenceMapping[],
     threshold: number,
 ): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
-    const currentPageKey = location.href.split('#')[0];
     const scores = sentences.map(s => s.score).sort((a, b) => a - b);
     let bins: number[];
     if (scores.length >= 6) {
@@ -374,113 +373,13 @@ function filterByIntensity(
     } else {
         bins = [0, 0.15, 0.4, 0.75, 0.9, 1];
     }
-    const counts = {medium: 0, high: 0, veryHigh: 0};
     const filtered: HTMLSentenceMapping[] = [];
     let top: HTMLSentenceMapping | undefined;
     for (const s of sentences) {
         const x = s.score;
-        if (x >= bins[4]) counts.veryHigh++;
-        else if (x >= bins[3]) counts.high++;
-        else if (x >= bins[2]) counts.medium++;
         if (x < threshold) continue;
         filtered.push(s);
         if (!top || x > top.score) top = s;
     }
-    chrome.storage.session.set({
-        [scopedKey(currentPageKey, "sentenceStats")]: {medium: counts.medium, high: counts.high, veryHigh: counts.veryHigh}
-    });
     return {filtered, top, bins};
-}
-function filterByIntensity3(
-    sentences: HTMLSentenceMapping[],
-    threshold: number,
-): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
-    const scores = sentences.map(s => s.score);
-    const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
-    const sd = Math.sqrt(scores.reduce((a, b) => a + (b - mean) ** 2, 0) / scores.length);
-
-    const bins = [
-        0,
-        Math.max(0, mean - 1.5 * sd),
-        Math.max(0, mean - 0.5 * sd),
-        Math.min(1, mean + 0.5 * sd),
-        Math.min(1, mean + 1.5 * sd),
-        1,
-    ];
-
-    const counts = {medium: 0, high: 0, veryHigh: 0 };
-    const filtered: HTMLSentenceMapping[] = [];
-    let top: HTMLSentenceMapping | undefined;
-
-    for (const s of sentences) {
-        const x = s.score;
-        if (x >= bins[4]) counts.veryHigh++;
-        else if (x >= bins[3]) counts.high++;
-        else if (x >= bins[2]) counts.medium++;
-
-        if (x < threshold) continue;
-        filtered.push(s);
-        if (!top || x > top.score) top = s;
-    }
-
-    chrome.storage.session.set({sentenceStats: {medium: counts.medium, high: counts.high, veryHigh: counts.veryHigh}});
-    return {filtered, top, bins};
-}
-
-function filterByIntensity1(
-    sentences: HTMLSentenceMapping[],
-    threshold: number,
-): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping; bins: number[] } {
-    const filtered: HTMLSentenceMapping[] = [];
-    let top: HTMLSentenceMapping | undefined;
-    let medium = 0, high = 0, veryHigh = 0;
-
-    for (const s of sentences) {
-        if (s.score >= 0.90) veryHigh++;
-        else if (s.score >= 0.75) high++;
-        else if (s.score >= 0.40) medium++;
-
-        if (s.score < threshold) continue;
-        filtered.push(s);
-        if (!top ||top.score < s.score) top = s;
-    }
-
-    chrome.storage.session.set({sentenceStats: {medium, high, veryHigh}});
-
-    // Use fixed bins for simplicity
-    const bins = [0, 0.15, 0.4, 0.75, 0.9, 1];
-
-    return {filtered, top, bins};
-}
-
-function filterByIntensity2(
-    sentences: HTMLSentenceMapping[],
-    threshold: number,
-): { filtered: HTMLSentenceMapping[]; top?: HTMLSentenceMapping } {
-    const filtered: HTMLSentenceMapping[] = [];
-    let top: HTMLSentenceMapping | undefined;
-    let medium = 0, high = 0, veryHigh = 0;
-
-    const scores = sentences.map(s => s.score).sort((a, b) => a - b);
-    const getQuantile = (q: number) => scores[Math.floor(q * scores.length)] || 0;
-
-    const q40 = getQuantile(0.4);
-    const q70 = getQuantile(0.7);
-    const q90 = getQuantile(0.9);
-    console.log(`Quantiles: 40%=${q40}, 70%=${q70}, 90%=${q90}`);
-
-    for (const s of sentences) {
-        if (s.score >= q90) veryHigh++;
-        else if (s.score >= q70) high++;
-        else if (s.score >= q40) medium++;
-
-        if (s.score < threshold) continue;
-        filtered.push(s);
-        if (!top) top = s;
-        if (s.score >= q90 && (!top || top.score < q90)) top = s;
-    }
-
-    chrome.storage.session.set({sentenceStats: {medium, high, veryHigh}});
-
-    return {filtered, top};
 }

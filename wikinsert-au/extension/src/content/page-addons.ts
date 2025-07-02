@@ -127,58 +127,6 @@ export function floatingInfoDisplay(): void {
 //   </fieldset>`;
   
     wrapper.appendChild(sliderBox);
-    const statsBox = document.createElement("div");
-    statsBox.id = "sentence-stats";
-    Object.assign(statsBox.style, {
-        padding: "0.75rem",
-        display: "grid",
-        gridTemplateColumns: "repeat(3, 1fr)",
-        rowGap: "4px",
-        columnGap: "4px",
-        fontSize: "11px",
-        opacity: ".9",
-        textAlign: "center",
-    });
-
-    /* first row – coloured badges (number only) */
-    statsBox.innerHTML = `
-        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
-            <span id="stat-veryHigh-val"
-                style="
-                    display:inline-flex; align-items:center; justify-content:center;
-                    width:2.5rem; height:1.25rem;
-                    border-radius:0.625rem;
-                    font-variant-numeric:tabular-nums;
-                    background:rgba(255, 94, 94, 0.6); color:#111827;">
-            0
-            </span>
-            <span style="font-size:10px;">Very&nbsp;High</span>
-        </div>
-        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
-            <span id="stat-high-val"
-                style="
-                    display:inline-flex; align-items:center; justify-content:center;
-                    width:2.5rem; height:1.25rem;
-                    border-radius:0.625rem;
-                    font-variant-numeric:tabular-nums;
-                    background:rgba(255, 142, 66, 0.6); color:#111827;">
-            0
-            </span>
-            <span style="font-size:10px;">High</span>
-        </div>
-        <div style="display:flex; gap:5px; flex-direction:column; align-items:center;">
-            <span id="stat-medium-val"
-                style="
-                    display:inline-flex; align-items:center; justify-content:center;
-                    width:2.5rem; height:1.25rem;
-                    border-radius:0.625rem;
-                    font-variant-numeric:tabular-nums;
-                    background:rgba(255, 255, 0, 0.6); color:#111827;">
-            0
-            </span>
-            <span style="font-size:10px;">Medium</span>
-        </div>`;
-    wrapper.appendChild(statsBox);
 
     document.body.appendChild(wrapper);
 
@@ -263,26 +211,6 @@ export function floatingInfoDisplay(): void {
     attachListeners();
     updateRadioStyles();
 
-    const paintStats = (stats?: { medium: number; high: number; veryHigh: number }) => {
-        const box = document.getElementById("sentence-stats") as HTMLElement;
-        if (!box) return;
-
-        if (stats) {
-            box.style.display = "grid";
-            (document.getElementById("stat-veryHigh-val") as HTMLElement).textContent = String(stats.veryHigh);
-            (document.getElementById("stat-high-val") as HTMLElement).textContent = String(stats.high);
-            (document.getElementById("stat-medium-val") as HTMLElement).textContent = String(stats.medium);
-        } else {
-            box.style.display = "none";
-        }
-    };
-    chrome.storage.session.get(
-      [scopedKey(currentPageKey, "sentenceStats")],
-      (res) => {
-        const stats = res[scopedKey(currentPageKey, "sentenceStats")] as { medium: number; high: number; veryHigh: number };
-        paintStats(stats);
-      }
-    );
 
     /* auto-sync target info */
     chrome.storage.session.get(
@@ -331,9 +259,6 @@ export function floatingInfoDisplay(): void {
         fill();
         chrome.storage.onChanged.addListener((chg, area) => {
             if (area === "session" && watched.some(k => k in chg)) fill();
-            if (area === "session" && scopedKey(currentPageKey, "sentenceStats") in chg) {
-                paintStats(chg[scopedKey(currentPageKey, "sentenceStats")].newValue);
-            }
             if (area === "session" && scopedKey(currentPageKey, "dynamicBins") in chg) {
                 const bins = chg[scopedKey(currentPageKey, "dynamicBins")].newValue as number[];
                 if (Array.isArray(bins) && bins.length === 6) {

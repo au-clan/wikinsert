@@ -24,6 +24,12 @@ export function initTargetDisplay(pageKey: string) {
 }
 
 export function updateTargetDisplay(targetTitle?: string) {
+    if (typeof targetTitle === "undefined") {
+        const targetStatusEl = document.getElementById("targetStatus") as HTMLDivElement | null;
+        if (targetStatusEl && !targetStatusEl.classList.contains("hidden")) {
+            return; // keep existing display
+        }
+    }
     const searchInput = document.getElementById(
         "searchInput",
     ) as HTMLInputElement | null;
@@ -77,7 +83,7 @@ function initClearBtn(pageKey: string) {
             chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
                 chrome.tabs.sendMessage(tabs[0].id!, {action: "remove"});
             });
-            updateTargetDisplay();
+            updateTargetDisplay("");
         });
     });
 }
