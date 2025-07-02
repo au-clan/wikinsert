@@ -15,7 +15,8 @@
 			<template #default>
 				<input
 					type="hidden"
-					value="en"
+					:value="lang"
+
 				>
 				<input
 					type="hidden"
@@ -32,11 +33,16 @@ import {CdxTypeaheadSearch} from '@wikimedia/codex';
 import type {SearchResult} from '@wikimedia/codex/dist/types/types.d.ts';
 import type {FilteredArticle} from '../../../../extension/src/popup.js'
 
-export default defineComponent( {
-
-	name: 'TypeaheadSearchWikipedia',
-	components: { CdxTypeaheadSearch },
-	setup() {
+export default defineComponent({
+  name: 'TypeaheadSearchWikipedia',
+  components: { CdxTypeaheadSearch },
+  props: {
+    lang: {
+      type: String,
+      default: 'en'
+    }
+  },
+  setup(props) {
 		const searchResults = ref<SearchResult[]>( [] );
 		const currentSearchTerm = ref( '' );
 
@@ -52,8 +58,8 @@ export default defineComponent( {
 				searchResults.value = [];
 				return;
 			}
-			
-		const lang = 'en'; // TODO: Get the language from the user interface
+
+		const lang = props.lang;
 
       /**
        * Format search results for consumption by TypeaheadSearch.

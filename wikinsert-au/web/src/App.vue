@@ -17,9 +17,18 @@
           AI-assisted <a class="text-blue-600 underline" target="_blank" href="https://arxiv.org/abs/2410.04254">entity insertion</a> for Wikipedia editors
         </h2>
 
+        <!-- Language selector -->
+        <div class="w-full flex justify-center">
+          <select v-model="selectedLang" class="border rounded p-2">
+            <option v-for="code in languageCodes" :key="code" :value="code">
+              {{ code.toUpperCase() }}
+            </option>
+          </select>
+        </div>
+
         <!-- Search Component -->
         <div class="w-full">
-          <TypeaheadSearchWikipedia />
+          <TypeaheadSearchWikipedia :lang="selectedLang" />
         </div>
 
         <!-- Info Box (Lowered with Cursive Text and Bold Header) -->
@@ -38,5 +47,12 @@
 
 
 <script setup lang="ts">
+import { ref } from 'vue';
 import TypeaheadSearchWikipedia from "@/components/TypeaheadSearch/typeaheadSearch.vue";
+
+const languageCodes = [
+  "en","de","fr","es","it","nl","pt","ru","ja","zh","ar","sv","pl","cs","fi",
+  "no","da","ko","tr","he","uk","ca","hu","el","vi","id"
+];
+const selectedLang = ref('en');
 </script>
