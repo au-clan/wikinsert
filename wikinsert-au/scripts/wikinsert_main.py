@@ -168,7 +168,7 @@ class WikiPipeline:
             #df_sources = df_sources.sample(n=3, random_state=42)
         id_map = {}
         for _, row in df_sources.iterrows():
-            title = row['source_title']
+            title = fix_title(row['source_title'])
             revid = str(row['first_version'])
             src_id = self.extract_article(lang, title, revid)
             id_map[(title, revid)] = src_id
