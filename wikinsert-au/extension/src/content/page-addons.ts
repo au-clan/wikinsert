@@ -103,7 +103,7 @@ export function floatingInfoDisplay(): void {
         gap:4px; cursor:pointer; font-size:10px; user-select:none;
       ">
         <input type="radio" name="intensity"
-               value="${val.toFixed(3)}" ${i === 2 ? "checked" : ""}
+               value="${val}" ${i === 2 ? "checked" : ""}
                 style="appearance:none; width:1.1rem; height:1.1rem;
                       border-radius:50%; border:3px solid #e5e7eb;
                       margin-bottom:2px; cursor:pointer; transition:all 0.2s;

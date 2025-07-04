@@ -52,7 +52,7 @@ import TypeaheadSearchWikipedia from "@/components/TypeaheadSearch/typeaheadSear
 
 const languageCodes = [
   "en","de","fr","es","it","nl","pt","ru","ja","zh","ar","sv","pl","cs","fi",
-  "no","da","ko","tr","he","uk","ca","hu","el","vi","id"
+  "no","da","ko","tr","he","uk","ca","hu","el","vi","id", "hi"
 ];
 const selectedLang = ref('en');
 </script>
