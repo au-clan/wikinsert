@@ -6,10 +6,10 @@ information discovery and knowledge integration.
 
 ## Video demonstration of Wikinsert
 
-<video width="100%" height="auto" controls>
+[<video width="100%" height="auto" controls>
   <source src="static/demo-vid.mp4" type="video/mp4">
   Your browser does not support the video tag.
-</video>
+</video>](https://github.com/user-attachments/assets/2be10161-6069-41a2-b701-a6be5a53b106)
 
 If the embedded player does not appear, you can download or open the video directly:
 
