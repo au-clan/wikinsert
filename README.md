@@ -7,13 +7,13 @@ information discovery and knowledge integration.
 ## Video demonstration of Wikinsert
 
 <video width="100%" height="auto" controls>
-  <source src="static/demo-vid.mp4" type="video/mp4">
+  <source src="static/demo.mp4" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 
 If the embedded player does not appear, you can download or open the video directly:
 
-[Download the demo video](static/demo-vid.mp4)
+[Download the demo video](static/demo.mp4)
 
 
 ## Downloading the extension
