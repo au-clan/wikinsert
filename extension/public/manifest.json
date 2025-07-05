@@ -1,0 +1,28 @@
+{
+  "name": "Wikinsert",
+  "description": "Entity insertion tool for Wikipedia editors",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "webNavigation",
+    "declarativeContent"
+  ],
+  "host_permissions": [
+    "https://*.wikipedia.org/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "js": ["content.js"],
+      "matches": ["https://*.wikipedia.org/*"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

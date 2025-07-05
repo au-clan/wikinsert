@@ -1,0 +1,35 @@
+{
+  "name": "color-random-sentences",
+  "version": "1.0.0",
+  "main": "background.js",
+  "scripts": {
+    "build:css": "npx @tailwindcss/cli -i public/popup.css -o ./dist/popup.css",
+    "build:js": "webpack --config webpack/webpack.config.js",
+    "build": " npm run build:js && npm run build:css",
+    "dev:css": "npx @tailwindcss/cli -i public/popup.css -o ./dist/popup.css --watch",
+    "dev:js": "webpack --watch --config webpack/webpack.config.js",
+    "dev": " npm run dev:js && npm run dev:css"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/chrome": "^0.0.304",
+    "concurrently": "^9.1.2",
+    "copy-webpack-plugin": "^12.0.2",
+    "daisyui": "^5.0.0-beta.8",
+    "ts-loader": "^9.5.2",
+    "typescript": "^5.7.3",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  },
+  "dependencies": {
+    "@tailwindcss/cli": "^4.0.7",
+    "@wikimedia/codex": "^2.0.0-rc.1",
+    "@wikimedia/codex-design-tokens": "^2.0.0-rc.1",
+    "glob": "^11.0.1",
+    "sentence-splitter": "^5.0.0",
+    "tailwindcss": "^4.0.7"
+  }
+}

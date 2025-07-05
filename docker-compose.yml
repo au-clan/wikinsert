@@ -1,0 +1,73 @@
+services:
+  # MongoDB container
+  mongodb:
+    image: mongodb/mongodb-community-server:7.0.0-ubi8
+    cpus: 8.0
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - wikinsert-network
+    healthcheck:
+      test: [ "CMD", "mongosh", "--eval", "db.adminCommand('ping')" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  # Python data population container
+  python-populator:
+    build:
+      context: ./wikinsert-au
+      dockerfile: scripts/Dockerfile
+    container_name: python-populator
+    volumes:
+      - pip-cache:/pip-cache
+      - ./.env:/app/.env:ro
+      - /home/aarora/multilingual_entity_insertion/boulenge/wikidumps_data:/data:ro
+      - /home/nikolaj.mikkelsen/locei_dataset/test:/test:ro
+      - /home/aarora/multilingual_entity_insertion/models/roberta_full_multilingual-all:/models:ro
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - wikinsert-network
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/
+      - DB_NAME=wikinsert
+      - SOURCE_ARTICLES_PATH=${SOURCE_ARTICLES_PATH:-/data/report_examples/revisions_files/revisions_en.parquet}
+      - SCORED_DATA_PATH=${SCORED_DATA_PATH:-/data/report_examples/scored_data/en_5_scored.parquet}
+      - MENTION_MAP_PATH=${MENTION_MAP_PATH:-/data/report_examples/ready_to_score_data/mention_map_en.parquet}
+      - MODEL_DIR=${MODEL_DIR:-/models}
+    profiles:
+      - populator
+
+  # Ktor API container
+  ktor-api:
+    build:
+      context: ./wikinsert-au/backend
+      dockerfile: Dockerfile
+    container_name: ktor-api
+    ports:
+      - "8081:8080"
+    depends_on:
+      - mongodb
+    networks:
+      - wikinsert-network
+    environment:
+      - MONGODB_URI=mongodb://mongodb:27017/
+      - MONGODB_DATABASE=wikinsert
+    restart: always
+    profiles:
+      - api
+
+networks:
+  wikinsert-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  pip-cache:

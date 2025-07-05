@@ -1,0 +1,21 @@
+@import '@wikimedia/codex/dist/codex.style.css';
+@import '@wikimedia/codex-design-tokens/theme-wikimedia-ui.css';
+@import "tailwindcss";
+
+.wikimedia-heading {
+    font-size: 64px;
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-xxx-large);
+    margin: 0;
+}
+
+.wikimedia-subheading {
+    font-size: var(--font-size-large);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-large);
+    margin: 0;
+}
+
+.wikimedia-text {
+    font-family: var(--font-family-sans), sans-serif;
+}

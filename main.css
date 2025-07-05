@@ -1,0 +1,25 @@
+.wikimedia-heading {
+    font-size: 64px;
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-xxx-large);
+    margin: 0;
+}
+
+
+.wikimedia-heading-2 {
+    font-size: var(--font-size-xx-large);
+    font-weight: var(--font-weight-light);
+    line-height: var(--line-height-xx-large);
+    margin: 0;
+}
+
+.wikimedia-subheading {
+    font-size: var(--font-size-large);
+    font-weight: var(--font-weight-normal);
+    line-height: var(--line-height-large);
+    margin: 0;
+}
+
+.wikimedia-text {
+    font-family: var(--font-family-sans), sans-serif;
+}

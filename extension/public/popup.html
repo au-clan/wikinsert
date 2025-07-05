@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Toggle Color</title>
+    <link rel="stylesheet" href="popup.css" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@wikimedia/codex@latest/dist/codex.style.css"
+    />
+  </head>
+
+  <body class="w-[350px] bg-base-200 flex flex-col py-2 px-0 gap-4">
+    <div class="flex flex-col items-center gap-2">
+      <!-- Top menu -->
+      <div
+        id="popupMenu"
+        class="w-full flex justify-between items-center opacity-70 text-gray-500"
+      >
+        <span
+          id="minimize"
+          class="opacity-70 hover:opacity-100 cdx-icon cursor-pointer"
+        ></span>
+          <!-- <a href="./settings.html">
+            <span
+              id="settings"
+              class="opacity-70 hover:opacity-100 cdx-icon cursor-pointer"
+            ></span>
+          </a> -->
+      </div>
+      <!-- Logo and heading -->
+      <div id="header" class="flex items-center gap-2">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/6/63/Wikipedia-logo.png"
+          alt="Wikipedia Logo"
+          class="w-8 h-8"
+        />
+        <h1 class="wikimedia-heading-2 wikimedia-text">Wikinsert</h1>
+      </div>
+
+      <!-- Search form -->
+      <form id="searchForm" class="relative cdx-typeahead-search w-full">
+        <div class="cdx-search-input cdx-search-input--has-end-button">
+          <div class="cdx-search-input__input-wrapper">
+            <div class="cdx-text-input cdx-text-input--has-start-icon">
+              <input
+                type="search"
+                name="entity"
+                id="searchInput"
+                placeholder="Search Wikipedia"
+                autocomplete="off"
+                class="cdx-text-input__input w-full"
+              />
+              <span
+                class="cdx-text-input__icon cdx-text-input__start-icon"
+              ></span>
+            </div>
+          </div>
+          <button
+                  type="button"
+                  id="searchButton"
+            class="cdx-button cdx-search-input__end-button mt-2"
+          >
+            Search
+          </button>
+        </div>
+        <div id="searchDropdownWrapper" class="relative hidden">
+          <ul
+            id="searchDropdown"
+            role="listbox"
+            class="cdx-menu cdx-menu--has-icons cdx-typeahead-search__results absolute left-0 right-0 rounded max-h-60 overflow-y-auto hidden"
+          ></ul>
+        </div>
+      </form>
+
+      <!-- Dropdown for search results -->
+
+      <div id="targetStatus" class="hidden py-2 items-center gap-2">
+        <div class="flex gap-2">
+          <span
+            id="selectedTargetName"
+            class="wikimedia-text font-medium"
+          ></span>
+          <!-- Toggle switch (initially hidden) -->
+          <button id="clearTargetBtn" aria-label="Clear">
+            <span
+              id="cancel"
+              class="opacity-70 hover:opacity-100 cdx-icon cursor-pointer"
+            ></span>
+          </button>
+        </div>
+        <div id="toggleContainer" class="!h-[20px]">
+          <span class="cdx-toggle-switch">
+            <input
+              id="toggleInput"
+              class="cdx-toggle-switch__input"
+              type="checkbox"
+              aria-label="Highlight"
+            />
+            <span class="cdx-toggle-switch__switch">
+              <span class="cdx-toggle-switch__switch__grip"></span>
+            </span>
+            <label for="toggleColor" class="cdx-toggle-switch__label">
+              Highlight
+            </label>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div id="noTargetMessage" class="pt-2 text-sm opacity-70 hidden">
+      No target selected. Please search for a target.
+    </div>
+
+    <script src="popup.js"></script>
+    <footer>
+      <!-- Trademark (CLAN / AU / BACHELOR) -->
+      <!-- make it such that it is always at the bottom of the page center end aligned bottom -->
+      <div
+        id="trademark"
+        class="absolute bottom-0 left-0 right-0 mt-4 text-center text-gray-400"
+      >
+        <p class="text-xs">CLAN / AU / BACHELOR</p>
+      </div>
+    </footer>
+  </body>
+</html>
