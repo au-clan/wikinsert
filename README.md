@@ -1,4 +1,4 @@
-# Wikinsert: Entity-Aware Highlighting for Wikipedia
+# WIKINSERT: A Multilingual Machine-in-the-Loop Entity Insertion System for Wikipedia
 
 Wikinsert is a system for generating and displaying entity-aware highlighting of Wikipedia articles. It helps users
 identify sentences in a source article that are relevant to a specific target entity, enabling more efficient
