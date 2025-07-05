@@ -6,102 +6,34 @@ information discovery and knowledge integration.
 
 ![Wikinsert Highlighting Example](static/wikinsert-highlight.png)
 
-## System Architecture
+## Downloading the extension
 
-Wikinsert is composed of three main layers:
+Get the pre‑built package in three clicks:
 
-1. **Data Processing Layer** - Generates relevance scores for target entities
-2. **Backend API Layer** - Stores and serves those scores
-3. **UI Layer** - Overlays scores onto Wikipedia articles for interactive inspection
+1. Navigate to <https://github.com/au-clan/wikinsert/releases>.
+2. Open the **latest release** (or **pre‑release**) entry.
+3. Under **Assets**, download **wikinsert‑extension.zip**.
 
-The overall architecture is illustrated below:
+After downloading, continue with the installation steps below.
 
-![Wikinsert System Architecture](static/system-diagram.png)
+## Installing the Wikinsert browser extension
 
-### Components
+### Quick install (Chrome / Brave / Edge)
+1. Download `wikinsert-extension.zip` from the “Assets” section below.
+2. Unzip it – you’ll see a folder that contains **dist/**.
+3. Open your browser and navigate to:
+   * `chrome://extensions`  (Chrome)  
+   * `brave://extensions`   (Brave)  
+   * `edge://extensions`    (Edge)
+4. Enable **Developer mode** (toggle in the upper-right).
+5. Click **Load unpacked**, select the `dist` folder and confirm.
+6. Pin the “Wikinsert” icon to your toolbar for easy access.
 
-- **[Data Layer (scripts)](scripts/README.md)**: Python scripts that process Wikipedia articles, tokenize sentences, and
-  compute relevance scores using the XLocEI model.
-- **[Backend API (backend)](backend/README.md)**: Kotlin/Ktor server that provides endpoints for retrieving heatmap data
-  and searching for target entities.
-- **[Browser Extension (extension)](extension/README.md)**: TypeScript/Vue.js browser extension that overlays
-  highlighting on Wikipedia articles.
-- **[Web App (web)](web/README.md)**: Vue.js web application that serves as an entry point for user study experiments.
-
-## Deployment
-
-Wikinsert is designed to be deployed using Docker Compose, which orchestrates the following services:
-
-1. **MongoDB**: Stores pre-computed article data, sentence tokenization, and relevance scores
-2. **Python Populator**: Processes Wikipedia articles and populates the MongoDB database
-3. **Ktor API**: Serves pre-computed data to the UI layer
-
-### Prerequisites
-- Docker and Docker Compose
-- Access to Wikipedia dump data (for the Python populator) (behind VPN of AU)
-- Environment variables configuration
-- Access to the XLocEI model files (behind VPN of AU)
-
-### Environment Variables
-
-The following environment variables are configured in `docker-compose.yml` file, this gives you flexibility, one could also use a `.env` file to set these variables, however since we are dockerizing the application, we will hardcode them in the `docker-compose.yml` file. :
-
-```
-SOURCE_ARTICLES_PATH=/path/to/revisions_en.parquet
-SCORED_DATA_PATH=/path/to/en_5_scored.parquet
-MENTION_MAP_PATH=/path/to/mention_map_en.parquet
-MODEL_DIR=/path/to/models
-```
-
-Note that `SOURCE_ARTICLES` are the raw Wikipedia articles, and `SCORED_DATA` includes a sample that has been paired with target entities, so in practice, you would only need the pairs, however for some experiments, you might want to use the raw articles as well. The `MENTION_MAP` is a mapping of mentions to entities, and `MODEL_DIR` is the directory where the XLocEI model is stored.
-
-### Deployment Steps
-
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/your-username/wikinsert-au.git
-   cd wikinsert-au
-   ```
-
-2. **Configure environment variables**:
-   Create a `.env` file or directly hardcode it in the `.yml` file for docker-compose in the root directory with the
-   required variables.
-
-3. **Start the MongoDB service**:
-   ```bash
-   docker-compose up -d mongodb
-   ```
-
-4. **Populate the database** (one-time operation):
-   ```bash
-   docker-compose --profile populator up python-populator
-   ```
-
-5. **Start the API service**:
-   ```bash
-   docker-compose --profile api up -d ktor-api
-   ```
-
-6. **Install the browser extension**:
-   Follow the instructions in the [extension README](extension/README.md) to build and install the browser extension.
-
-### Docker Compose Configuration
-
-The `docker-compose.yml` file defines three services:
-
-1. **mongodb**: MongoDB database server
-    - Exposes port 27017
-    - Persists data in a volume
-
-2. **python-populator**: Data processing and database population
-    - Mounts data volumes and environment variables
-    - Depends on MongoDB being healthy
-    - Uses the "populator" profile
-
-3. **ktor-api**: Backend API server
-    - Exposes port 8081
-    - Connects to MongoDB
-    - Uses the "api" profile
+### Quick install (Firefox – temporary)
+1. Unzip the archive.
+2. Visit `about:debugging#/runtime/this-firefox`.
+3. Click **Load Temporary Add-on…** and pick `dist/manifest.json`.
+   * Firefox removes temporary add-ons on restart; for a persistent install we’ll need AMO signing.
 
 ## Usage
 
@@ -132,3 +64,84 @@ For development instructions, refer to the README files of individual components
 - [Backend API Development](backend/README.md)
 - [Browser Extension Development](extension/README.md)
 - [Web App Development](web/README.md)
+
+
+## System Architecture
+
+Wikinsert is composed of three main layers:
+
+1. **Data Processing Layer** - Generates relevance scores for target entities
+2. **Backend API Layer** - Stores and serves those scores
+3. **UI Layer** - Overlays scores onto Wikipedia articles for interactive inspection
+
+The overall architecture is illustrated below:
+
+![Wikinsert System Architecture](static/system-diagram.png)
+
+### Components
+
+- **[Data Layer (scripts)](scripts/README.md)**: Python scripts that process Wikipedia articles, tokenize sentences, and
+  compute relevance scores using the XLocEI model.
+- **[Backend API (backend)](backend/README.md)**: Kotlin/Ktor server that provides endpoints for retrieving heatmap data
+  and searching for target entities.
+- **[Browser Extension (extension)](extension/README.md)**: TypeScript/Vue.js browser extension that overlays
+  highlighting on Wikipedia articles.
+- **[Web App (web)](web/README.md)**: Vue.js web application that serves as an entry point for user study experiments.
+
+## Serving the Wikinsert API and Database (behind VPN of Aarhus University)
+You interact with the stack exclusively through `run-wikinsert.sh`.  
+
+### Prerequisites
+- Docker and Docker Compose
+- Access to Wikipedia dump data (for the Python populator) (behind VPN of AU)
+- Access to the XLocEI model files (behind VPN of AU)
+
+Pick the workflow that matches what you need:
+
+### 1  Populate the database only
+Use this when you want to load several different samples before exposing an API.
+```bash
+./run-wikinsert.sh --populate \
+  --source /path/to/revisions_en.parquet \
+  --scored /path/to/en_5_scored.parquet \
+  --mention /path/to/mention_map_en.parquet \
+  --model-dir /path/to/models
+```
+### 2  Populate the database **and** start the API in one go
+
+```bash
+./run-wikinsert.sh --all \
+  --source /path/to/revisions_en.parquet \
+  --scored /path/to/en_5_scored.parquet \
+  --mention /path/to/mention_map_en.parquet \
+  --model-dir /path/to/models
+```
+
+If the database is already populated and you only want to expose the API, run:
+
+```bash
+./run-wikinsert.sh --api
+```
+
+
+## Deployment Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/au-clan/wikinsert
+   cd wikinsert
+   ```
+
+2. **Configure MongoDB connection**  
+   Open **docker-compose.yml** and edit the two environment variables under the **ktor-api** service:
+
+   ```yaml
+   environment:
+     - MONGODB_URI=mongodb://localhost:27017/
+     - MONGODB_DATABASE=wikinsert
+   ```
+
+3. **Start services**
+   Use the `run-wikinsert.sh` script as described above to start the desired services.
+
+**Note:** MongoDB connection settings (`MONGODB_URI`, `MONGODB_DATABASE`) are set in `docker-compose.yml` for now; all other paths are supplied via command‑line flags.
