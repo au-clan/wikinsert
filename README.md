@@ -6,11 +6,11 @@ information discovery and knowledge integration.
 
 ## Video demonstration of Wikinsert
 
-<video src="https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4" controls width="700"></video>
+<video src="static/demo-vid.mov" controls width="700"></video>
 
 If the embedded player does not appear, you can download or open the video directly:
 
-[Download the demo video](https://sample-videos.com/video321/mp4/720/big_buck_bunny_720p_1mb.mp4)
+[Download the demo video](static/demo-vid.mov)
 
 
 ## Downloading the extension
