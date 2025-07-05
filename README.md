@@ -4,11 +4,16 @@ Wikinsert is a system for generating and displaying entity-aware highlighting of
 identify sentences in a source article that are relevant to a specific target entity, enabling more efficient
 information discovery and knowledge integration.
 
-![Wikinsert Highlighting Example](static/wikinsert-highlight.png)
+## Video demonstration of Wikinsert
+
+<video src="static/demo-vid.mov" controls width="700"></video>
+
+If the embedded player does not appear, you can download or open the video directly:
+
+[Download the demo video](static/demo-vid.mov)
+
 
 ## Downloading the extension
-
-Get the pre‑built package in three clicks:
 
 1. Navigate to <https://github.com/au-clan/wikinsert/releases>.
 2. Open the **latest release** (or **pre‑release**) entry.
@@ -35,26 +40,26 @@ After downloading, continue with the installation steps below.
 3. Click **Load Temporary Add-on…** and pick `dist/manifest.json`.
    * Firefox removes temporary add-ons on restart; for a persistent install we’ll need AMO signing.
 
+> **DISCLAIMER**  
+> The Wikinsert API and MongoDB database are currently hosted on Aarhus University servers that require a VPN connection.  
+> If you are not connected to the AU VPN the extension will still load, but **it will not be able to retrieve heat‑map data**.  
+> We will migrate the service to a publicly accessible server before our EMNLP demonstration.
 ## Usage
 
 **Browser Extension**:
-    - Navigate to a Wikipedia article you have computed relevance scores for
-    - Click the Wikinsert extension icon
-    - Search for a target entity (which should be in the preprocessed dataset)
-    - Toggle highlighting to see the heatmap overlay
+- Navigate to a Wikipedia article you have computed relevance scores for
+- Click the Wikinsert extension icon
+- Search for a target entity (which should be in the preprocessed dataset)
+- Toggle highlighting to see the heatmap overlay
 
 **Web App**:
 This is a way of searching through your preprocessed dataset, and viewing the articles that can be highlighted, withouth directly going to the URL of the article. Helps with workflow simulation and user studies.
-    - Start the web app using `npm run dev`
-    - Access the web app URL at `http://localhost:8080`
-    - Search for a Wikipedia article from the preprocessed dataset
-    - Then use the browser extension to highlight entities in the article
-
-## Search Interface
-
-The search interface allows users to find target entities related to the current Wikipedia article:
-
-![Homepage Search](static/homepage_search.png)
+- cd into the `web` directory
+- Install dependencies using `npm install`
+- Start the web app using `npm run dev`
+- Access the web app URL at `http://localhost:8080`
+- Search for a Wikipedia article from the preprocessed dataset
+- Then use the browser extension to highlight entities in the article
 
 ## Development
 
@@ -66,7 +71,7 @@ For development instructions, refer to the README files of individual components
 - [Web App Development](web/README.md)
 
 
-## System Architecture
+### System Architecture
 
 Wikinsert is composed of three main layers:
 
@@ -88,17 +93,17 @@ The overall architecture is illustrated below:
   highlighting on Wikipedia articles.
 - **[Web App (web)](web/README.md)**: Vue.js web application that serves as an entry point for user study experiments.
 
-## Serving the Wikinsert API and Database (behind VPN of Aarhus University)
+### Serving the Wikinsert API and Database (behind VPN of Aarhus University)
 You interact with the stack exclusively through `run-wikinsert.sh`.  
 
-### Prerequisites
+#### Prerequisites
 - Docker and Docker Compose
 - Access to Wikipedia dump data (for the Python populator) (behind VPN of AU)
 - Access to the XLocEI model files (behind VPN of AU)
 
 Pick the workflow that matches what you need:
 
-### 1  Populate the database only
+#### 1  Populate the database only
 Use this when you want to load several different samples before exposing an API.
 ```bash
 ./run-wikinsert.sh --populate \
@@ -107,7 +112,7 @@ Use this when you want to load several different samples before exposing an API.
   --mention /path/to/mention_map_en.parquet \
   --model-dir /path/to/models
 ```
-### 2  Populate the database **and** start the API in one go
+#### 2  Populate the database **and** start the API in one go
 
 ```bash
 ./run-wikinsert.sh --all \
@@ -124,7 +129,7 @@ If the database is already populated and you only want to expose the API, run:
 ```
 
 
-## Deployment Steps
+### Deployment Steps
 
 1. **Clone the repository**
    ```bash
