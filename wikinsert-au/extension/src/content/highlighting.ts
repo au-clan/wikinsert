@@ -115,7 +115,7 @@ export function highlightSentences(withScrollTo: boolean): void {
       }, () => {
         const intensityKey = scopedKey(pageKey, 'intensity');
         chrome.storage.session.get([intensityKey], ({ [intensityKey]: threshold = 0.5 }) => {
-          const { filtered, top, bins } = type === 'smooth'
+          const { filtered, bins } = type === 'smooth'
             ? filterByIntensitySmooth(normalized, threshold)
             : filterByIntensityRelative(normalized, threshold);
           currentBins = bins;
@@ -124,24 +124,26 @@ export function highlightSentences(withScrollTo: boolean): void {
           const textNodes = getTextNodesIn();
           const ordered = filtered.slice().sort((a, b) => b.startOffset - a.startOffset);
           ordered.forEach((sentence) => wrapRangeInContainer(sentence, textNodes));
+          const highThreshold = bins[bins.length - 3]; // lower bound of "High" bin
+          const scrollTarget = filtered.find(s => s.score >= highThreshold);
 
-          if (top && withScrollTo) {
-            requestAnimationFrame(() => {
-                const span = document.getElementById(`sentence-${top!.id}`);
-                if (!span) return;
-                let anchor = document.getElementById("wikinsert-top-highlight");
-                if (!anchor) {
-                    anchor = document.createElement("a");
-                    anchor.id = "wikinsert-top-highlight";
-                    anchor.style.position = "absolute";
-                    anchor.style.width = "0";
-                    anchor.style.height = "0";
-                }
-                span.prepend(anchor);
+          if (scrollTarget && withScrollTo) {
+              requestAnimationFrame(() => {
+                  const span = document.getElementById(`sentence-${scrollTarget.id}`);
+                  if (!span) return;
+                  let anchor = document.getElementById("wikinsert-top-highlight");
+                  if (!anchor) {
+                      anchor = document.createElement("a");
+                      anchor.id = "wikinsert-top-highlight";
+                      anchor.style.position = "absolute";
+                      anchor.style.width = "0";
+                      anchor.style.height = "0";
+                  }
+                  span.prepend(anchor);
 
-                smoothScrollTo(anchor);
-            });
-        }
+                  smoothScrollTo(anchor);
+              });
+          }
           showFloatingDisplay();
           buildMinimap(normalized);
         });
